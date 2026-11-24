@@ -33,5 +33,6 @@ export default {
   'logsQuery.loadMoreHint': 'スクロールまたはクリックしてさらに読み込む',
   'logsQuery.limitPlaceholder': '上限を入力',
   'logsQuery.traceNoTable':
-    'データベース "{database}" に traces テーブルが見つかりません。先に Traces Query で選択してください。',
+    'データベース "{database}" に traces テーブルが見つかりません。先に {page} ページで選択してください。',
+  'logsQuery.traceNotFound': '{target} にスパンが見つかりません。{page} ページで traces テーブルを選択してください。',
 }

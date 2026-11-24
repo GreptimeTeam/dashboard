@@ -1,5 +1,5 @@
 <template lang="pug">
-.query-layout.query-layout--stack.trace-query-container.query-container
+.query-layout.query-layout--stack.trace-query-container.query-container.drilldown-body
   .page-header.gpt-page-header
     | {{ $t('menu.dashboard.traces') }}
   .content-wrapper.query-layout-cards
@@ -72,6 +72,13 @@
       :loading="loading"
       :query-state="queryState"
       @filterConditionAdd="handleFilterConditionAdd"
+      @trace-click="openTrace"
+    )
+    TraceDetailDrawer(
+      popup-container=".trace-query-container"
+      :trace-id="traceDrawerId"
+      :target="traceDrawerTarget"
+      @close="closeTraceDrawer"
     )
 </template>
 
@@ -85,7 +92,9 @@
   import { listSignalTables } from '@/observability/semantics'
   import { TRACES_QUERY_STORAGE_KEY } from '@/observability/query-table-pref'
   import useUiPref from '@/composables/use-ui-pref'
+  import { buildTraceDetailTarget, type TraceDetailTarget } from '@/observability/traces/trace-detail-target'
   import TraceTable from './components/TraceTable.vue'
+  import TraceDetailDrawer from './components/TraceDetailDrawer.vue'
 
   defineOptions({
     name: 'TraceQuery',
@@ -180,6 +189,25 @@
         countChartRef.value?.executeCountQuery()
       })
     }
+  }
+
+  // Trace detail opens as a drawer over this page: no route change, so this page stays mounted.
+  const traceDrawerId = ref('')
+  const traceDrawerTarget = ref<TraceDetailTarget>()
+
+  function openTrace(payload: { traceId: string; timestamp?: unknown }) {
+    const traceId = String(payload?.traceId || '').trim()
+    if (!traceId) return
+    traceDrawerTarget.value = buildTraceDetailTarget({
+      table: queryState.table || 'spans',
+      database: queryState.database,
+      timestamp: payload.timestamp,
+    })
+    traceDrawerId.value = traceId
+  }
+
+  function closeTraceDrawer() {
+    traceDrawerId.value = ''
   }
 
   function handleFilterConditionAdd({ columnName, operator, value }) {

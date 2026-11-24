@@ -38,8 +38,7 @@
           @view-logs="(span) => emit('viewLogs', span)"
         )
     a-empty(v-else-if="!loading")
-      .gantt-empty-title {{ emptyDescription || t('drilldown.traces.ganttEmpty') }}
-      .gantt-empty-hint(v-if="emptyHint") {{ emptyHint }}
+      .gantt-empty-text {{ emptyText || t('drilldown.traces.ganttEmpty') }}
 </template>
 
 <script setup lang="ts">
@@ -66,17 +65,14 @@
       logsTraceEnabled?: boolean
       /** Resolved `database.table` label per service, shown next to the View logs action. */
       serviceTargetLabels?: Record<string, string>
-      /** Overrides the empty-state title (e.g. names the table that was searched). */
-      emptyDescription?: string
-      /** Secondary line under the empty-state title. */
-      emptyHint?: string
+      /** Overrides the empty-state message: one paragraph, so callers compose the full sentence. */
+      emptyText?: string
     }>(),
     {
       loading: false,
       logsTraceEnabled: false,
       serviceTargetLabels: () => ({}),
-      emptyDescription: '',
-      emptyHint: '',
+      emptyText: '',
     }
   )
 
@@ -198,17 +194,12 @@
     color: var(--gpt-text-primary);
   }
 
-  .gantt-empty-title {
+  .gantt-empty-text {
+    max-width: 480px;
+    margin: 0 auto;
     color: var(--gpt-text-secondary);
     font-size: var(--gpt-font-base);
-    text-align: center;
-  }
-
-  .gantt-empty-hint {
-    max-width: 420px;
-    margin: var(--gpt-gap-sm) auto 0;
-    color: var(--gpt-text-muted);
-    font-size: var(--gpt-font-sm);
+    line-height: 1.6;
     text-align: center;
   }
 

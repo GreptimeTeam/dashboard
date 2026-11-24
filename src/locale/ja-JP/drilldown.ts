@@ -245,9 +245,8 @@ export default {
   'drilldown.traces.back': '戻る',
   'drilldown.traces.unknownOperation': '不明な操作',
   'drilldown.traces.ganttEmpty': 'このトレース ID のスパンは見つかりませんでした',
-  'drilldown.traces.ganttEmptyIn': '{target} にこのトレース ID のスパンは見つかりませんでした',
-  'drilldown.traces.ganttEmptyHint':
-    'サンプリングで破棄された、別のテーブルやデータベースにある、または時間範囲外の可能性があります。',
+  'drilldown.traces.ganttEmptyIn':
+    '{target} にこのトレース ID のスパンは見つかりませんでした。サンプリングで破棄された可能性があります。',
   'drilldown.traces.logsSettingsTitle': 'トレースログを設定',
   'drilldown.traces.logsSettingsShortTitle': 'トレースログ',
   'drilldown.traces.logsSettingsDescription':

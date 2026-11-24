@@ -1,5 +1,5 @@
 <template lang="pug">
-.query-layout.query-layout--stack.logs-query-container.query-container
+.query-layout.query-layout--stack.logs-query-container.query-container.drilldown-body
   .page-header.gpt-page-header
     | {{ $t('menu.dashboard.logsQuery') }}
   .content-wrapper.query-layout-cards
@@ -146,11 +146,18 @@
       )
 
     ExportModal(v-model:visible="exportModalVisible" :sql="exportSqlText" @confirm="handleExportConfirm")
+    TraceDetailDrawer(
+      popup-container=".logs-query-container"
+      :empty-text="traceEmptyText"
+      :trace-id="traceDrawerId"
+      :target="traceDrawerTarget"
+      @close="closeTraceDrawer"
+    )
 </template>
 
 <script setup lang="ts">
   import { ref, computed, watch, nextTick, onActivated, onDeactivated } from 'vue'
-  import { useRoute, useRouter } from 'vue-router'
+  import { useRoute } from 'vue-router'
   import { Message } from '@arco-design/web-vue'
   import { useI18n } from 'vue-i18n'
   import SQLBuilder from '@/components/sql-builder/index.vue'
@@ -161,6 +168,8 @@
   import { getSignalDatabase } from '@/observability/signal-database'
   import { LOGS_QUERY_STORAGE_KEY } from '@/observability/query-table-pref'
   import { findTraceIdColumn, resolveTraceDetailTarget } from '@/observability/traces/open-trace-from-log'
+  import type { TraceDetailTarget } from '@/observability/traces/trace-detail-target'
+  import TraceDetailDrawer from '@/views/dashboard/traces/components/TraceDetailDrawer.vue'
   import ColumnLayoutPanel from '@/components/column-layout-panel/ColumnLayoutPanel.vue'
   import ChartContainer from './ChartContainer.vue'
   import ExportModal from './ExportModal.vue'
@@ -171,7 +180,6 @@
   })
 
   const route = useRoute()
-  const router = useRouter()
   const { t } = useI18n()
   const isLogsQueryRoute = () => route.name === 'log-query'
   // Guide step switching is browse-only. Preserve the normal page's initial auto query,
@@ -243,17 +251,36 @@
   // claims a trace (no foreign key), so existence is checked by the detail page itself.
   const traceIdColumn = computed(() => findTraceIdColumn(columns.value))
 
+  // Trace detail opens as a drawer over this page, so the Logs Query stays mounted (no URL change).
+  const traceDrawerId = ref('')
+  const traceDrawerTarget = ref<TraceDetailTarget>()
+
   async function openTrace(traceId: string, row?: Record<string, unknown>) {
     const id = String(traceId || '').trim()
     if (!id) return
     const anchor = timestampColumnName.value ? row?.[timestampColumnName.value] : undefined
     const target = await resolveTraceDetailTarget(anchor)
     if (!target) {
-      Message.warning(t('logsQuery.traceNoTable', { database: getSignalDatabase('traces') }))
+      Message.warning(
+        t('logsQuery.traceNoTable', { database: getSignalDatabase('traces'), page: t('menu.dashboard.traces') })
+      )
       return
     }
-    router.push({ name: 'dashboard-TraceDetail', params: { id }, query: target.query })
+    traceDrawerTarget.value = target
+    traceDrawerId.value = id
   }
+
+  function closeTraceDrawer() {
+    traceDrawerId.value = ''
+  }
+
+  // Shown when the trace has no spans in the target table: says where to pick the table.
+  const traceEmptyText = computed(() => {
+    const target = traceDrawerTarget.value
+    if (!target) return undefined
+    const label = target.database ? `${target.database}.${target.table}` : target.table
+    return t('logsQuery.traceNotFound', { target: label, page: t('menu.dashboard.traces') })
+  })
 
   const selectableColumnNames = computed(() => columnNames.value.filter((name) => name !== timestampColumnName.value))
   // DataGrid always pins ts via tsColumn; stored layout covers selectable columns only.
@@ -413,6 +440,11 @@
 
 <style lang="less">
   @import '@/assets/style/query-layout.less';
+
+  .logs-query-container,
+  .trace-query-container {
+    position: relative;
+  }
 
   .results-count {
     color: var(--gpt-text-muted);

@@ -56,13 +56,10 @@ a-card(:bordered="false")
 
 <script setup lang="ts">
   import { computed, ref, watch } from 'vue'
-  import { useRouter } from 'vue-router'
   import { IconDown } from '@arco-design/web-vue/es/icon'
   import type { PropType } from 'vue'
   import type { ColumnType, QueryState } from '@/types/query'
   import useTraceTablePrefs from '@/observability/use-trace-table-prefs'
-  import { buildTraceDetailUnixRange } from '@/utils/trace-detail-time-range'
-  import { bareTableName } from '@/utils/sql'
   import ColumnLayoutPanel from '@/components/column-layout-panel/ColumnLayoutPanel.vue'
   import DataGrid from '@/components/data-grid/DataGrid.vue'
 
@@ -101,7 +98,7 @@ a-card(:bordered="false")
       type: Object as PropType<QueryState>,
       default: () => ({}),
     },
-    /** When true, emit `traceClick` only — do not route to TraceDetail. */
+    /** Drilldown embed: adds the logs action to the row menu. Trace click always emits `traceClick`. */
     embedMode: {
       type: Boolean,
       default: false,
@@ -129,7 +126,6 @@ a-card(:bordered="false")
     (e: 'logsTraceClick', payload: { traceId: string; service?: string }): void
     (e: 'openLogsSettings'): void
   }>()
-  const router = useRouter()
 
   // Column layout is stored per trace table (`traceTableColumns`).
   const {
@@ -234,27 +230,8 @@ a-card(:bordered="false")
 
   function handleTraceClick(record: TableData) {
     const traceId = String(record?.trace_id ?? '')
+    // The parent decides where the detail opens (drawer on the list page, no URL change).
     emit('traceClick', { traceId, timestamp: record?.timestamp })
-    if (props.embedMode) {
-      return
-    }
-    const detailRange = buildTraceDetailUnixRange(record?.timestamp)
-    // Code mode stores a quoted `"db"."table"` in queryState.table — pass bare name + database.
-    const table = bareTableName(props.queryState.table) || props.queryState.table
-    router.push({
-      name: 'dashboard-TraceDetail',
-      params: { id: traceId },
-      query: {
-        table,
-        ...(props.queryState.database ? { database: props.queryState.database } : {}),
-        ...(detailRange
-          ? {
-              start: String(detailRange[0]),
-              end: String(detailRange[1]),
-            }
-          : {}),
-      },
-    })
   }
 </script>
 
