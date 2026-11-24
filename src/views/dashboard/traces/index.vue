@@ -231,23 +231,13 @@
     initializeFromQuery()
   })
 
-  // keepAlive: re-apply URL state (e.g. product tour steps) on re-entry.
-  onActivated(() => {
-    initializeFromQuery()
-  })
-
   // Same-route tutorial click: re-apply form and run (initial-query watch won't re-fire).
-  // `prev` from watch() would also include values from other routes (e.g. Trace detail has no
-  // builderForm), so coming back from detail looked like a change and re-ran the query even
-  // though this page is kept alive. Compare against what this route itself last saw instead.
-  let lastSeenQuery: readonly [unknown, unknown] = [route.query.builderForm, route.query.tourApply]
   watch(
     () => [route.query.builderForm, route.query.tourApply] as const,
-    (next) => {
+    (next, prev) => {
       if (!isTraceQueryRoute()) return
-      const prev = lastSeenQuery
-      lastSeenQuery = next
       if (isApplyingLocalUrlUpdate()) return
+      if (!prev) return
       if (next[0] === prev[0] && next[1] === prev[1]) return
       if (!next[0] && !next[1]) return
       initializeFromQuery()

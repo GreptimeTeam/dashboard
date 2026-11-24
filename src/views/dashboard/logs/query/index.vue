@@ -156,7 +156,7 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, watch, nextTick, onActivated, onDeactivated } from 'vue'
+  import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue'
   import { useRoute } from 'vue-router'
   import { Message } from '@arco-design/web-vue'
   import { useI18n } from 'vue-i18n'
@@ -329,17 +329,12 @@
   }
 
   // Same-route tutorial click: form sync alone does not re-fire canExecuteInitialQuery.
-  // Compare against what this route itself last saw: `prev` from watch() would include values
-  // from other routes (Trace detail has no builderForm), so returning from detail would re-run
-  // the query even though this page is kept alive.
-  let lastSeenQuery: readonly [unknown, unknown] = [route.query.builderForm, route.query.tourApply]
   watch(
     () => [route.query.builderForm, route.query.tourApply] as const,
-    (next) => {
+    (next, prev) => {
       if (!isLogsQueryRoute()) return
-      const prev = lastSeenQuery
-      lastSeenQuery = next
       if (isApplyingLocalUrlUpdate()) return
+      if (!prev) return
       if (next[0] === prev[0] && next[1] === prev[1]) return
       if (!next[0] && !next[1]) return
       initializeFromQuery()
@@ -396,16 +391,9 @@
     }
   })
 
-  // Kept alive (e.g. while a Trace detail is open): pause Live polling off-screen.
-  onDeactivated(() => {
+  // Stop Live polling when leaving the page.
+  onBeforeUnmount(() => {
     clearTimeout(refreshTimeout)
-  })
-
-  onActivated(() => {
-    initializeFromQuery()
-    if (refresh.value) {
-      mayRefresh()
-    }
   })
 
   // Chart/row logic
