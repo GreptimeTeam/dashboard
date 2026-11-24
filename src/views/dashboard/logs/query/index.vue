@@ -441,11 +441,6 @@
 <style lang="less">
   @import '@/assets/style/query-layout.less';
 
-  .logs-query-container,
-  .trace-query-container {
-    position: relative;
-  }
-
   .results-count {
     color: var(--gpt-text-muted);
     font-size: var(--gpt-font-base);

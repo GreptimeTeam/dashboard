@@ -5,6 +5,10 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  // Containing block for in-page drawers (`popup-container` = the page root), so they cover
+  // only this page and never the app navbar. Lives here, not in one page, so every page
+  // that imports the layout gets it regardless of which page was visited first.
+  position: relative;
 
   // Same-element (`.query-layout.query-container`) and nested both need a viewport height.
   &.query-container,
