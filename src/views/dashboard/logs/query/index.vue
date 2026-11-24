@@ -52,8 +52,9 @@
         SQLBuilder(
           v-if="editorType === 'builder'"
           ref="sqlBuilderRef"
-          storage-key="logs-query-table"
+          remember-table
           signal-database-kind="logs"
+          :storage-key="LOGS_QUERY_STORAGE_KEY"
           :form-state="builderFormState"
           :default-form-state="defaultFormState"
         )
@@ -158,6 +159,7 @@
   import { isQueryGuideEnabled } from '@/utils/query-guide-enabled'
   import useLogsTablePrefs from '@/observability/use-logs-table-prefs'
   import { getSignalDatabase } from '@/observability/signal-database'
+  import { LOGS_QUERY_STORAGE_KEY } from '@/observability/query-table-pref'
   import { findTraceIdColumn, resolveTraceDetailTarget } from '@/observability/traces/open-trace-from-log'
   import ColumnLayoutPanel from '@/components/column-layout-panel/ColumnLayoutPanel.vue'
   import ChartContainer from './ChartContainer.vue'

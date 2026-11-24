@@ -41,8 +41,9 @@
         SQLBuilder(
           v-if="editorType === 'builder'"
           ref="sqlBuilderRef"
-          storage-key="traces-query-table"
+          remember-table
           signal-database-kind="traces"
+          :storage-key="TRACES_QUERY_STORAGE_KEY"
           :tables-provider="traceTablesProvider"
           :form-state="builderFormState"
           :default-form-state="defaultFormState"
@@ -82,6 +83,7 @@
   import { isQueryGuideEnabled } from '@/utils/query-guide-enabled'
   import { getSignalDatabase } from '@/observability/signal-database'
   import { listSignalTables } from '@/observability/semantics'
+  import { TRACES_QUERY_STORAGE_KEY } from '@/observability/query-table-pref'
   import useUiPref from '@/composables/use-ui-pref'
   import TraceTable from './components/TraceTable.vue'
 
