@@ -6,7 +6,7 @@
         nav.drilldown-drawer__breadcrumb(:aria-label="$t('drilldown.nav.breadcrumb')")
           a-breadcrumb
             a-breadcrumb-item
-              button.drilldown-drawer__crumb-link(type="button" @click="handleBack") {{ $t('menu.dashboard.traces') }}
+              button.drilldown-drawer__crumb-link(type="button" @click="handleBack") {{ $t('drilldown.nav.overview') }}
             a-breadcrumb-item
               span.drilldown-drawer__crumb-current.is-mono(:title="traceId") {{ traceId }}
         span.drilldown-drawer__subtitle Trace Timeline
@@ -17,7 +17,7 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, watch, onMounted } from 'vue'
+  import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
   import { useRoute, useRouter } from 'vue-router'
   import { IconClose } from '@arco-design/web-vue/es/icon'
   import editorAPI from '@/api/editor'
@@ -100,7 +100,26 @@
     fetchTraceData()
   }
 
-  onMounted(loadTraceData)
+  // Same as the Signals Explore drawer: Esc closes the detail (ignored while typing / in popups).
+  function handleKeydown(event: KeyboardEvent) {
+    if (event.key !== 'Escape' || event.defaultPrevented) {
+      return
+    }
+    const target = event.target as HTMLElement | null
+    if (target?.closest('input, textarea, [contenteditable="true"], .arco-select-dropdown, .arco-trigger-popup')) {
+      return
+    }
+    handleBack()
+  }
+
+  onMounted(() => {
+    loadTraceData()
+    window.addEventListener('keydown', handleKeydown)
+  })
+
+  onBeforeUnmount(() => {
+    window.removeEventListener('keydown', handleKeydown)
+  })
 
   watch(() => route.params.id, loadTraceData)
 </script>
