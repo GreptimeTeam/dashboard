@@ -31,7 +31,7 @@ article.traces-breakdown-panel.drilldown-card(ref="targetRef")
   import type { RedMetric } from '@/observability/adapters/traces'
   import { BREAKDOWN_CHART_HEIGHT, METRIC_PANEL_HEIGHT } from '@/observability/metrics/panel-stats'
   import { buildBarSparklineOption, buildSparklineOption } from '@/observability/metrics/prom-chart'
-  import { redMetricBarColor, redMetricPanelUnit } from '@/observability/traces/red-queries'
+  import { BREAKDOWN_NONE, redMetricBarColor, redMetricPanelUnit } from '@/observability/traces/red-queries'
   import useLazyPanelQuery from '@/observability/use-lazy-panel-query'
   import DrilldownChartPanel from '../components/drilldown-chart-panel.vue'
 
@@ -67,7 +67,7 @@ article.traces-breakdown-panel.drilldown-card(ref="targetRef")
   const filterableParts = computed(() =>
     props.groupColumns.flatMap((key, index) => {
       const value = props.groupValues[index]
-      if (!key || !value || value === '<unspecified>') {
+      if (!key || !value || value === BREAKDOWN_NONE) {
         return []
       }
       return [{ key, value }]

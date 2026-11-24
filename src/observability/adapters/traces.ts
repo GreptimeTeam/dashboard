@@ -13,7 +13,7 @@ import { isJsonAttributeContainerName, parseJsonFieldChipKey, sqlJsonGetStringEx
 import {
   bucketToUnixSeconds,
   BREAKDOWN_CARD_LIMIT,
-  BREAKDOWN_UNSPECIFIED,
+  BREAKDOWN_NONE,
   breakdownGroupKey,
   breakdownSeriesIntervalSeconds,
   buildBreakdownSeriesSql,
@@ -328,12 +328,12 @@ export interface BreakdownAttrValue {
   metricValue: number
 }
 
-/** Reads one group tuple. SQL already folds NULL/empty into the unspecified bucket; this is a guard. */
+/** Reads one group tuple. SQL already folds NULL/empty into the BREAKDOWN_NONE group; this is a guard. */
 function readGroupParts(row: unknown[] | undefined, offset: number, count: number): string[] {
   const parts: string[] = []
   for (let index = 0; index < count; index += 1) {
     const cell = row?.[offset + index]
-    const part = cell == null || cell === '' ? BREAKDOWN_UNSPECIFIED : String(cell)
+    const part = cell == null || cell === '' ? BREAKDOWN_NONE : String(cell)
     parts.push(part)
   }
   return parts

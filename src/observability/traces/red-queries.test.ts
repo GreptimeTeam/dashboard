@@ -15,8 +15,8 @@ import {
   volumeIntervalSecondsFromRange,
 } from './red-queries'
 
-/** Group key as emitted by the breakdown SQL: NULL and empty both fold into the unspecified bucket. */
-const unspecified = (expr: string) => `COALESCE(NULLIF(${expr}, ''), '<unspecified>')`
+/** Group key as emitted by the breakdown SQL: NULL and empty both fold into the none group. */
+const noneGroup = (expr: string) => `COALESCE(NULLIF(CAST(${expr} AS STRING), ''), 'none')`
 
 describe('traces red-queries', () => {
   it('builds rate metric as count per second', () => {
@@ -146,9 +146,9 @@ describe('traces red-queries', () => {
       values: [['frontend'], ["o'brien"]],
     })
     expect(sql).toContain('date_bin(\'60 seconds\', "timestamp")')
-    expect(sql).toContain(`${unspecified('"service_name"')} IN ('frontend', 'o''brien')`)
+    expect(sql).toContain(`${noneGroup('"service_name"')} IN ('frontend', 'o''brien')`)
     expect(sql).toContain('COUNT(*) * 1.0 / 60')
-    expect(sql).toContain(`GROUP BY time_bucket, ${unspecified('"service_name"')}`)
+    expect(sql).toContain(`GROUP BY time_bucket, ${noneGroup('"service_name"')}`)
     expect(sql).not.toContain('LIMIT')
   })
 
@@ -182,8 +182,8 @@ describe('traces red-queries', () => {
       limit: 10,
     })
     const methodExpr = `json_get_string("span_attributes", '$."http.request.method"')`
-    expect(valuesSql).toContain(`${unspecified(methodExpr)} AS attr_value`)
-    expect(valuesSql).toContain(`GROUP BY ${unspecified(methodExpr)}`)
+    expect(valuesSql).toContain(`${noneGroup(methodExpr)} AS attr_value`)
+    expect(valuesSql).toContain(`GROUP BY ${noneGroup(methodExpr)}`)
     expect(valuesSql).not.toContain('"span_attributes.http.request.method"')
 
     const seriesSql = buildBreakdownSeriesSql({
@@ -199,11 +199,11 @@ describe('traces red-queries', () => {
       values: [['1.4.2']],
     })
     expect(seriesSql).toContain(
-      `${unspecified(`json_get_string("resource_attributes", '$."service.version"')`)} IN ('1.4.2')`
+      `${noneGroup(`json_get_string("resource_attributes", '$."service.version"')`)} IN ('1.4.2')`
     )
   })
 
-  it('keeps spans missing a dimension as the unspecified bucket', () => {
+  it('keeps spans missing a dimension in the none group', () => {
     const sql = buildBreakdownValuesSql({
       tableName: 'opentelemetry_traces',
       where: '"parent_span_id" IS NULL',
@@ -213,8 +213,23 @@ describe('traces red-queries', () => {
       metric: 'rate',
       limit: 10,
     })
-    expect(sql).toContain(`${unspecified('"resource_attributes.browser.language"')} AS attr_value`)
+    expect(sql).toContain(`${noneGroup('"resource_attributes.browser.language"')} AS attr_value`)
     expect(sql).not.toContain('IS NOT NULL')
+  })
+
+  it('casts the group value to a string so numeric columns can be compared with the literals', () => {
+    const sql = buildBreakdownValuesSql({
+      tableName: 'opentelemetry_traces',
+      where: '"parent_span_id" IS NULL',
+      groupByColumns: ['span_attributes.http.response.status_code'],
+      statusColumn: 'span_status_code',
+      durationColumn: 'duration_nano',
+      metric: 'rate',
+      limit: 10,
+    })
+    expect(sql).toContain(`CAST("span_attributes.http.response.status_code" AS STRING)`)
+    // The raw column must never meet a string literal directly.
+    expect(sql).not.toContain(`NULLIF("span_attributes.http.response.status_code", '')`)
   })
 
   it('builds breakdown values ranked by RED', () => {
@@ -227,7 +242,7 @@ describe('traces red-queries', () => {
       metric: 'errors',
       limit: 10,
     })
-    expect(sql).toContain(`GROUP BY ${unspecified('"service_name"')}`)
+    expect(sql).toContain(`GROUP BY ${noneGroup('"service_name"')}`)
     expect(sql).not.toContain('IS NOT NULL')
     expect(sql).toContain('STATUS_CODE_ERROR')
     expect(sql).toContain('ORDER BY metric_value DESC')
@@ -246,10 +261,10 @@ describe('traces red-queries', () => {
       metric: 'rate',
       limit: 10,
     })
-    expect(valuesSql).toContain(`${unspecified('"service_name"')} AS attr_0`)
-    expect(valuesSql).toContain(`${unspecified(methodExpr)} AS attr_1`)
+    expect(valuesSql).toContain(`${noneGroup('"service_name"')} AS attr_0`)
+    expect(valuesSql).toContain(`${noneGroup(methodExpr)} AS attr_1`)
     expect(valuesSql).not.toContain('IS NOT NULL')
-    expect(valuesSql).toContain(`GROUP BY ${unspecified('"service_name"')}, ${unspecified(methodExpr)}`)
+    expect(valuesSql).toContain(`GROUP BY ${noneGroup('"service_name"')}, ${noneGroup(methodExpr)}`)
 
     const seriesSql = buildBreakdownSeriesSql({
       tableName: 'opentelemetry_traces',
@@ -265,8 +280,8 @@ describe('traces red-queries', () => {
         ['frontend', "o'brien"],
       ],
     })
-    const serviceExpr = unspecified('"service_name"')
-    const spanExpr = unspecified('"span_name"')
+    const serviceExpr = noneGroup('"service_name"')
+    const spanExpr = noneGroup('"span_name"')
     expect(seriesSql).toContain(`${serviceExpr} = 'frontend' AND ${spanExpr} = 'GET'`)
     expect(seriesSql).toContain(`${serviceExpr} = 'frontend' AND ${spanExpr} = 'o''brien'`)
     expect(seriesSql).toContain(`GROUP BY time_bucket, ${serviceExpr}, ${spanExpr}`)

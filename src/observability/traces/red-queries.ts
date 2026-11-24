@@ -338,14 +338,19 @@ export function breakdownGroupKey(parts: readonly string[]): string {
   return JSON.stringify(parts)
 }
 
-/** Bucket for spans that lack a dimension (NULL or empty). Kept as a real group, not dropped. */
-export const BREAKDOWN_UNSPECIFIED = '<unspecified>'
+/** Group label for spans that lack a dimension (SQL NULL or empty string). Kept as a real group, not dropped. */
+export const BREAKDOWN_NONE = 'none'
 
-/** Each dimension becomes one group key; missing or empty values fold into {@link BREAKDOWN_UNSPECIFIED}. */
+/**
+ * Each dimension becomes one group key; missing or empty values fold into {@link BREAKDOWN_NONE}.
+ * The value is cast to a string first: attribute columns can be numeric / boolean, and comparing them to
+ * the `''` literal would otherwise fail ("Cannot cast string '' to value of Int64 type").
+ * Casting also makes the series query's tuple match compare string to string.
+ */
 function resolveGroupExprs(columns: readonly string[], columnSql?: readonly (string | undefined)[]): string[] {
   return columns.map((column, index) => {
     const raw = columnSql?.[index] || quoteIdent(column)
-    return `COALESCE(NULLIF(${raw}, ''), '${BREAKDOWN_UNSPECIFIED}')`
+    return `COALESCE(NULLIF(CAST(${raw} AS STRING), ''), '${BREAKDOWN_NONE}')`
   })
 }
 
