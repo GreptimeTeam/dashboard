@@ -221,6 +221,7 @@ export default {
   'drilldown.traces.breakdownByAttr': '按属性',
   'drilldown.traces.breakdownByAttrPlaceholder': '选择一个或多个属性',
   'drilldown.traces.breakdownNoValues': '当前范围无属性值',
+  'drilldown.traces.breakdownTruncated': '仅显示按当前指标排名前 {count} 的分组，其余已省略。',
   'drilldown.traces.redSelected': '当前',
   'drilldown.traces.redChartError': '图表加载失败',
   'drilldown.traces.redChartNoData': '当前范围无数据',

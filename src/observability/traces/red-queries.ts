@@ -377,7 +377,8 @@ function groupMatchPredicate(exprs: readonly string[], groups: readonly (readonl
   return `(\n    ${clauses.join('\n    OR ')}\n  )`
 }
 
-const BREAKDOWN_VALUES_LIMIT = 48
+/** Breakdown cards shown per query. Lower-ranked combinations are hidden; the UI notes when that happens. */
+export const BREAKDOWN_CARD_LIMIT = 48
 
 /**
  * Bucket width for the grouped breakdown query. Same window for every card,
@@ -449,7 +450,7 @@ export function sharedBreakdownYAxis(series: Array<Array<[number, number]>>): { 
 }
 
 export function buildBreakdownValuesSql(input: BuildBreakdownValuesSqlInput): string {
-  const limit = input.limit ?? BREAKDOWN_VALUES_LIMIT
+  const limit = input.limit ?? BREAKDOWN_CARD_LIMIT
   const rankExpr = buildRedRankExpr(input.metric, {
     status: input.statusColumn,
     duration: input.durationColumn,

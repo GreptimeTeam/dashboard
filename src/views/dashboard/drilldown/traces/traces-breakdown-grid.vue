@@ -16,7 +16,7 @@
           a-option(v-for="attr in resourceAttrs" :key="attr.column" :value="attr.column") {{ attr.label }}
         a-optgroup(label="Span")
           a-option(v-for="attr in spanAttrs" :key="attr.column" :value="attr.column") {{ attr.label }}
-
+    p.traces-breakdown-grid__truncated.gpt-text-toolbar-meta(v-if="truncated && !loading") {{ t('drilldown.traces.breakdownTruncated', { count: BREAKDOWN_CARD_LIMIT }) }}
   a-spin(style="width: 100%" :loading="loading")
     .drilldown-grid.traces-breakdown-grid__values
       TracesBreakdownPanel(
@@ -47,6 +47,7 @@
     type RedMetric,
   } from '@/observability/adapters/traces'
   import { discoverTraceBreakdownAttributes, type TraceBreakdownAttribute } from '@/observability/traces/field-map'
+  import { BREAKDOWN_CARD_LIMIT } from '@/observability/traces/red-queries'
   import useSignalQuery from '@/observability/use-signal-query'
   import TracesBreakdownPanel from './traces-breakdown-panel.vue'
 
@@ -63,6 +64,7 @@
   const loadingAttrs = ref(false)
   const loading = ref(false)
   const values = ref<BreakdownAttrValue[]>([])
+  const truncated = ref(false)
   const seriesByValue = ref<Record<string, Array<[number, number]>>>({})
   const yAxis = ref({ yMin: 0, yMax: 1 })
 
@@ -136,6 +138,7 @@
     }
     if (!ctx.semantics.traces.table.value || !groupByColumns.value.length) {
       values.value = []
+      truncated.value = false
       seriesByValue.value = {}
       yAxis.value = { yMin: 0, yMax: 1 }
       return
@@ -144,12 +147,13 @@
     const requestId = valuesRequestId
     loading.value = true
     try {
-      const nextValues = await fetchBreakdownAttrValues(ctx, props.redMetric, groupByColumns.value)
-      const series = await fetchBreakdownSeries(ctx, props.redMetric, groupByColumns.value, nextValues)
+      const result = await fetchBreakdownAttrValues(ctx, props.redMetric, groupByColumns.value)
+      const series = await fetchBreakdownSeries(ctx, props.redMetric, groupByColumns.value, result.values)
       if (requestId !== valuesRequestId) {
         return
       }
-      values.value = nextValues
+      values.value = result.values
+      truncated.value = result.truncated
       seriesByValue.value = series.series
       yAxis.value = series.yAxis
     } finally {
@@ -197,5 +201,10 @@
 
   .traces-breakdown-grid__values {
     padding-bottom: 0;
+  }
+
+  .traces-breakdown-grid__truncated {
+    margin: 0;
+    align-self: center;
   }
 </style>

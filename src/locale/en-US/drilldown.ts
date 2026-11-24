@@ -227,6 +227,8 @@ export default {
   'drilldown.traces.breakdownByAttr': 'Group by',
   'drilldown.traces.breakdownByAttrPlaceholder': 'Select attributes',
   'drilldown.traces.breakdownNoValues': 'No attribute values in range',
+  'drilldown.traces.breakdownTruncated':
+    'Showing the top {count} groups by the selected metric. Lower-ranked groups are hidden.',
   'drilldown.traces.redSelected': 'Selected',
   'drilldown.traces.redChartError': 'Failed to load chart',
   'drilldown.traces.redChartNoData': 'No data in range',

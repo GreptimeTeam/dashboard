@@ -12,6 +12,7 @@ import { fetchTableAttributeKeys } from '../traces/attribute-sampling'
 import { isJsonAttributeContainerName, parseJsonFieldChipKey, sqlJsonGetStringExpr } from '../logs/json-field-keys'
 import {
   bucketToUnixSeconds,
+  BREAKDOWN_CARD_LIMIT,
   BREAKDOWN_UNSPECIFIED,
   breakdownGroupKey,
   breakdownSeriesIntervalSeconds,
@@ -459,20 +460,27 @@ export async function fetchBreakdownSeries(
   }
 }
 
-/** Top attribute values ranked by current RED aggregate (Phase B). */
+export interface BreakdownAttrValuesResult {
+  /** At most {@link BREAKDOWN_CARD_LIMIT} groups, ranked by the current RED aggregate. */
+  values: BreakdownAttrValue[]
+  /** True when more groups exist than are returned; the UI shows a hint instead of the rest. */
+  truncated: boolean
+}
+
+/** Top attribute groups ranked by current RED aggregate (Phase B). Fetches one extra row to detect truncation. */
 export async function fetchBreakdownAttrValues(
   ctx: DrilldownContext,
   metric: RedMetric,
-  groupByColumns: string[],
-  options?: { limit?: number }
-): Promise<BreakdownAttrValue[]> {
+  groupByColumns: string[]
+): Promise<BreakdownAttrValuesResult> {
+  const empty: BreakdownAttrValuesResult = { values: [], truncated: false }
   const tableName = ctx.semantics.traces.table.value
   if (!tableName || !groupByColumns.length) {
-    return []
+    return empty
   }
   const where = buildTracesContextWhere(ctx, { rootOnly: true })
   if (!where) {
-    return []
+    return empty
   }
   const sql = buildBreakdownValuesSql({
     tableName,
@@ -482,15 +490,15 @@ export async function fetchBreakdownAttrValues(
     statusColumn: statusColumn(ctx),
     durationColumn: durationColumn(ctx),
     metric,
-    limit: options?.limit,
+    limit: BREAKDOWN_CARD_LIMIT + 1,
   })
   try {
     const response = await editorApi.runSQL(sql, boundSignalDatabase(ctx, 'traces'))
     const rows = response?.output?.[0]?.records?.rows
     if (!Array.isArray(rows)) {
-      return []
+      return empty
     }
-    return rows.map((row): BreakdownAttrValue => {
+    const values = rows.map((row): BreakdownAttrValue => {
       const parts = readGroupParts(row, 0, groupByColumns.length)
       const metricValue = Number(row?.[groupByColumns.length])
       return {
@@ -499,9 +507,13 @@ export async function fetchBreakdownAttrValues(
         metricValue: Number.isFinite(metricValue) ? metricValue : 0,
       }
     })
+    return {
+      values: values.slice(0, BREAKDOWN_CARD_LIMIT),
+      truncated: values.length > BREAKDOWN_CARD_LIMIT,
+    }
   } catch (error) {
     console.error('Failed to fetch traces breakdown values:', error)
-    return []
+    return empty
   }
 }
 
