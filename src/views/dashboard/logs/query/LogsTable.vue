@@ -107,7 +107,7 @@
     (e: 'filterConditionAdd', payload: unknown): void
     (e: 'rowSelect', row: TableData): void
     (e: 'reachEnd'): void
-    (e: 'traceClick', value: string): void
+    (e: 'traceClick', value: string, row?: TableData): void
     (e: 'columnOrderChange', fields: string[]): void
   }>()
 
@@ -122,11 +122,11 @@
     'logs-table--headerless': !props.showHeader,
   }))
 
-  const handleTraceClick = (_columnName: string, value: string) => {
+  const handleTraceClick = (_columnName: string, value: string, row?: TableData) => {
     if (!value) {
       return
     }
-    emit('traceClick', value)
+    emit('traceClick', value, row)
   }
 
   const handleTsClick = (row: TableData, rowIndex: number) => {

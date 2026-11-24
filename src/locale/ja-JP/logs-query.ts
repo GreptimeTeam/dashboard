@@ -32,4 +32,7 @@ export default {
   'logsQuery.clickToQuery': '時間範囲を選択',
   'logsQuery.loadMoreHint': 'スクロールまたはクリックしてさらに読み込む',
   'logsQuery.limitPlaceholder': '上限を入力',
+  'logsQuery.traceNoTable':
+    'traces テーブルがまだバインドされていません。先に {page} ページでクエリを実行するか、テーブルを選択してください。',
+  'logsQuery.traceNotFound': '{target} にスパンが見つかりません。{page} ページで traces テーブルを選択してください。',
 }

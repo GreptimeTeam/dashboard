@@ -12,7 +12,7 @@ a-modal(
       a-button(type="primary" :loading="loading" @click="handleConfirm")
         | {{ $t('common.export') }}
   .export-modal-content
-    a-form(layout="vertical")
+    a-form(layout="vertical" :model="formModel")
       a-form-item
         template(#label)
           a-space(:size="4")
@@ -23,9 +23,9 @@ a-modal(
         pre.export-sql-display {{ formattedSql }}
       a-form-item(:label="$t('logsQuery.exportLimit')")
         a-space(style="width: 100%" fill)
-          a-input(
-            v-model.number="limit"
-            type="number"
+          a-input-number(
+            v-model="limit"
+            hide-button
             style="flex: 1"
             :placeholder="$t('logsQuery.limitPlaceholder')"
             :min="1"
@@ -56,7 +56,8 @@ a-modal(
     (event: 'cancel'): void
   }>()
 
-  const limit = ref(1000)
+  const limit = ref<number | undefined>(1000)
+  const formModel = computed(() => ({ limit: limit.value }))
   const loading = ref(false)
   const totalCount = ref<number | null>(null)
 

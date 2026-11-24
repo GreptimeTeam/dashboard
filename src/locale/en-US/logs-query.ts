@@ -32,4 +32,6 @@ export default {
   'logsQuery.clickToQuery': 'Select time range',
   'logsQuery.loadMoreHint': 'Scroll or click to load more',
   'logsQuery.limitPlaceholder': 'Enter limit',
+  'logsQuery.traceNoTable': 'No traces table is bound yet. Run a query or pick a table on the {page} page.',
+  'logsQuery.traceNotFound': 'No spans in {target}. Choose the traces table on the {page} page.',
 }

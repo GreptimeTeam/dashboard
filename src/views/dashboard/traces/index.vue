@@ -1,5 +1,5 @@
 <template lang="pug">
-.query-layout.query-layout--stack.trace-query-container.query-container
+.query-layout.query-layout--stack.trace-query-container.query-container.drilldown-body
   .page-header.gpt-page-header
     | {{ $t('menu.dashboard.traces') }}
   .content-wrapper.query-layout-cards
@@ -41,8 +41,9 @@
         SQLBuilder(
           v-if="editorType === 'builder'"
           ref="sqlBuilderRef"
-          storage-key="traces-query-table"
+          remember-table
           signal-database-kind="traces"
+          :storage-key="TRACES_QUERY_STORAGE_KEY"
           :tables-provider="traceTablesProvider"
           :form-state="builderFormState"
           :default-form-state="defaultFormState"
@@ -71,6 +72,22 @@
       :loading="loading"
       :query-state="queryState"
       @filterConditionAdd="handleFilterConditionAdd"
+      @trace-click="openTrace"
+    )
+    TraceDetailDrawer(
+      popup-container=".trace-query-container"
+      logs-trace-enabled
+      :parent-label="$t('menu.dashboard.traces')"
+      :trace-id="traceDrawerId"
+      :target="traceDrawerTarget"
+      @close="closeTraceDrawer"
+      @view-logs="openLogs"
+    )
+    TraceLogsDrawer(
+      popup-container=".trace-query-container"
+      :trace-id="logsDrawerId"
+      :target="logsDrawerTarget"
+      @close="closeLogsDrawer"
     )
 </template>
 
@@ -82,12 +99,22 @@
   import { isQueryGuideEnabled } from '@/utils/query-guide-enabled'
   import { getSignalDatabase } from '@/observability/signal-database'
   import { listSignalTables } from '@/observability/semantics'
+  import { TRACES_QUERY_STORAGE_KEY, writeQueryTable } from '@/observability/query-table-pref'
   import useUiPref from '@/composables/use-ui-pref'
+  import { Message } from '@arco-design/web-vue'
+  import { useI18n } from 'vue-i18n'
+  import { buildTraceDetailTarget } from '@/observability/traces/trace-detail-target'
+  import resolveTraceLogsDrawerTarget from '@/observability/traces/open-logs-from-trace'
+  import useTraceDrawerUrlSync from '@/observability/traces/use-trace-drawer-url-sync'
   import TraceTable from './components/TraceTable.vue'
+  import TraceDetailDrawer from './components/TraceDetailDrawer.vue'
+  import TraceLogsDrawer from './components/TraceLogsDrawer.vue'
 
   defineOptions({
     name: 'TraceQuery',
   })
+
+  const { t } = useI18n()
 
   // 1. Time range state
   const timeRange = useTimeRange()
@@ -145,6 +172,17 @@
     exportToCSV()
   }
 
+  /**
+   * Publish the table this page just queried, so the Logs Query page reads the same traces
+   * table from its Logs → trace link. Code mode has no SQLBuilder, so this is the only writer
+   * in that mode. Any defaulting (first table in the list) stays inside the page, never in the
+   * link: the link only follows what the page published.
+   */
+  function publishQueryTable() {
+    if (!queryState.table || !queryState.database) return
+    writeQueryTable(TRACES_QUERY_STORAGE_KEY, queryState.database, queryState.table)
+  }
+
   async function handleQuery() {
     // Keep-alive keeps this component's watchers alive after it is deactivated. Do not
     // let a cached Trace page consume query params or run while another route is active.
@@ -154,6 +192,7 @@
       if (!isTraceQueryRoute()) return
       allResults.value = results || []
       updateQueryParams()
+      publishQueryTable()
     })
     // CountChart mounts only after queryState.sql is set — wait a tick for the ref.
     if (chartExpanded.value) {
@@ -180,6 +219,47 @@
     }
   }
 
+  // Trace detail opens as a drawer over this page: the page stays mounted and the drawer state
+  // lives in the URL query, so a refresh reopens it next to the list.
+  const {
+    traceId: traceDrawerId,
+    target: traceDrawerTarget,
+    open: openTraceDrawer,
+    close: closeTraceDrawer,
+  } = useTraceDrawerUrlSync('trace-query')
+
+  function openTrace(payload: { traceId: string; timestamp?: unknown }) {
+    const traceId = String(payload?.traceId || '').trim()
+    if (!traceId) return
+    openTraceDrawer(
+      traceId,
+      buildTraceDetailTarget({
+        table: queryState.table || 'spans',
+        database: queryState.database,
+        timestamp: payload.timestamp,
+      })
+    )
+  }
+
+  // Logs of the open trace stack on top of the trace drawer, also kept in the URL.
+  const {
+    traceId: logsDrawerId,
+    target: logsDrawerTarget,
+    open: openLogsDrawer,
+    close: closeLogsDrawer,
+  } = useTraceDrawerUrlSync('trace-query', 'logs')
+
+  function openLogs(span: Record<string, any>) {
+    const traceId = String(span?.trace_id || traceDrawerId.value || '').trim()
+    if (!traceId) return
+    const target = resolveTraceLogsDrawerTarget(span?.timestamp)
+    if (!target) {
+      Message.warning(t('drilldown.traces.traceLogsNoTable', { page: t('menu.dashboard.logsQuery') }))
+      return
+    }
+    openLogsDrawer(traceId, target)
+  }
+
   function handleFilterConditionAdd({ columnName, operator, value }) {
     if (sqlBuilderRef.value && sqlBuilderRef.value.addFilterCondition) {
       sqlBuilderRef.value.addFilterCondition(columnName, operator, value)
@@ -194,11 +274,6 @@
   })
 
   onMounted(() => {
-    initializeFromQuery()
-  })
-
-  // keepAlive: re-apply URL state (e.g. product tour steps) on re-entry.
-  onActivated(() => {
     initializeFromQuery()
   })
 

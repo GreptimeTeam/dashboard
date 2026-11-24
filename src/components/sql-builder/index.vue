@@ -196,6 +196,7 @@ a-modal(
   import { useAppStore } from '@/store'
   import { listBySignal } from '@/observability/semantics'
   import { getSignalDatabase, setSignalDatabase } from '@/observability/signal-database'
+  import { readQueryTable, writeQueryTable } from '@/observability/query-table-pref'
   import type { Condition, BuilderFormState as Form } from '@/types/query'
   import { TsTypeMapping } from '@/utils/date-time'
   import { hostMatches, readRaw, writeJSON } from '@/utils/storage'
@@ -246,6 +247,13 @@ a-modal(
      * dropdown uses Drilldown `listSignalTables` (unless `tablesProvider` is provided).
      */
     signalDatabaseKind?: 'logs' | 'traces'
+    /**
+     * Remember the chosen table per database under `storageKey`, and restore it when the
+     * table is not already set (reload, database switch). Every write also records the
+     * (database, table) as the page's latest query, which the Logs ⇄ Trace links read back
+     * with `readLastQueryTable`.
+     */
+    rememberTable?: boolean
     defaultFormState?: Form
   }>()
 
@@ -268,13 +276,20 @@ a-modal(
     return databaseList.value.filter((db) => db !== 'greptime_private' && db !== 'information_schema')
   })
 
-  // Stable key for per-builder preferences (quick filters). The selected table is
-  // deliberately not persisted: remembering a table across database switches leaves
-  // the picker pointing at a name from the previous database.
+  // Stable key for per-builder preferences (quick filters, remembered table). The table is
+  // only remembered when `rememberTable` is set, and per database, so a database switch
+  // never leaves the picker pointing at a name from the previous database.
   const storageKey = props.storageKey || 'sql-builder'
 
   // Initialize form state as reactive object
   const form = reactive<Form>(props.formState)
+
+  /** Persist the table currently shown, once it is known to exist in this database. */
+  function rememberSelectedTable() {
+    if (!props.rememberTable || !form.database || !form.table) return
+    if (!tables.value.includes(form.table)) return
+    writeQueryTable(storageKey, form.database, form.table)
+  }
 
   // Computed tableCatalog and tableSchema based on form.database
   const currentTableCatalog = computed(() => {
@@ -685,10 +700,12 @@ a-modal(
       }
 
       // Keep a table already chosen for this database (e.g. restored from the URL);
-      // otherwise fall back to the first one in the list.
+      // otherwise the one remembered for this database, else the first in the list.
       if (!form.table || !tables.value.includes(form.table)) {
-        form.table = tables.value[0] ?? ''
+        const remembered = props.rememberTable ? readQueryTable(storageKey, form.database) : undefined
+        form.table = remembered && tables.value.includes(remembered) ? remembered : tables.value[0] ?? ''
       }
+      rememberSelectedTable()
     } catch (error) {
       console.error('Failed to fetch tables:', error)
     }
@@ -868,6 +885,7 @@ a-modal(
   watch(
     () => form.table,
     () => {
+      rememberSelectedTable()
       clearSampledAttributes()
       fetchTableFields(form.table)
       // Attribute keys are sampled later, when the filter field picker opens.

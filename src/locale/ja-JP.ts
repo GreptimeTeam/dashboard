@@ -170,6 +170,7 @@ export default {
   // SQL Builder
   'sqlBuilder.table': 'テーブル',
   'sqlBuilder.database': 'データベース',
+  'sqlBuilder.selectDatabase': 'データベースを選択',
   'sqlBuilder.selectTable': 'テーブルを選択',
   'sqlBuilder.filters': '抽出条件',
   'sqlBuilder.field': '列',

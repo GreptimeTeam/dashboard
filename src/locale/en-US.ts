@@ -169,6 +169,7 @@ export default {
   // SQL Builder
   'sqlBuilder.table': 'Table',
   'sqlBuilder.database': 'Database',
+  'sqlBuilder.selectDatabase': 'Select database',
   'sqlBuilder.selectTable': 'Select table',
   'sqlBuilder.filters': 'Filters',
   'sqlBuilder.field': 'field',

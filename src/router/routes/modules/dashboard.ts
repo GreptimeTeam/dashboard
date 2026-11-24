@@ -111,21 +111,6 @@ const DASHBOARD: AppRouteRecordRaw = {
         requiresAuth: false,
         icon: 'Icon7',
         roles: ['admin', 'cloud'],
-        keepAlive: true,
-        componentName: 'TraceQuery',
-      },
-    },
-    {
-      path: 'traces/detail/:id',
-      name: 'dashboard-TraceDetail',
-      component: () => import('@/views/dashboard/traces/[id].vue'),
-      meta: {
-        requiresAuth: false,
-        roles: ['admin', 'cloud'],
-        hideInMenu: true,
-        activeMenu: 'trace-query',
-        keepAlive: false,
-        ignoreCache: true,
       },
     },
     {

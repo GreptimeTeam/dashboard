@@ -238,6 +238,14 @@ export default {
   'drilldown.traces.noRows': '現在の時間範囲にルートスパンがありません',
   'drilldown.traces.traceIdSearchPlaceholder': 'トレース ID を貼り付け',
   'drilldown.traces.traceIdSearchAction': '表示',
+  'drilldown.traces.traceLogsTitle': 'Trace ログ',
+  'drilldown.traces.traceLogsCount': '{count} 件のログ',
+  'drilldown.traces.traceLogsEmpty':
+    '{target} にこの Trace ID のログが見つかりません。{page} ページでログテーブルを選択してください。',
+  'drilldown.traces.traceLogsNoTraceColumn':
+    '{target} には trace id 列がありません。{page} ページでログテーブルを選択してください。',
+  'drilldown.traces.traceLogsNoTable':
+    'ログテーブルがまだバインドされていません。先に {page} ページでクエリを実行するか、テーブルを選択してください。',
   'drilldown.traces.openLogs': 'ログを表示',
   'drilldown.traces.logsMappingAmbiguous': '複数のログテーブルが候補として見つかりました。設定から 1 つ選んでください',
   'drilldown.traces.logsMappingFallbackHint':
@@ -245,6 +253,8 @@ export default {
   'drilldown.traces.back': '戻る',
   'drilldown.traces.unknownOperation': '不明な操作',
   'drilldown.traces.ganttEmpty': 'このトレース ID のスパンは見つかりませんでした',
+  'drilldown.traces.ganttEmptyIn':
+    '{target} にこのトレース ID のスパンは見つかりませんでした。サンプリングで破棄された可能性があります。',
   'drilldown.traces.logsSettingsTitle': 'トレースログを設定',
   'drilldown.traces.logsSettingsShortTitle': 'トレースログ',
   'drilldown.traces.logsSettingsDescription':
