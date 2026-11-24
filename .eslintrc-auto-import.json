@@ -13,6 +13,7 @@
     "MaybeRefOrGetter": true,
     "PropType": true,
     "Ref": true,
+    "TABLE_OPTION_LIMIT": true,
     "VNode": true,
     "WritableComputedRef": true,
     "acceptHMRUpdate": true,
@@ -113,6 +114,7 @@
     "useSqlBuilderHook": true,
     "useStatusBarStore": true,
     "useTabBarStore": true,
+    "useTableOptions": true,
     "useTableSchemaStore": true,
     "useTemplateRef": true,
     "useTextEditorState": true,
@@ -122,8 +124,6 @@
     "watch": true,
     "watchEffect": true,
     "watchPostEffect": true,
-    "watchSyncEffect": true,
-    "TABLE_OPTION_LIMIT": true,
-    "useTableOptions": true
+    "watchSyncEffect": true
   }
 }

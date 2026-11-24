@@ -412,6 +412,46 @@
   }
 }
 
+// Standalone detail page header (Trace Query detail): same chrome as the drawer header above.
+.drilldown-detail-header {
+  display: flex;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  width: 100%;
+  height: 48px;
+  align-items: center;
+  padding: 0 var(--gpt-page-padding-x);
+  border-bottom: 1px solid var(--gpt-border-default);
+  background: var(--gpt-bg-header);
+  color: var(--gpt-text-primary);
+  // Arco drawer title defaults (the breadcrumb text inherits these).
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.drilldown-detail-header__close {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: var(--gpt-control-height-sm);
+  height: var(--gpt-control-height-sm);
+  align-items: center;
+  justify-content: center;
+  margin-left: var(--gpt-page-padding-x);
+  padding: 0;
+  border: 0;
+  border-radius: var(--gpt-radius-sm);
+  color: var(--gpt-text-secondary);
+  background: transparent;
+  font-size: var(--gpt-font-xl);
+  line-height: 1;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--gpt-text-primary);
+    background-color: var(--gpt-bg-code-line);
+  }
+}
+
 .drilldown-drawer__standard-header {
   display: flex;
   width: 100%;
