@@ -19,6 +19,7 @@
       :columns="vxeColumns"
       :loading="loading"
       :row-config="rowConfig"
+      :cell-config="cellConfig"
       :column-config="columnConfig"
       :column-drag-config="columnDragConfig"
       :virtual-y-config="virtualYConfig"
@@ -381,15 +382,13 @@
   })
 
   const rowConfig = computed(() => {
-    const base = {
+    return {
       isHover: true,
       keyField: '__rowIndex',
     }
-    if (props.wrapLine) {
-      return base
-    }
-    return { ...base, height: rowHeight.value }
   })
+
+  const cellConfig = computed(() => (props.wrapLine ? {} : { height: rowHeight.value }))
 
   const columnDragEnabled = computed(() => props.columnDrag && props.columnMode === 'separate')
 

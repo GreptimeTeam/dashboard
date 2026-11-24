@@ -170,6 +170,7 @@ export default {
   // SQL Builder
   'sqlBuilder.table': '表',
   'sqlBuilder.database': '数据库',
+  'sqlBuilder.selectDatabase': '选择数据库',
   'sqlBuilder.selectTable': '选择表',
   'sqlBuilder.filters': '筛选条件',
   'sqlBuilder.field': '列',
