@@ -92,7 +92,8 @@
   import { listSignalTables } from '@/observability/semantics'
   import { TRACES_QUERY_STORAGE_KEY } from '@/observability/query-table-pref'
   import useUiPref from '@/composables/use-ui-pref'
-  import { buildTraceDetailTarget, type TraceDetailTarget } from '@/observability/traces/trace-detail-target'
+  import { buildTraceDetailTarget } from '@/observability/traces/trace-detail-target'
+  import useTraceDrawerUrlSync from '@/observability/traces/use-trace-drawer-url-sync'
   import TraceTable from './components/TraceTable.vue'
   import TraceDetailDrawer from './components/TraceDetailDrawer.vue'
 
@@ -191,23 +192,26 @@
     }
   }
 
-  // Trace detail opens as a drawer over this page: no route change, so this page stays mounted.
-  const traceDrawerId = ref('')
-  const traceDrawerTarget = ref<TraceDetailTarget>()
+  // Trace detail opens as a drawer over this page: the page stays mounted and the drawer state
+  // lives in the URL query, so a refresh reopens it next to the list.
+  const {
+    traceId: traceDrawerId,
+    target: traceDrawerTarget,
+    open: openTraceDrawer,
+    close: closeTraceDrawer,
+  } = useTraceDrawerUrlSync('trace-query')
 
   function openTrace(payload: { traceId: string; timestamp?: unknown }) {
     const traceId = String(payload?.traceId || '').trim()
     if (!traceId) return
-    traceDrawerTarget.value = buildTraceDetailTarget({
-      table: queryState.table || 'spans',
-      database: queryState.database,
-      timestamp: payload.timestamp,
-    })
-    traceDrawerId.value = traceId
-  }
-
-  function closeTraceDrawer() {
-    traceDrawerId.value = ''
+    openTraceDrawer(
+      traceId,
+      buildTraceDetailTarget({
+        table: queryState.table || 'spans',
+        database: queryState.database,
+        timestamp: payload.timestamp,
+      })
+    )
   }
 
   function handleFilterConditionAdd({ columnName, operator, value }) {

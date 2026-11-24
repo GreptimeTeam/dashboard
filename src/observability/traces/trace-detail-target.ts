@@ -38,3 +38,57 @@ export function traceDetailTargetFromQuery(query: Record<string, unknown>): Trac
     ...(hasRange ? { start, end } : {}),
   }
 }
+
+/**
+ * Query keys that keep an open trace drawer across a refresh. Prefixed so they never
+ * collide with the list pages' own params (`builderForm`, `timeRange`, ...).
+ */
+export const TRACE_DRAWER_QUERY_KEYS = ['traceId', 'traceTable', 'traceDb', 'traceStart', 'traceEnd'] as const
+
+function firstString(value: unknown): string {
+  const item = Array.isArray(value) ? value[0] : value
+  return typeof item === 'string' ? item : ''
+}
+
+/** Drawer state encoded in a list page's query string; `undefined` when no drawer is open. */
+export function traceDrawerFromQuery(
+  query: Record<string, unknown>
+): { traceId: string; target: TraceDetailTarget } | undefined {
+  const traceId = firstString(query.traceId).trim()
+  const table = firstString(query.traceTable).trim()
+  if (!traceId || !table) return undefined
+  const database = firstString(query.traceDb).trim()
+  const start = Number(firstString(query.traceStart))
+  const end = Number(firstString(query.traceEnd))
+  const hasRange =
+    firstString(query.traceStart) && firstString(query.traceEnd) && Number.isFinite(start) && end >= start
+  return {
+    traceId,
+    target: {
+      table,
+      ...(database ? { database } : {}),
+      ...(hasRange ? { start, end } : {}),
+    },
+  }
+}
+
+/** Query with the drawer params set (open) or removed (`traceId` empty); other params are kept. */
+export function traceDrawerToQuery(
+  query: Record<string, unknown>,
+  traceId: string,
+  target?: TraceDetailTarget
+): Record<string, unknown> {
+  const next: Record<string, unknown> = { ...query }
+  TRACE_DRAWER_QUERY_KEYS.forEach((key) => {
+    delete next[key]
+  })
+  if (!traceId || !target) return next
+  next.traceId = traceId
+  next.traceTable = target.table
+  if (target.database) next.traceDb = target.database
+  if (target.start !== undefined && target.end !== undefined) {
+    next.traceStart = String(target.start)
+    next.traceEnd = String(target.end)
+  }
+  return next
+}

@@ -168,7 +168,7 @@
   import { getSignalDatabase } from '@/observability/signal-database'
   import { LOGS_QUERY_STORAGE_KEY } from '@/observability/query-table-pref'
   import { findTraceIdColumn, resolveTraceDetailTarget } from '@/observability/traces/open-trace-from-log'
-  import type { TraceDetailTarget } from '@/observability/traces/trace-detail-target'
+  import useTraceDrawerUrlSync from '@/observability/traces/use-trace-drawer-url-sync'
   import TraceDetailDrawer from '@/views/dashboard/traces/components/TraceDetailDrawer.vue'
   import ColumnLayoutPanel from '@/components/column-layout-panel/ColumnLayoutPanel.vue'
   import ChartContainer from './ChartContainer.vue'
@@ -251,9 +251,14 @@
   // claims a trace (no foreign key), so existence is checked by the detail page itself.
   const traceIdColumn = computed(() => findTraceIdColumn(columns.value))
 
-  // Trace detail opens as a drawer over this page, so the Logs Query stays mounted (no URL change).
-  const traceDrawerId = ref('')
-  const traceDrawerTarget = ref<TraceDetailTarget>()
+  // Trace detail opens as a drawer over this page, so the Logs Query stays mounted. The drawer
+  // state lives in the URL query (not the path), so a refresh reopens it next to the list.
+  const {
+    traceId: traceDrawerId,
+    target: traceDrawerTarget,
+    open: openTraceDrawer,
+    close: closeTraceDrawer,
+  } = useTraceDrawerUrlSync('log-query')
 
   async function openTrace(traceId: string, row?: Record<string, unknown>) {
     const id = String(traceId || '').trim()
@@ -266,12 +271,7 @@
       )
       return
     }
-    traceDrawerTarget.value = target
-    traceDrawerId.value = id
-  }
-
-  function closeTraceDrawer() {
-    traceDrawerId.value = ''
+    openTraceDrawer(id, target)
   }
 
   // Shown when the trace has no spans in the target table: says where to pick the table.
