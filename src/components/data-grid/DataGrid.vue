@@ -238,7 +238,7 @@
   const emit = defineEmits<{
     (e: 'reachEnd'): void
     (e: 'tsCellClick', row: TableData, rowIndex: number): void
-    (e: 'columnLinkClick', columnName: string, value: string): void
+    (e: 'columnLinkClick', columnName: string, value: string, row?: TableData): void
     (e: 'filterConditionAdd', payload: { columnName: string; operator: string; value: unknown }): void
     (e: 'update:page', page: number): void
     (e: 'update:pageSize', size: number): void
@@ -802,13 +802,13 @@
     isDetailCellTarget,
   } = cellDetailApi
 
-  function onLinkClick(columnName: string, value: string, event: Event) {
+  function onLinkClick(columnName: string, value: string, event: Event, row?: TableData) {
     event.stopPropagation()
     const text = value.trim()
     if (!text) {
       return
     }
-    emit('columnLinkClick', columnName, text)
+    emit('columnLinkClick', columnName, text, row ? getOriginalRow(row) : undefined)
   }
 
   function renderActionIcon(row: TableData, field: string) {
@@ -862,7 +862,7 @@
           {
             type: 'button',
             class: 'dg-link',
-            onClick: (event: MouseEvent) => onLinkClick(field, text, event),
+            onClick: (event: MouseEvent) => onLinkClick(field, text, event, row),
           },
           text
         )
@@ -889,7 +889,7 @@
             {
               type: 'button',
               class: 'dg-link',
-              onClick: (event: MouseEvent) => onLinkClick(part.key, part.text, event),
+              onClick: (event: MouseEvent) => onLinkClick(part.key, part.text, event, params.row),
             },
             part.text
           )

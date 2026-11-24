@@ -244,6 +244,9 @@ export default {
   'drilldown.traces.back': 'Back',
   'drilldown.traces.unknownOperation': 'Unknown operation',
   'drilldown.traces.ganttEmpty': 'No spans found for this Trace ID',
+  'drilldown.traces.ganttEmptyIn': 'No spans found for this Trace ID in {target}',
+  'drilldown.traces.ganttEmptyHint':
+    'The trace may be sampled out, stored in another table or database, or outside the time window.',
   'drilldown.traces.logsSettingsTitle': 'Configure trace logs',
   'drilldown.traces.logsSettingsShortTitle': 'Trace logs',
   'drilldown.traces.logsSettingsDescription': 'Map each service to the logs database and table that contain its logs.',

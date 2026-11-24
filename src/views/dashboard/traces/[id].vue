@@ -13,7 +13,12 @@
     button.drilldown-detail-header__close(type="button" :aria-label="$t('common.close')" @click="handleBack")
       icon-close
   .trace-detail-body
-    TraceGanttView(:spans="traceSpans" :loading="loading")
+    TraceGanttView(
+      :spans="traceSpans"
+      :loading="loading"
+      :empty-description="$t('drilldown.traces.ganttEmptyIn', { target: searchedTarget })"
+      :empty-hint="$t('drilldown.traces.ganttEmptyHint')"
+    )
 </template>
 
 <script setup lang="ts">
@@ -36,6 +41,11 @@
 
   const traceSpans = ref<Span[]>([])
   const traceId = computed(() => String(route.params.id || ''))
+  const searchedTarget = computed(() => {
+    const table = String(route.query.table || 'spans')
+    const database = String(route.query.database || '')
+    return database ? `${database}.${table}` : table
+  })
 
   function escapeSqlString(value: string) {
     return value.replace(/'/g, "''")

@@ -32,4 +32,5 @@ export default {
   'logsQuery.clickToQuery': '选择时间段',
   'logsQuery.loadMoreHint': '继续滚动或点击加载更多',
   'logsQuery.limitPlaceholder': '输入条数上限',
+  'logsQuery.traceNoTable': '数据库 "{database}" 中未找到 traces 表，请先在 Traces Query 中选择。',
 }

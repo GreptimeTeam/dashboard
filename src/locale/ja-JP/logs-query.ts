@@ -32,4 +32,6 @@ export default {
   'logsQuery.clickToQuery': '時間範囲を選択',
   'logsQuery.loadMoreHint': 'スクロールまたはクリックしてさらに読み込む',
   'logsQuery.limitPlaceholder': '上限を入力',
+  'logsQuery.traceNoTable':
+    'データベース "{database}" に traces テーブルが見つかりません。先に Traces Query で選択してください。',
 }

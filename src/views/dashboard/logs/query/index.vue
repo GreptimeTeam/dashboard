@@ -137,6 +137,8 @@
         :displayed-columns="visibleColumnNames"
         :column-drag="columnMode === 'separate'"
         :pinned-column-fields="timestampColumnName ? [timestampColumnName] : []"
+        :trace-id-column="traceIdColumn"
+        @trace-click="openTrace"
         @filter-condition-add="handleFilterConditionAdd"
         @reach-end="loadMore"
         @column-order-change="handleColumnOrderChange"
@@ -145,21 +147,30 @@
     ExportModal(v-model:visible="exportModalVisible" :sql="exportSqlText" @confirm="handleExportConfirm")
 </template>
 
-<script setup lang="ts" name="LogsQuery">
-  import { ref, computed, watch, nextTick } from 'vue'
-  import { useRoute } from 'vue-router'
+<script setup lang="ts">
+  import { ref, computed, watch, nextTick, onActivated, onDeactivated } from 'vue'
+  import { useRoute, useRouter } from 'vue-router'
+  import { Message } from '@arco-design/web-vue'
+  import { useI18n } from 'vue-i18n'
   import SQLBuilder from '@/components/sql-builder/index.vue'
   import SqlTextEditor from '@/components/sql-text-editor/index.vue'
   import { replaceTimePlaceholders } from '@/utils/sql'
   import { isQueryGuideEnabled } from '@/utils/query-guide-enabled'
   import useLogsTablePrefs from '@/observability/use-logs-table-prefs'
   import { getSignalDatabase } from '@/observability/signal-database'
+  import { findTraceIdColumn, resolveTraceDetailTarget } from '@/observability/traces/open-trace-from-log'
   import ColumnLayoutPanel from '@/components/column-layout-panel/ColumnLayoutPanel.vue'
   import ChartContainer from './ChartContainer.vue'
   import ExportModal from './ExportModal.vue'
   import LogTableData from './LogsTable.vue'
 
+  defineOptions({
+    name: 'LogsQuery',
+  })
+
   const route = useRoute()
+  const router = useRouter()
+  const { t } = useI18n()
   const isLogsQueryRoute = () => route.name === 'log-query'
   // Guide step switching is browse-only. Preserve the normal page's initial auto query,
   // but in guide mode wait for the guide's explicit "Run query" action (`tourApply`).
@@ -226,6 +237,22 @@
       columns.value.find((column) => column.data_type?.toLowerCase().includes('timestamp'))?.name ||
       ''
   )
+  // A `trace_id` column makes every value a link to the Trace detail page. The log row only
+  // claims a trace (no foreign key), so existence is checked by the detail page itself.
+  const traceIdColumn = computed(() => findTraceIdColumn(columns.value))
+
+  async function openTrace(traceId: string, row?: Record<string, unknown>) {
+    const id = String(traceId || '').trim()
+    if (!id) return
+    const anchor = timestampColumnName.value ? row?.[timestampColumnName.value] : undefined
+    const target = await resolveTraceDetailTarget(anchor)
+    if (!target) {
+      Message.warning(t('logsQuery.traceNoTable', { database: getSignalDatabase('traces') }))
+      return
+    }
+    router.push({ name: 'dashboard-TraceDetail', params: { id }, query: target.query })
+  }
+
   const selectableColumnNames = computed(() => columnNames.value.filter((name) => name !== timestampColumnName.value))
   // DataGrid always pins ts via tsColumn; stored layout covers selectable columns only.
   const visibleColumnNames = computed(() => {
@@ -273,12 +300,17 @@
   }
 
   // Same-route tutorial click: form sync alone does not re-fire canExecuteInitialQuery.
+  // Compare against what this route itself last saw: `prev` from watch() would include values
+  // from other routes (Trace detail has no builderForm), so returning from detail would re-run
+  // the query even though this page is kept alive.
+  let lastSeenQuery: readonly [unknown, unknown] = [route.query.builderForm, route.query.tourApply]
   watch(
     () => [route.query.builderForm, route.query.tourApply] as const,
-    (next, prev) => {
+    (next) => {
       if (!isLogsQueryRoute()) return
+      const prev = lastSeenQuery
+      lastSeenQuery = next
       if (isApplyingLocalUrlUpdate()) return
-      if (!prev) return
       if (next[0] === prev[0] && next[1] === prev[1]) return
       if (!next[0] && !next[1]) return
       initializeFromQuery()
@@ -332,6 +364,18 @@
       mayRefresh()
     } else {
       clearTimeout(refreshTimeout)
+    }
+  })
+
+  // Kept alive (e.g. while a Trace detail is open): pause Live polling off-screen.
+  onDeactivated(() => {
+    clearTimeout(refreshTimeout)
+  })
+
+  onActivated(() => {
+    initializeFromQuery()
+    if (refresh.value) {
+      mayRefresh()
     }
   })
 
