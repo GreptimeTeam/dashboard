@@ -462,6 +462,11 @@ export async function resolveSignalTable(
 ): Promise<string | undefined>
 
 export async function resolveSignalTable(
+  signal: 'logs',
+  options?: { preferred?: string; settingsTable?: string; database?: string }
+): Promise<string | undefined>
+
+export async function resolveSignalTable(
   signal: 'logs' | 'traces',
   options?: { preferred?: string; settingsTable?: string; database?: string }
 ): Promise<string | undefined> {

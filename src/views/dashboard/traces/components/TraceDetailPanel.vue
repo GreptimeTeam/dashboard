@@ -1,6 +1,12 @@
 <template lang="pug">
 .trace-detail-panel
-  TraceGanttView(:spans="traceSpans" :loading="loading" :empty-text="resolvedEmptyText")
+  TraceGanttView(
+    :spans="traceSpans"
+    :loading="loading"
+    :empty-text="resolvedEmptyText"
+    :logs-trace-enabled="logsTraceEnabled"
+    @view-logs="(span) => emit('viewLogs', span)"
+  )
 </template>
 
 <script setup lang="ts">
@@ -27,6 +33,12 @@
     target: TraceDetailTarget
     /** Full empty-state message; defaults to "not found in <table>". */
     emptyText?: string
+    /** Show the span's View logs action; the parent opens the logs. */
+    logsTraceEnabled?: boolean
+  }>()
+
+  const emit = defineEmits<{
+    viewLogs: [span: Span]
   }>()
 
   const loading = ref(false)

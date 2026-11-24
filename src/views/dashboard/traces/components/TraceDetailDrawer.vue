@@ -11,6 +11,8 @@ DrilldownDrawer(
     :trace-id="traceId"
     :target="target"
     :empty-text="emptyText"
+    :logs-trace-enabled="logsTraceEnabled"
+    @view-logs="(span) => emit('viewLogs', span)"
   )
 </template>
 
@@ -20,6 +22,7 @@ DrilldownDrawer(
   import DrilldownDrawer from '@/views/dashboard/drilldown/components/drilldown-drawer.vue'
   import type { TraceDetailTarget } from '@/observability/traces/trace-detail-target'
   import TraceDetailPanel from './TraceDetailPanel.vue'
+  import type { Span } from '../utils'
 
   /**
    * In-page trace detail: the same header and timeline as the standalone detail route, but
@@ -35,10 +38,13 @@ DrilldownDrawer(
     target?: TraceDetailTarget
     popupContainer: string
     emptyText?: string
+    /** Show the span's View logs action; the parent opens the logs. */
+    logsTraceEnabled?: boolean
   }>()
 
   const emit = defineEmits<{
     close: []
+    viewLogs: [span: Span]
   }>()
 
   const { t } = useI18n()

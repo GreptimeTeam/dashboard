@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { traceDrawerFromQuery, traceDrawerToQuery } from './trace-detail-target'
+import {
+  traceDrawerFromQuery,
+  traceDrawerToQuery,
+  traceLogsDrawerFromQuery,
+  traceLogsDrawerToQuery,
+} from './trace-detail-target'
 
 describe('trace drawer query', () => {
   const target = { table: 'opentelemetry_traces_v2', database: 'public', start: 100, end: 200 }
@@ -47,5 +52,34 @@ describe('trace drawer query', () => {
       traceId: 'abc',
       target: { table: 'spans' },
     })
+  })
+})
+
+describe('trace logs drawer query', () => {
+  const target = { table: 'opentelemetry_logs', database: 'public', start: 100, end: 200 }
+
+  it('round-trips through its own prefixed keys', () => {
+    const query = traceLogsDrawerToQuery({}, 'abc', target)
+
+    expect(query).toEqual({
+      logsTraceId: 'abc',
+      logsTable: 'opentelemetry_logs',
+      logsDb: 'public',
+      logsStart: '100',
+      logsEnd: '200',
+    })
+    expect(traceLogsDrawerFromQuery(query)).toEqual({ traceId: 'abc', target })
+  })
+
+  it('is independent of the trace drawer params that are open at the same time', () => {
+    const traceTarget = { table: 'spans' }
+    const both = traceLogsDrawerToQuery(traceDrawerToQuery({ keep: '1' }, 't1', traceTarget), 'l1', target)
+
+    expect(traceDrawerFromQuery(both)).toEqual({ traceId: 't1', target: traceTarget })
+    expect(traceLogsDrawerFromQuery(both)).toEqual({ traceId: 'l1', target })
+
+    const logsClosed = traceLogsDrawerToQuery(both, '')
+    expect(logsClosed).toEqual({ keep: '1', traceId: 't1', traceTable: 'spans' })
+    expect(traceLogsDrawerFromQuery(logsClosed)).toBeUndefined()
   })
 })

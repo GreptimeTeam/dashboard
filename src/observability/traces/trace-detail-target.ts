@@ -39,29 +39,57 @@ export function traceDetailTargetFromQuery(query: Record<string, unknown>): Trac
   }
 }
 
+/** Query keys of one trace-target drawer: id + where to read it from (+ optional window). */
+interface TargetDrawerKeys {
+  id: string
+  table: string
+  db: string
+  start: string
+  end: string
+}
+
 /**
- * Query keys that keep an open trace drawer across a refresh. Prefixed so they never
- * collide with the list pages' own params (`builderForm`, `timeRange`, ...).
+ * Keys are prefixed so they never collide with the list pages' own params (`builderForm`,
+ * `timeRange`, ...) nor with each other: the trace drawer and the logs drawer opened from it
+ * can be open at the same time.
  */
-export const TRACE_DRAWER_QUERY_KEYS = ['traceId', 'traceTable', 'traceDb', 'traceStart', 'traceEnd'] as const
+const TRACE_KEYS: TargetDrawerKeys = {
+  id: 'traceId',
+  table: 'traceTable',
+  db: 'traceDb',
+  start: 'traceStart',
+  end: 'traceEnd',
+}
+const TRACE_LOGS_KEYS: TargetDrawerKeys = {
+  id: 'logsTraceId',
+  table: 'logsTable',
+  db: 'logsDb',
+  start: 'logsStart',
+  end: 'logsEnd',
+}
+
+export const TRACE_DRAWER_QUERY_KEYS = Object.values(TRACE_KEYS)
+export const TRACE_LOGS_DRAWER_QUERY_KEYS = Object.values(TRACE_LOGS_KEYS)
+
+export interface TraceDrawerState {
+  traceId: string
+  target: TraceDetailTarget
+}
 
 function firstString(value: unknown): string {
   const item = Array.isArray(value) ? value[0] : value
   return typeof item === 'string' ? item : ''
 }
 
-/** Drawer state encoded in a list page's query string; `undefined` when no drawer is open. */
-export function traceDrawerFromQuery(
-  query: Record<string, unknown>
-): { traceId: string; target: TraceDetailTarget } | undefined {
-  const traceId = firstString(query.traceId).trim()
-  const table = firstString(query.traceTable).trim()
+function drawerFromQuery(query: Record<string, unknown>, keys: TargetDrawerKeys): TraceDrawerState | undefined {
+  const traceId = firstString(query[keys.id]).trim()
+  const table = firstString(query[keys.table]).trim()
   if (!traceId || !table) return undefined
-  const database = firstString(query.traceDb).trim()
-  const start = Number(firstString(query.traceStart))
-  const end = Number(firstString(query.traceEnd))
+  const database = firstString(query[keys.db]).trim()
+  const start = Number(firstString(query[keys.start]))
+  const end = Number(firstString(query[keys.end]))
   const hasRange =
-    firstString(query.traceStart) && firstString(query.traceEnd) && Number.isFinite(start) && end >= start
+    firstString(query[keys.start]) && firstString(query[keys.end]) && Number.isFinite(start) && end >= start
   return {
     traceId,
     target: {
@@ -72,23 +100,51 @@ export function traceDrawerFromQuery(
   }
 }
 
-/** Query with the drawer params set (open) or removed (`traceId` empty); other params are kept. */
+function drawerToQuery(
+  query: Record<string, unknown>,
+  keys: TargetDrawerKeys,
+  traceId: string,
+  target?: TraceDetailTarget
+): Record<string, unknown> {
+  const next: Record<string, unknown> = { ...query }
+  Object.values(keys).forEach((key) => {
+    delete next[key]
+  })
+  if (!traceId || !target) return next
+  next[keys.id] = traceId
+  next[keys.table] = target.table
+  if (target.database) next[keys.db] = target.database
+  if (target.start !== undefined && target.end !== undefined) {
+    next[keys.start] = String(target.start)
+    next[keys.end] = String(target.end)
+  }
+  return next
+}
+
+/** Trace drawer state in a list page's query string; `undefined` when no drawer is open. */
+export function traceDrawerFromQuery(query: Record<string, unknown>): TraceDrawerState | undefined {
+  return drawerFromQuery(query, TRACE_KEYS)
+}
+
+/** Query with the trace drawer params set (open) or removed (`traceId` empty); other params are kept. */
 export function traceDrawerToQuery(
   query: Record<string, unknown>,
   traceId: string,
   target?: TraceDetailTarget
 ): Record<string, unknown> {
-  const next: Record<string, unknown> = { ...query }
-  TRACE_DRAWER_QUERY_KEYS.forEach((key) => {
-    delete next[key]
-  })
-  if (!traceId || !target) return next
-  next.traceId = traceId
-  next.traceTable = target.table
-  if (target.database) next.traceDb = target.database
-  if (target.start !== undefined && target.end !== undefined) {
-    next.traceStart = String(target.start)
-    next.traceEnd = String(target.end)
-  }
-  return next
+  return drawerToQuery(query, TRACE_KEYS, traceId, target)
+}
+
+/** Logs drawer (logs of one trace, opened from the trace drawer) state in the query string. */
+export function traceLogsDrawerFromQuery(query: Record<string, unknown>): TraceDrawerState | undefined {
+  return drawerFromQuery(query, TRACE_LOGS_KEYS)
+}
+
+/** Query with the logs drawer params set (open) or removed (`traceId` empty); other params are kept. */
+export function traceLogsDrawerToQuery(
+  query: Record<string, unknown>,
+  traceId: string,
+  target?: TraceDetailTarget
+): Record<string, unknown> {
+  return drawerToQuery(query, TRACE_LOGS_KEYS, traceId, target)
 }

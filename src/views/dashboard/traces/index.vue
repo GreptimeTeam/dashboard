@@ -76,9 +76,17 @@
     )
     TraceDetailDrawer(
       popup-container=".trace-query-container"
+      logs-trace-enabled
       :trace-id="traceDrawerId"
       :target="traceDrawerTarget"
       @close="closeTraceDrawer"
+      @view-logs="openLogs"
+    )
+    TraceLogsDrawer(
+      popup-container=".trace-query-container"
+      :trace-id="logsDrawerId"
+      :target="logsDrawerTarget"
+      @close="closeLogsDrawer"
     )
 </template>
 
@@ -92,14 +100,20 @@
   import { listSignalTables } from '@/observability/semantics'
   import { TRACES_QUERY_STORAGE_KEY } from '@/observability/query-table-pref'
   import useUiPref from '@/composables/use-ui-pref'
+  import { Message } from '@arco-design/web-vue'
+  import { useI18n } from 'vue-i18n'
   import { buildTraceDetailTarget } from '@/observability/traces/trace-detail-target'
+  import resolveTraceLogsDrawerTarget from '@/observability/traces/open-logs-from-trace'
   import useTraceDrawerUrlSync from '@/observability/traces/use-trace-drawer-url-sync'
   import TraceTable from './components/TraceTable.vue'
   import TraceDetailDrawer from './components/TraceDetailDrawer.vue'
+  import TraceLogsDrawer from './components/TraceLogsDrawer.vue'
 
   defineOptions({
     name: 'TraceQuery',
   })
+
+  const { t } = useI18n()
 
   // 1. Time range state
   const timeRange = useTimeRange()
@@ -212,6 +226,30 @@
         timestamp: payload.timestamp,
       })
     )
+  }
+
+  // Logs of the open trace stack on top of the trace drawer, also kept in the URL.
+  const {
+    traceId: logsDrawerId,
+    target: logsDrawerTarget,
+    open: openLogsDrawer,
+    close: closeLogsDrawer,
+  } = useTraceDrawerUrlSync('trace-query', 'logs')
+
+  async function openLogs(span: Record<string, any>) {
+    const traceId = String(span?.trace_id || traceDrawerId.value || '').trim()
+    if (!traceId) return
+    const target = await resolveTraceLogsDrawerTarget(span?.timestamp)
+    if (!target) {
+      Message.warning(
+        t('drilldown.traces.traceLogsNoTable', {
+          database: getSignalDatabase('logs'),
+          page: t('menu.dashboard.logsQuery'),
+        })
+      )
+      return
+    }
+    openLogsDrawer(traceId, target)
   }
 
   function handleFilterConditionAdd({ columnName, operator, value }) {
