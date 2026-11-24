@@ -23,21 +23,40 @@ export interface DrawerUrlCodec<T> {
  *
  * Only reacts while `routeName` is the active route, so route changes that belong to another
  * page (e.g. while this one is leaving) are ignored.
+ *
+ * The state object is only replaced when this drawer's own keys actually change value. Router
+ * writes that leave them untouched are common — the page's own params (`updateQueryParams`)
+ * and a sibling drawer — and handing consumers a fresh object for those makes every panel
+ * watching its value re-run its query for nothing.
  */
 export default function useDrawerUrlSync<T>(routeName: string, codec: DrawerUrlCodec<T>) {
   const route = useRoute()
   const router = useRouter()
 
   const state = ref<T>() as Ref<T | undefined>
+  /** Signature of the query values `state` currently mirrors; `undefined` until parsed. */
+  let appliedSignature: string | undefined
+
+  /** The drawer keys' values alone, so the query object identity does not matter. */
+  function signatureOf(query: Query): string {
+    return JSON.stringify(codec.keys.map((key) => query[key] ?? null))
+  }
 
   function syncFromRoute() {
     if (route.name !== routeName) return
+    const signature = signatureOf(route.query)
+    if (signature === appliedSignature) return
+    appliedSignature = signature
     state.value = codec.parse(route.query)
   }
 
   function writeRoute(value?: T) {
     if (route.name !== routeName) return
-    router.replace({ query: codec.serialize(route.query, value) as Record<string, any> })
+    const query = codec.serialize(route.query, value)
+    // Pre-apply the signature of the write we are about to make, so its echo (the route change
+    // that follows) does not re-parse and re-create the state.
+    appliedSignature = signatureOf(query)
+    router.replace({ query: query as Record<string, any> })
   }
 
   function open(value: T) {

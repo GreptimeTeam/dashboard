@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { LOGS_QUERY_STORAGE_KEY, TRACES_QUERY_STORAGE_KEY, readQueryTable, writeQueryTable } from './query-table-pref'
+import {
+  LOGS_QUERY_STORAGE_KEY,
+  TRACES_QUERY_STORAGE_KEY,
+  readLastQueryTable,
+  readQueryTable,
+  writeQueryTable,
+} from './query-table-pref'
 
 const app = vi.hoisted(() => ({ host: 'http://primary' }))
 
@@ -64,5 +70,39 @@ describe('query table preference', () => {
     expect(readQueryTable(TRACES_QUERY_STORAGE_KEY, 'public')).toBeUndefined()
     writeQueryTable(TRACES_QUERY_STORAGE_KEY, 'public', 'spans')
     expect(readQueryTable(TRACES_QUERY_STORAGE_KEY, 'public')).toBe('spans')
+  })
+
+  // Code mode may parse a qualified table ref; every writer must store the same bare shape,
+  // since the cross-signal links use the stored value directly.
+  it('stores the bare table name', () => {
+    writeQueryTable(TRACES_QUERY_STORAGE_KEY, 'public', '"public"."opentelemetry_traces_v2"')
+    expect(readQueryTable(TRACES_QUERY_STORAGE_KEY, 'public')).toBe('opentelemetry_traces_v2')
+
+    writeQueryTable(TRACES_QUERY_STORAGE_KEY, 'prod', 'prod.spans')
+    expect(readQueryTable(TRACES_QUERY_STORAGE_KEY, 'prod')).toBe('spans')
+  })
+
+  // What the cross-signal links read: the page's own latest query, database included, so a
+  // code-mode query against another database cannot resolve to a stale per-database entry.
+  it('exposes the last queried database and table', () => {
+    expect(readLastQueryTable(TRACES_QUERY_STORAGE_KEY)).toBeUndefined()
+
+    writeQueryTable(TRACES_QUERY_STORAGE_KEY, 'public', 'spans')
+    expect(readLastQueryTable(TRACES_QUERY_STORAGE_KEY)).toEqual({ database: 'public', table: 'spans' })
+
+    writeQueryTable(TRACES_QUERY_STORAGE_KEY, 'otel', 'otel.traces_v2')
+    expect(readLastQueryTable(TRACES_QUERY_STORAGE_KEY)).toEqual({ database: 'otel', table: 'traces_v2' })
+    // The per-database memory is untouched by the latest-query pointer.
+    expect(readQueryTable(TRACES_QUERY_STORAGE_KEY, 'public')).toBe('spans')
+  })
+
+  it('drops the last query when the host changed or the record is corrupt', () => {
+    writeQueryTable(TRACES_QUERY_STORAGE_KEY, 'public', 'spans')
+    app.host = 'http://other'
+    expect(readLastQueryTable(TRACES_QUERY_STORAGE_KEY)).toBeUndefined()
+
+    app.host = 'http://primary'
+    storage.set(`${TRACES_QUERY_STORAGE_KEY}:selected-table`, '{not json')
+    expect(readLastQueryTable(TRACES_QUERY_STORAGE_KEY)).toBeUndefined()
   })
 })

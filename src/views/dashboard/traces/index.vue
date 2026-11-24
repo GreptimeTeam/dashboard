@@ -77,6 +77,7 @@
     TraceDetailDrawer(
       popup-container=".trace-query-container"
       logs-trace-enabled
+      :parent-label="$t('menu.dashboard.traces')"
       :trace-id="traceDrawerId"
       :target="traceDrawerTarget"
       @close="closeTraceDrawer"
@@ -98,7 +99,7 @@
   import { isQueryGuideEnabled } from '@/utils/query-guide-enabled'
   import { getSignalDatabase } from '@/observability/signal-database'
   import { listSignalTables } from '@/observability/semantics'
-  import { TRACES_QUERY_STORAGE_KEY } from '@/observability/query-table-pref'
+  import { TRACES_QUERY_STORAGE_KEY, writeQueryTable } from '@/observability/query-table-pref'
   import useUiPref from '@/composables/use-ui-pref'
   import { Message } from '@arco-design/web-vue'
   import { useI18n } from 'vue-i18n'
@@ -171,6 +172,17 @@
     exportToCSV()
   }
 
+  /**
+   * Publish the table this page just queried, so the Logs Query page reads the same traces
+   * table from its Logs → trace link. Code mode has no SQLBuilder, so this is the only writer
+   * in that mode. Any defaulting (first table in the list) stays inside the page, never in the
+   * link: the link only follows what the page published.
+   */
+  function publishQueryTable() {
+    if (!queryState.table || !queryState.database) return
+    writeQueryTable(TRACES_QUERY_STORAGE_KEY, queryState.database, queryState.table)
+  }
+
   async function handleQuery() {
     // Keep-alive keeps this component's watchers alive after it is deactivated. Do not
     // let a cached Trace page consume query params or run while another route is active.
@@ -180,6 +192,7 @@
       if (!isTraceQueryRoute()) return
       allResults.value = results || []
       updateQueryParams()
+      publishQueryTable()
     })
     // CountChart mounts only after queryState.sql is set — wait a tick for the ref.
     if (chartExpanded.value) {
@@ -236,17 +249,12 @@
     close: closeLogsDrawer,
   } = useTraceDrawerUrlSync('trace-query', 'logs')
 
-  async function openLogs(span: Record<string, any>) {
+  function openLogs(span: Record<string, any>) {
     const traceId = String(span?.trace_id || traceDrawerId.value || '').trim()
     if (!traceId) return
-    const target = await resolveTraceLogsDrawerTarget(span?.timestamp)
+    const target = resolveTraceLogsDrawerTarget(span?.timestamp)
     if (!target) {
-      Message.warning(
-        t('drilldown.traces.traceLogsNoTable', {
-          database: getSignalDatabase('logs'),
-          page: t('menu.dashboard.logsQuery'),
-        })
-      )
+      Message.warning(t('drilldown.traces.traceLogsNoTable', { page: t('menu.dashboard.logsQuery') }))
       return
     }
     openLogsDrawer(traceId, target)

@@ -244,8 +244,7 @@ export default {
     'No logs found for this Trace ID in {target}. Choose the logs table on the {page} page.',
   'drilldown.traces.traceLogsNoTraceColumn':
     '{target} has no trace id column. Choose the logs table on the {page} page.',
-  'drilldown.traces.traceLogsNoTable':
-    'No logs table found in database "{database}". Pick one on the {page} page first.',
+  'drilldown.traces.traceLogsNoTable': 'No logs table is bound yet. Run a query or pick a table on the {page} page.',
   'drilldown.traces.openLogs': 'View logs',
   'drilldown.traces.logsMappingAmbiguous': 'Multiple possible log tables — pick one in settings',
   'drilldown.traces.logsMappingFallbackHint': 'Services without a mapping use the Logs page bound table ({table}).',

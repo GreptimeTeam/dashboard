@@ -114,19 +114,6 @@ const DASHBOARD: AppRouteRecordRaw = {
       },
     },
     {
-      path: 'traces/detail/:id',
-      name: 'dashboard-TraceDetail',
-      component: () => import('@/views/dashboard/traces/[id].vue'),
-      meta: {
-        requiresAuth: false,
-        roles: ['admin', 'cloud'],
-        hideInMenu: true,
-        activeMenu: 'trace-query',
-        keepAlive: false,
-        ignoreCache: true,
-      },
-    },
-    {
       path: 'ingest',
       name: 'ingest',
       component: () => import('@/views/dashboard/ingest/index.vue'),

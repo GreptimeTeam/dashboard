@@ -40,6 +40,8 @@ DrilldownDrawer(
     emptyText?: string
     /** Show the span's View logs action; the parent opens the logs. */
     logsTraceEnabled?: boolean
+    /** Name of the list page the drawer is opened over; the first crumb returns to it. */
+    parentLabel?: string
   }>()
 
   const emit = defineEmits<{
@@ -49,8 +51,10 @@ DrilldownDrawer(
 
   const { t } = useI18n()
 
+  // The first crumb closes the drawer back to the page underneath, so it carries that page's
+  // name — "Overview" would name a level that does not exist on a query page.
   const breadcrumbs = computed(() => [
-    { label: t('drilldown.nav.overview'), onSelect: () => emit('close') },
+    { label: props.parentLabel || t('drilldown.nav.overview'), onSelect: () => emit('close') },
     { label: props.traceId, mono: true },
   ])
 </script>

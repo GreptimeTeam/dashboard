@@ -27,16 +27,22 @@ export function buildTraceDetailTarget(input: {
   }
 }
 
-/** Target from the standalone detail route's query string (`?table=&database=&start=&end=`). */
-export function traceDetailTargetFromQuery(query: Record<string, unknown>): TraceDetailTarget {
-  const start = Number(query.start)
-  const end = Number(query.end)
-  const hasRange = Number.isFinite(start) && Number.isFinite(end) && end >= start
-  return {
-    table: String(query.table || 'spans'),
-    ...(query.database ? { database: String(query.database) } : {}),
-    ...(hasRange ? { start, end } : {}),
-  }
+/**
+ * A ±12h partition-pruning window from two query values, or `undefined` when either is missing
+ * or unusable. Both bounds must be present and finite: `Number('')` is `0` and a hand-edited
+ * URL can hold `Infinity`, which would otherwise be interpolated into the SQL verbatim.
+ */
+function unixRangeFrom(startText: string, endText: string): [number, number] | undefined {
+  if (!startText.trim() || !endText.trim()) return undefined
+  const start = Number(startText)
+  const end = Number(endText)
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return undefined
+  return [start, end]
+}
+
+function firstString(value: unknown): string {
+  const item = Array.isArray(value) ? value[0] : value
+  return typeof item === 'string' ? item : ''
 }
 
 /** Query keys of one trace-target drawer: id + where to read it from (+ optional window). */
@@ -76,26 +82,18 @@ export interface TraceDrawerState {
   target: TraceDetailTarget
 }
 
-function firstString(value: unknown): string {
-  const item = Array.isArray(value) ? value[0] : value
-  return typeof item === 'string' ? item : ''
-}
-
 function drawerFromQuery(query: Record<string, unknown>, keys: TargetDrawerKeys): TraceDrawerState | undefined {
   const traceId = firstString(query[keys.id]).trim()
   const table = firstString(query[keys.table]).trim()
   if (!traceId || !table) return undefined
   const database = firstString(query[keys.db]).trim()
-  const start = Number(firstString(query[keys.start]))
-  const end = Number(firstString(query[keys.end]))
-  const hasRange =
-    firstString(query[keys.start]) && firstString(query[keys.end]) && Number.isFinite(start) && end >= start
+  const range = unixRangeFrom(firstString(query[keys.start]), firstString(query[keys.end]))
   return {
     traceId,
     target: {
       table,
       ...(database ? { database } : {}),
-      ...(hasRange ? { start, end } : {}),
+      ...(range ? { start: range[0], end: range[1] } : {}),
     },
   }
 }

@@ -245,7 +245,7 @@ export default {
   'drilldown.traces.traceLogsNoTraceColumn':
     '{target} には trace id 列がありません。{page} ページでログテーブルを選択してください。',
   'drilldown.traces.traceLogsNoTable':
-    'データベース "{database}" にログテーブルが見つかりません。先に {page} ページで選択してください。',
+    'ログテーブルがまだバインドされていません。先に {page} ページでクエリを実行するか、テーブルを選択してください。',
   'drilldown.traces.openLogs': 'ログを表示',
   'drilldown.traces.logsMappingAmbiguous': '複数のログテーブルが候補として見つかりました。設定から 1 つ選んでください',
   'drilldown.traces.logsMappingFallbackHint':

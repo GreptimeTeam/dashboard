@@ -148,6 +148,7 @@
     ExportModal(v-model:visible="exportModalVisible" :sql="exportSqlText" @confirm="handleExportConfirm")
     TraceDetailDrawer(
       popup-container=".logs-query-container"
+      :parent-label="$t('menu.dashboard.logsQuery')"
       :empty-text="traceEmptyText"
       :trace-id="traceDrawerId"
       :target="traceDrawerTarget"
@@ -166,7 +167,7 @@
   import { isQueryGuideEnabled } from '@/utils/query-guide-enabled'
   import useLogsTablePrefs from '@/observability/use-logs-table-prefs'
   import { getSignalDatabase } from '@/observability/signal-database'
-  import { LOGS_QUERY_STORAGE_KEY } from '@/observability/query-table-pref'
+  import { LOGS_QUERY_STORAGE_KEY, writeQueryTable } from '@/observability/query-table-pref'
   import { findTraceIdColumn, resolveTraceDetailTarget } from '@/observability/traces/open-trace-from-log'
   import useTraceDrawerUrlSync from '@/observability/traces/use-trace-drawer-url-sync'
   import TraceDetailDrawer from '@/views/dashboard/traces/components/TraceDetailDrawer.vue'
@@ -260,15 +261,24 @@
     close: closeTraceDrawer,
   } = useTraceDrawerUrlSync('log-query')
 
-  async function openTrace(traceId: string, row?: Record<string, unknown>) {
+  /**
+   * Publish the table this page just queried, so the Traces Query page reads the same trace
+   * table from the Logs → trace link. Code mode has no SQLBuilder, so this is the only writer
+   * in that mode. Any defaulting (first table in the list) stays inside the page, never in the
+   * link: the link only follows what the page published.
+   */
+  function publishQueryTable() {
+    if (!queryState.table || !queryState.database) return
+    writeQueryTable(LOGS_QUERY_STORAGE_KEY, queryState.database, queryState.table)
+  }
+
+  function openTrace(traceId: string, row?: Record<string, unknown>) {
     const id = String(traceId || '').trim()
     if (!id) return
     const anchor = timestampColumnName.value ? row?.[timestampColumnName.value] : undefined
-    const target = await resolveTraceDetailTarget(anchor)
+    const target = resolveTraceDetailTarget(anchor)
     if (!target) {
-      Message.warning(
-        t('logsQuery.traceNoTable', { database: getSignalDatabase('traces'), page: t('menu.dashboard.traces') })
-      )
+      Message.warning(t('logsQuery.traceNoTable', { page: t('menu.dashboard.traces') }))
       return
     }
     openTraceDrawer(id, target)
@@ -320,6 +330,7 @@
       if (!isLogsQueryRoute()) return
       if (isNewQuery) {
         updateQueryParams()
+        publishQueryTable()
       }
     })
 

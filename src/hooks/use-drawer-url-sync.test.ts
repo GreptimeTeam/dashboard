@@ -74,4 +74,44 @@ describe('useDrawerUrlSync', () => {
     open({ id: 'z' })
     expect(replace).not.toHaveBeenCalled()
   })
+
+  // Panels watch their drawer state and re-run their query when it changes identity, so a
+  // router write that leaves these keys alone must not produce a new object.
+  it('keeps the state object across unrelated query writes', async () => {
+    route.query = { drawerId: 'a' }
+    const { state } = useDrawerUrlSync('page', codec)
+    const before = state.value
+
+    // A sibling drawer opening, or the page writing its own params.
+    route.query = { drawerId: 'a', keep: '1', otherDrawer: 'x' }
+    await nextTick()
+
+    expect(state.value).toBe(before)
+  })
+
+  it('replaces the state object when its own keys change', async () => {
+    route.query = { drawerId: 'a' }
+    const { state } = useDrawerUrlSync('page', codec)
+    const before = state.value
+
+    route.query = { drawerId: 'b' }
+    await nextTick()
+
+    expect(state.value).not.toBe(before)
+    expect(state.value).toEqual({ id: 'b' })
+  })
+
+  // `open()` writes the URL and the router echoes it back; that echo must not parse again.
+  it('does not re-parse its own open/close echo', async () => {
+    const { state, open, close } = useDrawerUrlSync('page', codec)
+
+    open({ id: 'b' })
+    const opened = state.value
+    await nextTick()
+    expect(state.value).toBe(opened)
+
+    close()
+    await nextTick()
+    expect(state.value).toBeUndefined()
+  })
 })

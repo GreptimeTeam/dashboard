@@ -8,7 +8,7 @@ a-drawer.drilldown-drawer(
   :footer="false"
   :mask="false"
   :closable="closable"
-  :esc-to-close="escToClose"
+  :esc-to-close="true"
   :unmount-on-close="true"
   @cancel="close"
   @update:visible="onVisible"
@@ -69,8 +69,6 @@ a-drawer.drilldown-drawer(
       popupContainer: string
       variant?: 'standard' | 'logs' | 'stacked'
       closable?: boolean
-      /** Esc closes the drawer; set false where Esc must not navigate away. */
-      escToClose?: boolean
       breadcrumbs?: DrilldownDrawerCrumb[]
       title?: string
       subtitle?: string
@@ -78,7 +76,6 @@ a-drawer.drilldown-drawer(
     {
       variant: 'standard',
       closable: true,
-      escToClose: true,
       breadcrumbs: () => [],
       title: undefined,
       subtitle: undefined,

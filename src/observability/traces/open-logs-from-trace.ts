@@ -1,23 +1,21 @@
 import { buildTraceDetailTarget, type TraceDetailTarget } from './trace-detail-target'
-import { getSignalDatabase } from '../signal-database'
-import { LOGS_QUERY_STORAGE_KEY, readQueryTable } from '../query-table-pref'
-import { resolveSignalTable } from '../semantics'
+import { LOGS_QUERY_STORAGE_KEY, readLastQueryTable } from '../query-table-pref'
 
 /**
- * Where the logs of a trace should be read from: the logs table of the per-signal logs
- * database — the one last chosen on the Logs Query page, else the auto-bound one. The span
- * timestamp anchors the ±12h partition-pruning window (a span's logs are emitted around it).
- * Whether logs really exist is answered by the drawer itself.
- * Returns `undefined` when the logs database has no table at all.
+ * Where the logs of a trace should be read from: whatever the Logs Query page queried last.
+ * That page publishes the database *and* the table it used (builder or code mode), so the
+ * drawer and the page cannot disagree. The span timestamp anchors the ±12h partition-pruning
+ * window (a span's logs are emitted around it). Whether logs really exist is answered by the
+ * drawer itself.
+ *
+ * There is deliberately no fallback here — choosing a logs table is the Logs Query page's job.
+ * When that page has not published one yet this returns `undefined` and the caller sends the
+ * user there, instead of querying an arbitrary table of the database.
  */
-export default async function resolveTraceLogsDrawerTarget(
-  spanTimestamp?: unknown
-): Promise<TraceDetailTarget | undefined> {
-  const database = getSignalDatabase('logs')
-  const preferred = readQueryTable(LOGS_QUERY_STORAGE_KEY, database)
-  const table = await resolveSignalTable('logs', { database, preferred })
-  if (!table) {
+export default function resolveTraceLogsDrawerTarget(spanTimestamp?: unknown): TraceDetailTarget | undefined {
+  const pick = readLastQueryTable(LOGS_QUERY_STORAGE_KEY)
+  if (!pick) {
     return undefined
   }
-  return buildTraceDetailTarget({ table, database, timestamp: spanTimestamp })
+  return buildTraceDetailTarget({ table: pick.table, database: pick.database, timestamp: spanTimestamp })
 }

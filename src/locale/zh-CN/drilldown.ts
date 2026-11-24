@@ -235,7 +235,7 @@ export default {
   'drilldown.traces.traceLogsCount': '{count} 条日志',
   'drilldown.traces.traceLogsEmpty': '在 {target} 中未找到该 Trace ID 的日志。请到 {page} 页面选择日志表。',
   'drilldown.traces.traceLogsNoTraceColumn': '{target} 没有 trace id 列。请到 {page} 页面选择日志表。',
-  'drilldown.traces.traceLogsNoTable': '数据库 "{database}" 中未找到日志表，请先到 {page} 页面选择。',
+  'drilldown.traces.traceLogsNoTable': '尚未绑定日志表，请先到 {page} 页面执行查询或选择表。',
   'drilldown.traces.openLogs': '查看日志',
   'drilldown.traces.logsMappingAmbiguous': '发现多张可能关联的日志表，请在设置中指定',
   'drilldown.traces.logsMappingFallbackHint': '未配置映射的 service 将使用 Logs 页当前绑定表（{table}）。',

@@ -53,6 +53,22 @@ describe('trace drawer query', () => {
       target: { table: 'spans' },
     })
   })
+
+  // A hand-edited URL must never reach the SQL builder: `Number('')` is 0 and `Infinity` is a
+  // finite-looking bound that would be interpolated verbatim.
+  it('drops a non-finite or blank time window', () => {
+    const base = { traceId: 'abc', traceTable: 'spans' }
+    const closed = { traceId: 'abc', target: { table: 'spans' } }
+
+    expect(traceDrawerFromQuery({ ...base, traceStart: '1', traceEnd: 'Infinity' })).toEqual(closed)
+    expect(traceDrawerFromQuery({ ...base, traceStart: 'Infinity', traceEnd: '1' })).toEqual(closed)
+    expect(traceDrawerFromQuery({ ...base, traceStart: '1', traceEnd: 'NaN' })).toEqual(closed)
+    expect(traceDrawerFromQuery({ ...base, traceStart: '', traceEnd: '' })).toEqual(closed)
+    expect(traceDrawerFromQuery({ ...base, traceStart: '0', traceEnd: '0' })).toEqual({
+      traceId: 'abc',
+      target: { table: 'spans', start: 0, end: 0 },
+    })
+  })
 })
 
 describe('trace logs drawer query', () => {

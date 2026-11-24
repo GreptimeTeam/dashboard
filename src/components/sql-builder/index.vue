@@ -249,8 +249,9 @@ a-modal(
     signalDatabaseKind?: 'logs' | 'traces'
     /**
      * Remember the chosen table per database under `storageKey`, and restore it when the
-     * table is not already set (reload, database switch). Other pages can read it back with
-     * `readQueryTable`.
+     * table is not already set (reload, database switch). Every write also records the
+     * (database, table) as the page's latest query, which the Logs ⇄ Trace links read back
+     * with `readLastQueryTable`.
      */
     rememberTable?: boolean
     defaultFormState?: Form
