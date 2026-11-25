@@ -234,6 +234,12 @@ export default {
   'drilldown.traces.redChartNoData': 'No data in range',
   'drilldown.traces.comingSoon': 'Coming soon',
   'drilldown.traces.rootSpanList': 'Root spans',
+  'drilldown.traces.spanScopeLabel': 'Spans',
+  'drilldown.traces.spanScopeRoot': 'Root spans',
+  'drilldown.traces.spanScopeAll': 'All spans',
+  'drilldown.traces.spanScopeRootHint': 'Charts, breakdown and list use only the root span of each trace.',
+  'drilldown.traces.spanScopeAllHint':
+    'Charts and breakdown count every span. The list shows the root span of each trace that has a matching span; traces without a root in range are not listed.',
   'drilldown.traces.rowCount': '{count} traces',
   'drilldown.traces.noRows': 'No root spans in the current time range',
   'drilldown.traces.traceIdSearchPlaceholder': 'Paste Trace ID',

@@ -227,6 +227,12 @@ export default {
   'drilldown.traces.redChartNoData': '当前范围无数据',
   'drilldown.traces.comingSoon': '即将推出',
   'drilldown.traces.rootSpanList': '根 Span 列表',
+  'drilldown.traces.spanScopeLabel': 'Span 范围',
+  'drilldown.traces.spanScopeRoot': 'Root spans',
+  'drilldown.traces.spanScopeAll': 'All spans',
+  'drilldown.traces.spanScopeRootHint': '图表、Breakdown 和列表仅统计每条 Trace 的根 Span。',
+  'drilldown.traces.spanScopeAllHint':
+    '图表和 Breakdown 统计所有 Span；列表展示含匹配 Span 的 Trace 的根 Span，当前范围内没有根 Span 的 Trace 不会列出。',
   'drilldown.traces.rowCount': '{count} 条 Trace',
   'drilldown.traces.noRows': '当前时间范围内无根 Span',
   'drilldown.traces.traceIdSearchPlaceholder': '粘贴 Trace ID',

@@ -7,8 +7,11 @@ import {
   buildBreakdownValuesSql,
   sharedBreakdownYAxis,
   buildDurationHeatmapSql,
+  buildMatchedTraceIdsSql,
   buildRedTimeseriesSql,
   buildRootListOrderAndExtraWhere,
+  buildTraceIdInPredicate,
+  isSpanScope,
   redMetricBarColor,
   redMetricChartKind,
   redMetricPanelUnit,
@@ -286,5 +289,42 @@ describe('traces red-queries', () => {
     expect(seriesSql).toContain(`${serviceExpr} = 'frontend' AND ${spanExpr} = 'o''brien'`)
     expect(seriesSql).toContain(`GROUP BY time_bucket, ${serviceExpr}, ${spanExpr}`)
     expect(seriesSql).not.toContain(' IN (')
+  })
+})
+
+describe('traces span scope', () => {
+  it('accepts only the known scopes', () => {
+    expect(isSpanScope('root')).toBe(true)
+    expect(isSpanScope('all')).toBe(true)
+    expect(isSpanScope('server')).toBe(false)
+    expect(isSpanScope(undefined)).toBe(false)
+  })
+
+  it('builds a literal trace id predicate and escapes quotes', () => {
+    expect(buildTraceIdInPredicate('trace_id', ['a', "b'c"])).toBe(`"trace_id" IN ('a', 'b''c')`)
+  })
+
+  it('matches nothing, but keeps a valid query, for an empty trace id list', () => {
+    expect(buildTraceIdInPredicate('trace_id', [])).toBe('1 = 0')
+  })
+
+  it('ranks matched traces by latest span time, or by slowest span for duration', () => {
+    const base = {
+      tableName: 'opentelemetry_traces',
+      where: '"timestamp" >= FROM_UNIXTIME(1)',
+      traceIdColumn: 'trace_id',
+      timeColumn: 'timestamp',
+      durationColumn: 'duration_nano',
+      limit: 100,
+    }
+    const byTime = buildMatchedTraceIdsSql({ ...base, metric: 'errors' })
+    expect(byTime).toContain('SELECT "trace_id" AS trace_id')
+    expect(byTime).toContain('"trace_id" IS NOT NULL')
+    expect(byTime).toContain('GROUP BY "trace_id"')
+    expect(byTime).toContain('ORDER BY MAX("timestamp") DESC')
+    expect(byTime).toContain('LIMIT 100')
+
+    const byDuration = buildMatchedTraceIdsSql({ ...base, metric: 'duration' })
+    expect(byDuration).toContain('ORDER BY MAX("duration_nano") DESC')
   })
 })

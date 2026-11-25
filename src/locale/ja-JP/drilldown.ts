@@ -234,6 +234,12 @@ export default {
   'drilldown.traces.redChartNoData': '範囲内にデータがありません',
   'drilldown.traces.comingSoon': '近日公開',
   'drilldown.traces.rootSpanList': 'ルートスパン',
+  'drilldown.traces.spanScopeLabel': 'スパン範囲',
+  'drilldown.traces.spanScopeRoot': 'Root spans',
+  'drilldown.traces.spanScopeAll': 'All spans',
+  'drilldown.traces.spanScopeRootHint': 'チャート・内訳・一覧は各トレースのルートスパンのみを対象にします。',
+  'drilldown.traces.spanScopeAllHint':
+    'チャートと内訳はすべてのスパンを集計します。一覧は一致するスパンを含むトレースのルートスパンを表示し、範囲内にルートがないトレースは表示されません。',
   'drilldown.traces.rowCount': '{count} 件のトレース',
   'drilldown.traces.noRows': '現在の時間範囲にルートスパンがありません',
   'drilldown.traces.traceIdSearchPlaceholder': 'トレース ID を貼り付け',

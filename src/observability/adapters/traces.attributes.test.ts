@@ -1,15 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ref } from 'vue'
 
+import { fetchTraceAttributeKeys } from './traces'
+import type { DrilldownContext } from '../context'
+
 const runSQL = vi.fn()
 
 vi.mock('@/api/editor', () => ({ default: { runSQL: (...args: unknown[]) => runSQL(...args) } }))
 // The adapter resolves the bound database through the Pinia-backed helper; the test only
 // needs a stable database name.
 vi.mock('../signal-database', () => ({ boundSignalDatabase: () => 'public' }))
-
-import { fetchTraceAttributeKeys } from './traces'
-import type { DrilldownContext } from '../context'
 
 function rowsResponse(rows: Array<Record<string, unknown>>) {
   const schema = ['span_attributes', 'scope_attributes', 'resource_attributes']
@@ -38,6 +38,7 @@ function fakeCtx(columns: string[], table = 'opentelemetry_traces_v2'): Drilldow
     },
     connection: { databaseFor: () => 'public' },
     query: { unixTimeRange: () => [0, 0] },
+    ui: { spanScope: ref('root') },
     session: { traceLogs: { traceServices: new Map() } },
   } as unknown as DrilldownContext
 }

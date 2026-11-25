@@ -19,16 +19,19 @@ import {
   buildBreakdownSeriesSql,
   buildBreakdownValuesSql,
   buildDurationHeatmapSql,
+  buildMatchedTraceIdsSql,
   buildRedTimeseriesSql,
   buildRootListOrderAndExtraWhere,
+  buildTraceIdInPredicate,
   aggregateDurationHeatmapRows,
   sharedBreakdownYAxis,
   volumeIntervalSecondsFromRange,
   type RedMetric,
+  type SpanScope,
 } from '../traces/red-queries'
 import type { HistogramHeatmapData } from '../metrics/prom-chart'
 
-export type { RedMetric }
+export type { RedMetric, SpanScope }
 
 const ROOT_SPAN_LIMIT = 100
 
@@ -57,11 +60,21 @@ function statusColumn(ctx: DrilldownContext): string {
   return fieldMap(ctx).status || fieldMap(ctx).span_status_code || 'span_status_code'
 }
 
-/** Shared WHERE: time range + label chips + root-span population. */
+function spanScope(ctx: DrilldownContext): SpanScope {
+  return ctx.ui.spanScope.value
+}
+
+/**
+ * Shared WHERE: time range + label chips + span population.
+ * Population follows `ctx.ui.spanScope` (root spans by default) unless `rootOnly` overrides it.
+ * `includeFilters: false` drops the label chips — the all-spans trace list applies them to the
+ * trace-id lookup instead of to the root rows it finally displays.
+ */
 export function buildTracesContextWhere(
   ctx: DrilldownContext,
   options?: {
     rootOnly?: boolean
+    includeFilters?: boolean
     extraEquals?: Array<{ column: string; value: string }>
     extraWhere?: string[]
   }
@@ -81,23 +94,25 @@ export function buildTracesContextWhere(
     whereParts.push(`${quoteIdent(tsCol)} <= FROM_UNIXTIME(${unixRange[1]})`)
   }
 
-  if (options?.rootOnly !== false) {
+  if (options?.rootOnly ?? spanScope(ctx) === 'root') {
     whereParts.push(`${quoteIdent(parentColumn(ctx))} IS NULL`)
   }
 
-  whereParts.push(
-    ...filtersToSqlWhere(ctx.query.filters.value, map, {
-      columns: ctx.semantics.traces.columns.value,
-      // Trace tables flatten attributes into physical dotted columns. Before the schema
-      // bind completes, JSON-chip guessing would misread `resource_attributes.service.name`
-      // as a `json_get_string("resource_attributes", …)` path — SQL the server rejects.
-      // Skip the chip read; the bind triggers a refresh with the real column list.
-      jsonChipWithoutColumns: false,
-      // Attribute columns are typed (bigint / boolean / …): literals must render accordingly,
-      // e.g. `"x" > 1000000000` and `"flag" = TRUE` instead of quoted strings.
-      typeOf: (column) => ctx.semantics.traces.columnTypes.value?.[column],
-    })
-  )
+  if (options?.includeFilters !== false) {
+    whereParts.push(
+      ...filtersToSqlWhere(ctx.query.filters.value, map, {
+        columns: ctx.semantics.traces.columns.value,
+        // Trace tables flatten attributes into physical dotted columns. Before the schema
+        // bind completes, JSON-chip guessing would misread `resource_attributes.service.name`
+        // as a `json_get_string("resource_attributes", …)` path — SQL the server rejects.
+        // Skip the chip read; the bind triggers a refresh with the real column list.
+        jsonChipWithoutColumns: false,
+        // Attribute columns are typed (bigint / boolean / …): literals must render accordingly,
+        // e.g. `"x" > 1000000000` and `"flag" = TRUE` instead of quoted strings.
+        typeOf: (column) => ctx.semantics.traces.columnTypes.value?.[column],
+      })
+    )
+  }
 
   options?.extraEquals?.forEach(({ column, value }) => {
     whereParts.push(`${quoteIdent(column)} = '${escapeSqlString(value)}'`)
@@ -173,7 +188,53 @@ function columnsFromRecords(records: {
   }))
 }
 
-/** Root spans for traces home list (TraceTable-compatible columns + rows). */
+/**
+ * Step 1 of the all-spans trace list: ids of traces holding at least one span that matches the
+ * label chips and the metric condition (e.g. an error span anywhere in the call chain).
+ * Resolves to `null` when the query fails.
+ */
+async function fetchMatchedTraceIds(
+  ctx: DrilldownContext,
+  tableName: string,
+  redMetric: RedMetric,
+  extraWhere: string[],
+  limit: number
+): Promise<string[] | null> {
+  const where = buildTracesContextWhere(ctx, { rootOnly: false, extraWhere })
+  if (!where) {
+    return []
+  }
+  const sql = buildMatchedTraceIdsSql({
+    tableName,
+    where,
+    traceIdColumn: traceIdColumn(ctx),
+    timeColumn: timeColumn(ctx),
+    durationColumn: durationColumn(ctx),
+    metric: redMetric,
+    limit,
+  })
+  try {
+    const response = await editorApi.runSQL(sql, boundSignalDatabase(ctx, 'traces'))
+    const rows = response?.output?.[0]?.records?.rows
+    if (!Array.isArray(rows)) {
+      return []
+    }
+    return (rows as unknown[][]).map((row) => String(row?.[0] ?? '').trim()).filter(Boolean)
+  } catch (error) {
+    console.error('Failed to fetch matched trace ids:', error)
+    return null
+  }
+}
+
+/**
+ * Trace list for traces home (TraceTable-compatible columns + rows). One row per trace: its root span.
+ *
+ * Root scope filters the root rows directly. All-spans scope keeps the same row shape but picks the
+ * traces by any span: chips and the Errors condition apply to every span, in two queries (trace ids
+ * first, root rows by literal id list second). A joined subquery reads every root row of the window.
+ * Rate / Duration without chips match every trace, so they stay a single root query.
+ * Traces whose root is outside the window or missing cannot be shown.
+ */
 export async function fetchRootSpanList(
   ctx: DrilldownContext,
   options?: { limit?: number; redMetric?: RedMetric }
@@ -184,20 +245,36 @@ export async function fetchRootSpanList(
     return empty
   }
 
-  const baseWhere = buildTracesContextWhere(ctx, { rootOnly: true })
-  if (!baseWhere) {
-    return empty
-  }
-
   const redMetric = options?.redMetric ?? 'rate'
+  const limit = options?.limit ?? ROOT_SPAN_LIMIT
   const { extraWhere, orderBy } = buildRootListOrderAndExtraWhere(redMetric, {
     time: timeColumn(ctx),
     status: statusColumn(ctx),
     duration: durationColumn(ctx),
   })
-  const where = [baseWhere, ...extraWhere].join(' AND ')
 
-  const limit = options?.limit ?? ROOT_SPAN_LIMIT
+  const matchByAnySpan =
+    spanScope(ctx) === 'all' && (redMetric === 'errors' || (ctx.query.filters.value?.length ?? 0) > 0)
+
+  let where: string
+  if (matchByAnySpan) {
+    const traceIds = await fetchMatchedTraceIds(ctx, tableName, redMetric, extraWhere, limit)
+    if (!traceIds) {
+      return empty
+    }
+    where = buildTracesContextWhere(ctx, {
+      rootOnly: true,
+      includeFilters: false,
+      extraWhere: [buildTraceIdInPredicate(traceIdColumn(ctx), traceIds)],
+    })
+  } else {
+    const baseWhere = buildTracesContextWhere(ctx, { rootOnly: true })
+    where = baseWhere && [baseWhere, ...extraWhere].join(' AND ')
+  }
+  if (!where) {
+    return empty
+  }
+
   // Whole row: the list's Columns picker must be able to show every column of the table,
   // not only the roles this view maps. Role aliases are added on top when the field map
   // points a role at a different column, so the canonical keys stay readable.
@@ -235,7 +312,7 @@ export async function fetchRedTimeseries(
   if (!tableName) {
     return []
   }
-  const where = buildTracesContextWhere(ctx, { rootOnly: true, extraEquals: options?.extraEquals })
+  const where = buildTracesContextWhere(ctx, { extraEquals: options?.extraEquals })
   if (!where) {
     return []
   }
@@ -280,7 +357,7 @@ export async function fetchDurationHeatmap(
   if (!tableName) {
     return null
   }
-  const where = buildTracesContextWhere(ctx, { rootOnly: true, extraEquals: options?.extraEquals })
+  const where = buildTracesContextWhere(ctx, { extraEquals: options?.extraEquals })
   if (!where) {
     return null
   }
@@ -366,7 +443,7 @@ const TRACE_ATTRIBUTE_SAMPLE_LIMIT = 1000
  *
  * v1 tables have no JSON2 containers, so this returns immediately and discovery keeps
  * reading physical columns. v2 tables have no per-key columns, so the keys are sampled
- * from the newest rows of the table (cached per database + table).
+ * from the newest rows of the table (cached per database + table + span scope).
  */
 export async function fetchTraceAttributeKeys(
   ctx: DrilldownContext,
@@ -391,6 +468,8 @@ export async function fetchTraceAttributeKeys(
     parentColumn: parentColumn(ctx),
     timeColumn: timeColumn(ctx),
     limit: TRACE_ATTRIBUTE_SAMPLE_LIMIT,
+    // All-spans views must also offer attributes that only child spans carry.
+    scope: spanScope(ctx),
   })
   if (!attributes.length) {
     console.warn('Sampled trace attribute keys is empty', { tableName, containers })
@@ -416,7 +495,7 @@ export async function fetchBreakdownSeries(
   if (!tableName || !groupByColumns.length || !listed.length) {
     return empty
   }
-  const where = buildTracesContextWhere(ctx, { rootOnly: true })
+  const where = buildTracesContextWhere(ctx)
   const unixRange = ctx.query.unixTimeRange()
   if (!where || unixRange.length !== 2) {
     return empty
@@ -478,7 +557,7 @@ export async function fetchBreakdownAttrValues(
   if (!tableName || !groupByColumns.length) {
     return empty
   }
-  const where = buildTracesContextWhere(ctx, { rootOnly: true })
+  const where = buildTracesContextWhere(ctx)
   if (!where) {
     return empty
   }

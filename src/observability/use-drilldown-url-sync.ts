@@ -17,7 +17,7 @@ import {
   type MetricDetailTab,
   type TracesHomeTab,
 } from './types'
-import { isRedMetric } from './traces/red-queries'
+import { DEFAULT_SPAN_SCOPE, isRedMetric, isSpanScope } from './traces/red-queries'
 
 const DRILLDOWN_SIGNALS: DrilldownSignal[] = ['metrics', 'logs', 'traces']
 
@@ -146,6 +146,7 @@ export default function useDrilldownUrlSync(
       logsTab,
       tracesTab,
       redMetric,
+      spanScope,
       body,
       bodyOp,
     } = query
@@ -236,6 +237,12 @@ export default function useDrilldownUrlSync(
       ctx.actions.setRedMetric(redMetric)
     } else {
       ctx.actions.setRedMetric('rate')
+    }
+
+    if (ctx.connection.signal.value === 'traces' && isSpanScope(spanScope)) {
+      ctx.actions.setSpanScope(spanScope)
+    } else {
+      ctx.actions.setSpanScope(DEFAULT_SPAN_SCOPE)
     }
 
     // Restore selected group from the service filter when opening detail from URL.
@@ -382,6 +389,10 @@ export default function useDrilldownUrlSync(
       query.redMetric = ctx.ui.redMetric.value
     }
 
+    if (ctx.connection.signal.value === 'traces' && ctx.ui.spanScope.value !== DEFAULT_SPAN_SCOPE) {
+      query.spanScope = ctx.ui.spanScope.value
+    }
+
     return query
   }
 
@@ -428,6 +439,7 @@ export default function useDrilldownUrlSync(
       ctx.ui.logsBodyValue.value,
       ctx.semantics.traces.table.value,
       ctx.ui.redMetric.value,
+      ctx.ui.spanScope.value,
       ctx.ui.focusTraceId.value,
       ctx.ui.focusTraceAt.value,
       ctx.ui.logsTraceId.value,
