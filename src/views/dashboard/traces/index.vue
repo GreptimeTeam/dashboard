@@ -106,6 +106,7 @@
   import { buildTraceDetailTarget } from '@/observability/traces/trace-detail-target'
   import resolveTraceLogsDrawerTarget from '@/observability/traces/open-logs-from-trace'
   import useTraceDrawerUrlSync from '@/observability/traces/use-trace-drawer-url-sync'
+  import { createRootSpanCondition } from '@/observability/traces/root-span-condition'
   import TraceTable from './components/TraceTable.vue'
   import TraceDetailDrawer from './components/TraceDetailDrawer.vue'
   import TraceLogsDrawer from './components/TraceLogsDrawer.vue'
@@ -126,7 +127,8 @@
     defaultFormState: {
       // Text mode has no DB selector; keep it on the per-signal DB.
       database: getSignalDatabase('traces'),
-      conditions: [{ field: 'parent_span_id', operator: 'Not Exist', value: '', relation: 'AND' }],
+      // Root spans by default; the chip is an ordinary condition the user can remove.
+      conditions: [createRootSpanCondition()],
     },
   })
   const { builderFormState, addFilterCondition, generateSql, defaultFormState } = builder

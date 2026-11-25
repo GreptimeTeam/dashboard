@@ -203,6 +203,7 @@ a-modal(
   import { isJsonDataType } from '@/utils/json-display'
   import { splitAttributeChip } from '@/observability/traces/attribute-keys'
   import { fetchSampledAttributes } from '@/observability/traces/attribute-sampling'
+  import { hasRootSpanCondition } from '@/observability/traces/root-span-condition'
   import { canSuggestValues as canSuggestFieldValues, fetchDistinctValues } from '@/observability/value-suggestions'
   import type { TraceBreakdownAttribute } from '@/observability/traces/field-map'
 
@@ -327,8 +328,16 @@ a-modal(
   const attributesLoading = ref(false)
   let attributesLoadPromise: Promise<void> | null = null
 
+  /**
+   * Traces: attribute suggestions follow the root-span condition. With it, sample root spans
+   * (the rows the query can match); without it, sample every span so child-only keys show up.
+   */
+  function attributeScope(): 'root' | 'all' {
+    return props.signalDatabaseKind === 'traces' && !hasRootSpanCondition(form.conditions) ? 'all' : 'root'
+  }
+
   function currentAttributesKey() {
-    return form.table ? `${form.database ?? ''}\0${form.table}` : ''
+    return form.table ? `${form.database ?? ''}\0${form.table}\0${attributeScope()}` : ''
   }
 
   function clearSampledAttributes() {
@@ -358,8 +367,9 @@ a-modal(
       database: form.database,
       table: form.table,
       columns,
-      // Trace views are root-scoped; logs have no parent span.
+      // Logs have no parent span.
       parentColumn: props.signalDatabaseKind === 'traces' ? 'parent_span_id' : undefined,
+      scope: attributeScope(),
       timeColumn: tsField?.name,
     })
     // Drop stale results if the user switched tables while the sample was in flight.
