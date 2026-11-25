@@ -35,6 +35,14 @@ app.use(directive)
 initializeNews()
 
 // Load the active locale dictionary before first paint so no raw keys flash.
-initLocale().then(() => {
-  app.mount('#app')
-})
+// A failed locale chunk must never keep the app from mounting: `initLocale` pulls
+// zh-CN / ja-JP through a dynamic import, and in dev that chunk can be rejected
+// while Vite re-optimizes or hot-updates. Mounting with the en-US fallback keeps
+// the dashboard usable instead of leaving a blank page behind.
+initLocale()
+  .catch((error) => {
+    console.error('[locale] failed to load the active locale, falling back to en-US', error)
+  })
+  .then(() => {
+    app.mount('#app')
+  })
