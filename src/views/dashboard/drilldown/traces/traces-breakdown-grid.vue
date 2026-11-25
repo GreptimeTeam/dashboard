@@ -170,9 +170,10 @@
     }
   })
 
-  // Attribute discovery: follow bind revision (table/columns), not query time/filters.
+  // Attribute discovery: follow bind revision (table/columns) and span scope (all-spans sampling
+  // also sees child-span attributes), not query time/filters.
   watch(
-    () => [ctx.ui.focusTraceId.value, ctx.semantics.traces.revision.value] as const,
+    () => [ctx.ui.focusTraceId.value, ctx.semantics.traces.revision.value, ctx.ui.spanScope.value] as const,
     () => {
       loadAttributes()
     },
@@ -181,7 +182,7 @@
 
   useSignalQuery(ctx, 'traces', {
     enabled: () => !ctx.ui.focusTraceId.value && groupByColumns.value.length > 0,
-    params: () => ({ redMetric: props.redMetric, groupBy: groupByColumns.value }),
+    params: () => ({ redMetric: props.redMetric, groupBy: groupByColumns.value, spanScope: ctx.ui.spanScope.value }),
     run: () => loadValues(),
   })
 </script>

@@ -234,8 +234,14 @@ export default {
   'drilldown.traces.redChartNoData': '範囲内にデータがありません',
   'drilldown.traces.comingSoon': '近日公開',
   'drilldown.traces.rootSpanList': 'ルートスパン',
+  'drilldown.traces.spanScopeLabel': 'スパン範囲',
+  'drilldown.traces.spanScopeRoot': 'Root spans',
+  'drilldown.traces.spanScopeAll': 'All spans',
+  'drilldown.traces.spanScopeRootHint': 'チャート・内訳・一覧は各トレースのルートスパンのみを対象にします。',
+  'drilldown.traces.spanScopeAllHint':
+    'チャートと内訳はすべてのスパンを集計します。一覧は一致するスパンを含むトレースのルートスパンを表示し、範囲内にルートがないトレースは表示されません。',
   'drilldown.traces.rowCount': '{count} 件のトレース',
-  'drilldown.traces.noRows': '現在の時間範囲にルートスパンがありません',
+  'drilldown.traces.noRows': '現在の時間範囲にデータがありません',
   'drilldown.traces.traceIdSearchPlaceholder': 'トレース ID を貼り付け',
   'drilldown.traces.traceIdSearchAction': '表示',
   'drilldown.traces.traceLogsTitle': 'Trace ログ',
@@ -244,8 +250,14 @@ export default {
     '{target} にこの Trace ID のログが見つかりません。{page} ページでログテーブルを選択してください。',
   'drilldown.traces.traceLogsNoTraceColumn':
     '{target} には trace id 列がありません。{page} ページでログテーブルを選択してください。',
+  'drilldown.traces.traceLogsEmptyExplore':
+    '{target} にこの Trace ID のログが見つかりません。シグナル探索の Logs タブでログテーブルを選択してください。',
+  'drilldown.traces.traceLogsNoTraceColumnExplore':
+    '{target} には trace id 列がありません。シグナル探索の Logs タブでログテーブルを選択してください。',
   'drilldown.traces.traceLogsNoTable':
     'ログテーブルがまだバインドされていません。先に {page} ページでクエリを実行するか、テーブルを選択してください。',
+  'drilldown.traces.traceLogsNoTableExplore':
+    'ログテーブルがまだバインドされていません。シグナル探索の Logs タブで選択してください。',
   'drilldown.traces.openLogs': 'ログを表示',
   'drilldown.traces.logsMappingAmbiguous': '複数のログテーブルが候補として見つかりました。設定から 1 つ選んでください',
   'drilldown.traces.logsMappingFallbackHint':

@@ -346,8 +346,8 @@ describe('useSignalBinding', () => {
 
   it('prefers URL/current logs table over persisted settings on initialize', async () => {
     const { default: useSignalBinding } = await import('./signal-binding')
-    const { resolveSignalTable } = await import('./semantics')
-    vi.mocked(resolveSignalTable).mockClear()
+    const { resolveSignalTable: mockedResolveSignalTable } = await import('./semantics')
+    vi.mocked(mockedResolveSignalTable).mockClear()
     loadDrilldownSettings.mockReturnValue({ logs: { table: 'settings_logs' } })
     const ctx = createCtx()
     ctx.semantics.logs.setTable('url_logs')
@@ -363,8 +363,8 @@ describe('useSignalBinding', () => {
 
   it('ignores a persisted traces table and auto-binds a traces table', async () => {
     const { default: useSignalBinding } = await import('./signal-binding')
-    const { resolveSignalTable } = await import('./semantics')
-    vi.mocked(resolveSignalTable).mockImplementation(async (signal: string) =>
+    const { resolveSignalTable: mockedResolveSignalTable } = await import('./semantics')
+    vi.mocked(mockedResolveSignalTable).mockImplementation(async (signal: string) =>
       signal === 'traces' ? 'opentelemetry_traces' : undefined
     )
     loadDrilldownSettings.mockReturnValue({
@@ -374,7 +374,9 @@ describe('useSignalBinding', () => {
     const ctx = createCtx()
 
     useSignalBinding(ctx)
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 0)
+    })
 
     expect(ctx.semantics.traces.table.value).toBe('opentelemetry_traces')
     // Nothing is written back: the traces table is not persisted at all.
@@ -383,8 +385,8 @@ describe('useSignalBinding', () => {
 
   it('drops a URL-carried traces table that is not trace-capable', async () => {
     const { default: useSignalBinding } = await import('./signal-binding')
-    const { resolveSignalTable } = await import('./semantics')
-    vi.mocked(resolveSignalTable).mockImplementation(async (signal: string) =>
+    const { resolveSignalTable: mockedResolveSignalTable } = await import('./semantics')
+    vi.mocked(mockedResolveSignalTable).mockImplementation(async (signal: string) =>
       signal === 'traces' ? 'opentelemetry_traces' : undefined
     )
     loadDrilldownSettings.mockReturnValue({ logs: { table: 'page_logs' }, traces: {} })
@@ -392,7 +394,9 @@ describe('useSignalBinding', () => {
     ctx.semantics.traces.setTable('t_0031')
 
     useSignalBinding(ctx)
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 0)
+    })
 
     expect(ctx.semantics.traces.table.value).toBe('opentelemetry_traces')
   })
@@ -405,7 +409,9 @@ describe('useSignalBinding', () => {
     ctx.semantics.traces.setTable('web_trace_demo')
 
     useSignalBinding(ctx)
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 0)
+    })
 
     expect(ctx.semantics.traces.table.value).toBe('web_trace_demo')
   })
@@ -431,6 +437,8 @@ describe('useSignalBinding', () => {
       setLogsView: () => undefined,
       setLogsTab: () => undefined,
       setTracesTab: () => undefined,
+      setRedMetric: () => undefined,
+      setSpanScope: () => undefined,
       openLogsForTrace: () => undefined,
       closeLogsForTrace: () => undefined,
       openTraceGantt: () => undefined,

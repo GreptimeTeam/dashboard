@@ -79,7 +79,12 @@ export const TRACE_LOGS_DRAWER_QUERY_KEYS = Object.values(TRACE_LOGS_KEYS)
 
 export interface TraceDrawerState {
   traceId: string
-  target: TraceDetailTarget
+  /**
+   * Absent when the caller has no table to point at yet — the logs drawer of a trace whose
+   * logs table is not chosen opens anyway and its panel explains why. Such a state cannot be
+   * carried by the URL (the target's table is the key), so it only lives for the session.
+   */
+  target?: TraceDetailTarget
 }
 
 function drawerFromQuery(query: Record<string, unknown>, keys: TargetDrawerKeys): TraceDrawerState | undefined {

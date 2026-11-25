@@ -24,7 +24,7 @@ import {
   type TracesHomeTab,
 } from './types'
 import { addFilter as mergeFilter, filterKey, hasLogsMappedFilters, toggleIncludeFilter } from './filters'
-import type { RedMetric } from './traces/red-queries'
+import { DEFAULT_SPAN_SCOPE, type RedMetric, type SpanScope } from './traces/red-queries'
 
 export interface SignalSemanticSnapshot {
   database: string | undefined
@@ -100,6 +100,8 @@ export interface DrilldownUiState {
   tracesTab: Ref<TracesHomeTab>
   /** Traces RED focus (Rate / Errors / Duration). URL `redMetric`, omit default `rate`. */
   redMetric: Ref<RedMetric>
+  /** Traces span population (root spans / all spans). URL `spanScope`, omit default `root`. */
+  spanScope: Ref<SpanScope>
   logsSelectedGroup: Ref<string | undefined>
 }
 
@@ -120,6 +122,7 @@ export interface DrilldownActions {
   setLogsTab: (tab: LogsDetailTab) => void
   setTracesTab: (tab: TracesHomeTab) => void
   setRedMetric: (metric: RedMetric) => void
+  setSpanScope: (scope: SpanScope) => void
   openLogsDetail: (groupValue?: string) => void
   closeLogsDetail: () => void
   /**
@@ -336,6 +339,7 @@ export function useDrilldownContextProvider(): DrilldownContext {
   const logsBodyValue = ref('')
   const tracesTab = ref<TracesHomeTab>('breakdown')
   const redMetric = ref<RedMetric>('rate')
+  const spanScope = ref<SpanScope>(DEFAULT_SPAN_SCOPE)
   const logsSelectedGroup = ref<string | undefined>()
 
   const logsSemantics = createSignalSemanticState()
@@ -450,6 +454,7 @@ export function useDrilldownContextProvider(): DrilldownContext {
     if (next !== 'traces') {
       tracesTab.value = 'breakdown'
       redMetric.value = 'rate'
+      spanScope.value = DEFAULT_SPAN_SCOPE
       // Prefer binder close so overlay snapshot restores; falls back to clearing the id.
       closeLogsForTrace()
     }
@@ -546,6 +551,10 @@ export function useDrilldownContextProvider(): DrilldownContext {
     redMetric.value = next
   }
 
+  const setSpanScope = (next: SpanScope) => {
+    spanScope.value = next
+  }
+
   const openTraceGantt = (traceId: string, options?: { at?: unknown }) => {
     const trimmed = traceId.trim()
     if (!trimmed) {
@@ -574,6 +583,7 @@ export function useDrilldownContextProvider(): DrilldownContext {
     setLogsTab,
     setTracesTab,
     setRedMetric,
+    setSpanScope,
     openLogsDetail,
     closeLogsDetail,
     claimOwnedLogsDetailFilters,
@@ -618,6 +628,7 @@ export function useDrilldownContextProvider(): DrilldownContext {
       logsBodyValue,
       tracesTab,
       redMetric,
+      spanScope,
       logsSelectedGroup,
     },
     actions,

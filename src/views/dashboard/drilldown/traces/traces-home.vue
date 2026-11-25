@@ -19,6 +19,17 @@ a-layout-content.layout-content
                 :placeholder="t('drilldown.traces.tablePlaceholder')"
                 @change="onTableChange"
               )
+            span.drilldown-toolbar__group
+              span.drilldown-toolbar__label {{ t('drilldown.traces.spanScopeLabel') }}
+              a-tooltip(:content="spanScopeHint")
+                a-radio-group.span-scope-toggle(
+                  type="button"
+                  size="medium"
+                  :model-value="spanScope"
+                  @update:model-value="onSpanScopeChange"
+                )
+                  a-radio(value="root") {{ t('drilldown.traces.spanScopeRoot') }}
+                  a-radio(value="all") {{ t('drilldown.traces.spanScopeAll') }}
           .drilldown-toolbar__right
             a-button.trace-logs-settings-trigger(
               v-if="logsManualMappingEnabled"
@@ -108,6 +119,7 @@ a-layout-content.layout-content
   import { resolveTraceLogsForServices, type TraceLogsTarget } from '@/observability/traces/logs-association'
   import type { ColumnType, QueryState } from '@/types/query'
   import { isTracesHomeTab } from '@/observability/types'
+  import { isSpanScope } from '@/observability/traces/red-queries'
   import useDrilldownKeepAlive from '@/observability/use-drilldown-keep-alive'
   import useDrilldownPanelTab from '@/observability/use-drilldown-panel-tab'
   import useSignalQuery from '@/observability/use-signal-query'
@@ -138,6 +150,10 @@ a-layout-content.layout-content
   const tracesTable = ref(ctx.semantics.traces.table.value)
   const traceIdDraft = ref('')
   const selectedRedMetric = ctx.ui.redMetric
+  const { spanScope } = ctx.ui
+  const spanScopeHint = computed(() =>
+    t(spanScope.value === 'all' ? 'drilldown.traces.spanScopeAllHint' : 'drilldown.traces.spanScopeRootHint')
+  )
   const traceLogsSettingsVisible = ref(false)
   const traceLogsMappingsVersion = ref(0)
   const activeTab = useDrilldownPanelTab({
@@ -159,6 +175,7 @@ a-layout-content.layout-content
       ctx.query.rangeTime.value[1],
       ctx.semantics.traces.table.value,
       selectedRedMetric.value,
+      spanScope.value,
     ])
 
   const keepAlive = useDrilldownKeepAlive({ deps: depsKey })
@@ -264,6 +281,12 @@ a-layout-content.layout-content
     ctx.actions.triggerRefresh()
   })
 
+  const onSpanScopeChange = (value: string | number | boolean) => {
+    if (isSpanScope(value)) {
+      ctx.actions.setSpanScope(value)
+    }
+  }
+
   const onTableChange = async (table: string) => {
     if (!table || table === ctx.semantics.traces.table.value) {
       return
@@ -325,7 +348,7 @@ a-layout-content.layout-content
   // 唯一的行加载管线：输入（含 refreshKey 的手动刷新）变化即重跑，immediate 覆盖首载。
   useSignalQuery(ctx, 'traces', {
     enabled: () => overviewActive.value && !ctx.ui.focusTraceId.value,
-    params: () => selectedRedMetric.value,
+    params: () => ({ redMetric: selectedRedMetric.value, spanScope: spanScope.value }),
     run: () => loadRows(),
   })
 </script>

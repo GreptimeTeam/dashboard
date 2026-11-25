@@ -26,6 +26,7 @@ function fakeCtx(): DrilldownContext {
     },
     connection: { databaseFor: () => 'public' },
     query: { unixTimeRange: () => [0, 0], filters: ref([]) },
+    ui: { spanScope: ref('root') },
     session: { traceLogs: { traceServices: new Map() } },
   } as unknown as DrilldownContext
 }

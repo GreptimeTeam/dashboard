@@ -234,8 +234,14 @@ export default {
   'drilldown.traces.redChartNoData': 'No data in range',
   'drilldown.traces.comingSoon': 'Coming soon',
   'drilldown.traces.rootSpanList': 'Root spans',
+  'drilldown.traces.spanScopeLabel': 'Spans',
+  'drilldown.traces.spanScopeRoot': 'Root spans',
+  'drilldown.traces.spanScopeAll': 'All spans',
+  'drilldown.traces.spanScopeRootHint': 'Charts, breakdown and list use only the root span of each trace.',
+  'drilldown.traces.spanScopeAllHint':
+    'Charts and breakdown count every span. The list shows the root span of each trace that has a matching span; traces without a root in range are not listed.',
   'drilldown.traces.rowCount': '{count} traces',
-  'drilldown.traces.noRows': 'No root spans in the current time range',
+  'drilldown.traces.noRows': 'No data in the current time range',
   'drilldown.traces.traceIdSearchPlaceholder': 'Paste Trace ID',
   'drilldown.traces.traceIdSearchAction': 'View',
   'drilldown.traces.traceLogsTitle': 'Trace Logs',
@@ -244,7 +250,13 @@ export default {
     'No logs found for this Trace ID in {target}. Choose the logs table on the {page} page.',
   'drilldown.traces.traceLogsNoTraceColumn':
     '{target} has no trace id column. Choose the logs table on the {page} page.',
+  'drilldown.traces.traceLogsEmptyExplore':
+    'No logs found for this Trace ID in {target}. Choose the logs table on the Logs tab of Signals Explore.',
+  'drilldown.traces.traceLogsNoTraceColumnExplore':
+    '{target} has no trace id column. Choose the logs table on the Logs tab of Signals Explore.',
   'drilldown.traces.traceLogsNoTable': 'No logs table is bound yet. Run a query or pick a table on the {page} page.',
+  'drilldown.traces.traceLogsNoTableExplore':
+    'No logs table is bound yet. Bind one on the Logs tab of Signals Explore.',
   'drilldown.traces.openLogs': 'View logs',
   'drilldown.traces.logsMappingAmbiguous': 'Multiple possible log tables — pick one in settings',
   'drilldown.traces.logsMappingFallbackHint': 'Services without a mapping use the Logs page bound table ({table}).',

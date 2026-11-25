@@ -1,6 +1,7 @@
 /**
  * RED timeseries + list semantics for Traces Drilldown (Phase A).
- * Aggregation follows selectedRedMetric; population is root spans.
+ * Aggregation follows selectedRedMetric; the span population follows {@link SpanScope}
+ * (root spans by default, every span on demand — Grafana Traces Drilldown "primary signal").
  */
 
 import { escapeSqlString, quoteIdent } from '../logs/query-state'
@@ -12,6 +13,21 @@ export const RED_METRICS: RedMetric[] = ['rate', 'errors', 'duration']
 
 export function isRedMetric(value: unknown): value is RedMetric {
   return typeof value === 'string' && RED_METRICS.includes(value as RedMetric)
+}
+
+/**
+ * Which spans the RED panels, breakdown and trace list are computed over.
+ * `root`: one span per trace (entry request). `all`: every span, so child-span errors,
+ * attributes and downstream services become visible.
+ */
+export type SpanScope = 'root' | 'all'
+
+export const SPAN_SCOPES: SpanScope[] = ['root', 'all']
+
+export const DEFAULT_SPAN_SCOPE: SpanScope = 'root'
+
+export function isSpanScope(value: unknown): value is SpanScope {
+  return typeof value === 'string' && SPAN_SCOPES.includes(value as SpanScope)
 }
 
 /** OTel / greptime_trace_v1 error status values seen in practice. */
@@ -277,6 +293,43 @@ WHERE ${input.where}
 GROUP BY time_bucket
 ORDER BY time_bucket ASC
 LIMIT ${limit}`
+}
+
+/** `trace_id IN (...)` over a literal list; an empty list matches nothing but keeps the result schema. */
+export function buildTraceIdInPredicate(traceIdColumn: string, traceIds: readonly string[]): string {
+  if (!traceIds.length) {
+    return '1 = 0'
+  }
+  const literals = traceIds.map((id) => `'${escapeSqlString(id)}'`)
+  return `${quoteIdent(traceIdColumn)} IN (${literals.join(', ')})`
+}
+
+export interface BuildMatchedTraceIdsSqlInput {
+  tableName: string
+  /** Any-span predicate: time window + label chips + the metric's own condition (e.g. error status). */
+  where: string
+  traceIdColumn: string
+  timeColumn: string
+  durationColumn: string
+  metric: RedMetric
+  limit: number
+}
+
+/**
+ * Step 1 of the all-spans trace list: ids of traces that contain at least one matching span,
+ * ranked like the list itself. Selecting only the id keeps the scan narrow; the root rows are
+ * then fetched by literal id list (step 2), which avoids a join that would read every root
+ * row of the window.
+ */
+export function buildMatchedTraceIdsSql(input: BuildMatchedTraceIdsSqlInput): string {
+  const trace = quoteIdent(input.traceIdColumn)
+  const rankColumn = input.metric === 'duration' ? input.durationColumn : input.timeColumn
+  return `SELECT ${trace} AS trace_id
+FROM ${quoteIdent(input.tableName)}
+WHERE ${input.where} AND ${trace} IS NOT NULL
+GROUP BY ${trace}
+ORDER BY MAX(${quoteIdent(rankColumn)}) DESC
+LIMIT ${input.limit}`
 }
 
 export function buildRootListOrderAndExtraWhere(

@@ -79,6 +79,7 @@ function createCtx() {
   const logsTab = ref('logs')
   const tracesTab = ref('breakdown')
   const redMetric = ref<'rate' | 'errors' | 'duration'>('rate')
+  const spanScope = ref<'root' | 'all'>('root')
   const time = ref(30)
   const rangeTime = ref<string[]>([])
 
@@ -127,6 +128,9 @@ function createCtx() {
   const setRedMetric = vi.fn((next: 'rate' | 'errors' | 'duration') => {
     redMetric.value = next
   })
+  const setSpanScope = vi.fn((next: 'root' | 'all') => {
+    spanScope.value = next
+  })
   const setDetailTab = vi.fn((tab: string) => {
     detailTab.value = tab as typeof detailTab.value
   })
@@ -161,6 +165,7 @@ function createCtx() {
       logsBodyValue,
       tracesTab,
       redMetric,
+      spanScope,
       logsSelectedGroup,
     },
     actions: {
@@ -172,6 +177,7 @@ function createCtx() {
       setLogsTab,
       setTracesTab,
       setRedMetric,
+      setSpanScope,
       openLogsForTrace,
       closeLogsForTrace,
       openTraceGantt,
@@ -274,6 +280,45 @@ describe('useDrilldownUrlSync', () => {
     urlSync.updateQueryParams()
     const withRate = router.push.mock.calls[0]?.[0] ?? router.replace.mock.calls[0]?.[0]
     expect(withRate.query).not.toHaveProperty('redMetric')
+  })
+
+  it('hydrates traces spanScope from the URL and falls back to root otherwise', async () => {
+    const { default: useDrilldownUrlSync } = await import('./use-drilldown-url-sync')
+    const ctx = createCtx()
+    const urlSync = useDrilldownUrlSync(
+      ctx,
+      { query: { signal: 'traces', timeLength: '30', spanScope: 'all' } } as never,
+      { push: vi.fn(), replace: vi.fn() } as never
+    )
+    urlSync.initializeFromQuery()
+    await nextTick()
+    expect(ctx.actions.setSpanScope).toHaveBeenCalledWith('all')
+
+    urlSync.applyQueryToContext({ signal: 'traces', timeLength: '30', spanScope: 'bogus' } as never)
+    expect(ctx.actions.setSpanScope).toHaveBeenLastCalledWith('root')
+  })
+
+  it('writes non-default traces spanScope and omits root', async () => {
+    const { default: useDrilldownUrlSync } = await import('./use-drilldown-url-sync')
+    const ctx = createCtx()
+    ctx.connection.signal.value = 'traces'
+    ctx.ui.spanScope.value = 'all'
+    const route = reactive<{ query: Record<string, string> }>({ query: { timeLength: '30', signal: 'traces' } })
+    const router = { push: vi.fn(), replace: vi.fn() }
+    const urlSync = useDrilldownUrlSync(ctx, route as never, router as never)
+
+    urlSync.updateQueryParams()
+    const withAll = router.push.mock.calls[0]?.[0] ?? router.replace.mock.calls[0]?.[0]
+    expect(withAll.query.spanScope).toBe('all')
+
+    await Promise.resolve()
+    router.push.mockClear()
+    router.replace.mockClear()
+    route.query = { timeLength: '30', signal: 'traces', spanScope: 'all' }
+    ctx.ui.spanScope.value = 'root'
+    urlSync.updateQueryParams()
+    const withRoot = router.push.mock.calls[0]?.[0] ?? router.replace.mock.calls[0]?.[0]
+    expect(withRoot.query).not.toHaveProperty('spanScope')
   })
 
   it('hydrates with soft setSignal and restores logsTrace drawer via openLogsForTrace', async () => {

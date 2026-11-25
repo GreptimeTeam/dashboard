@@ -142,7 +142,7 @@
 
   useSignalQuery(ctx, 'traces', {
     enabled: () => !ctx.ui.focusTraceId.value,
-    params: () => ({ metric: props.metric, isDark: isDark.value }),
+    params: () => ({ metric: props.metric, isDark: isDark.value, spanScope: ctx.ui.spanScope.value }),
     run: () => load(),
   })
 </script>

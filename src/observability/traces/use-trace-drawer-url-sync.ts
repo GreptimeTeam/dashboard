@@ -37,7 +37,11 @@ export default function useTraceDrawerUrlSync(routeName: string, kind: TraceDraw
   return {
     traceId: computed(() => state.value?.traceId ?? ''),
     target: computed<TraceDetailTarget | undefined>(() => state.value?.target),
-    open: (traceId: string, target: TraceDetailTarget) => open({ traceId, target }),
+    /**
+     * Open the drawer. `target` is optional so a caller with nothing to point at (no logs table
+     * chosen yet) still opens it and lets the panel say why; that state is not URL-carried.
+     */
+    open: (traceId: string, target?: TraceDetailTarget) => open(target ? { traceId, target } : { traceId }),
     close,
   }
 }
