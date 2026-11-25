@@ -75,8 +75,8 @@ module.exports = {
   },
   overrides: [
     {
-      // Playwright menu smoke is intentionally serial (SPA push + await per leaf).
-      files: ['tests/menu-smoke/**/*.{ts,js}', 'tests/release-smoke/**/*.{ts,js}'],
+      // Release smoke is intentionally serial (SPA push + await per leaf).
+      files: ['tests/release-smoke/**/*.{ts,js}'],
       rules: {
         'no-await-in-loop': 0,
         'no-restricted-syntax': 0,

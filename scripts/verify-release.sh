@@ -2,8 +2,8 @@
 # Verify a published dashboard release can boot and interact with key pages.
 #
 # Downloads build.tar.gz from GitHub Releases, serves the static HTML via
-# vite preview (proxies /v1 → http://127.0.0.1:4000), then runs Playwright
-# menu-smoke e2e (ephemeral DB + seeded fixtures) against the left-menu pages.
+# vite preview (proxies /v1 → http://127.0.0.1:4000), then runs the @smoke subset of the
+# single-session Playwright e2e suite (fixed `dashboard_e2e` database, seeded on demand).
 #
 # Prerequisites:
 #   - pnpm install (and playwright browsers: pnpm exec playwright install chromium)
@@ -18,7 +18,7 @@
 #   SMOKE_PORT=4173
 #   SMOKE_HOST=127.0.0.1
 #   SMOKE_FORCE_DOWNLOAD=1   re-download even if cached
-#   SMOKE_STRICT=1           fail suite when any page action fails
+#   E2E_FULL=1               run the whole suite instead of only @smoke
 #   REPO=GreptimeTeam/dashboard
 
 set -euo pipefail
@@ -61,7 +61,8 @@ echo "    download: ${DOWNLOAD_URL}"
 echo "    workdir:  ${WORK_DIR}"
 echo "    db host:  ${DB_HOST} (via vite preview /v1 proxy → 127.0.0.1:4000)"
 echo "    serve:    http://${HOST}:${PORT}"
-echo "    suite:    menu-smoke (fixture + mock data)"
+if [[ "${E2E_FULL:-0}" == "1" ]]; then SUITE="full"; else SUITE="@smoke"; fi
+echo "    suite:    e2e ${SUITE} (fixed seeded database)"
 
 mkdir -p "$WORK_DIR"
 
@@ -91,20 +92,21 @@ if ! curl -fsS --max-time 3 "${DB_HOST%/}/v1/health" >/dev/null 2>&1; then
   echo "      Pages may still open; API-backed widgets may warn."
 fi
 
-export SMOKE_DIST_DIR="$DIST_DIR"
-export SMOKE_HOST="$HOST"
-export SMOKE_PORT="$PORT"
-export SMOKE_DB_HOST="$DB_HOST"
-export SMOKE_NO_OPEN=1
+export E2E_DIST_DIR="$DIST_DIR"
+export E2E_HOST="$HOST"
+export E2E_PORT="$PORT"
+export E2E_DB_HTTP="$DB_HOST"
 export CI="${CI:-1}"
 
-echo "==> Running Playwright menu-smoke e2e against release ${TAG}..."
-pnpm exec playwright test -c playwright.menu.config.ts
+echo "==> Running Playwright e2e against release ${TAG}..."
+if [[ "${E2E_FULL:-0}" == "1" ]]; then
+  pnpm exec playwright test -c playwright.e2e.config.ts
+else
+  pnpm exec playwright test -c playwright.e2e.config.ts --grep @smoke
+fi
 
-REPORT_LATEST="${ROOT_DIR}/artifacts/menu-smoke/latest/index.html"
-echo "==> PASS: release ${TAG} smoke verification succeeded"
+REPORT_LATEST="${ROOT_DIR}/artifacts/e2e/report/index.html"
+echo "==> PASS: release ${TAG} verification succeeded"
 echo "    report:      ${REPORT_LATEST}"
 echo "    report URL:  file://${REPORT_LATEST}"
-if [[ -d "${ROOT_DIR}/artifacts/menu-smoke/latest/screenshots" ]]; then
-  echo "    screenshots: artifacts/menu-smoke/latest/screenshots"
-fi
+

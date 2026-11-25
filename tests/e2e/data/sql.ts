@@ -1,4 +1,4 @@
-/** HTTP client for GreptimeDB `/v1/sql` (used by global setup/teardown). */
+/** HTTP client for GreptimeDB `/v1/sql` (global setup, seeding and read-back assertions). */
 
 export type SqlClientOptions = {
   baseUrl: string
@@ -8,8 +8,11 @@ export type SqlClientOptions = {
   authHeader?: string
 }
 
+/** `E2E_DB_*` wins; the `SMOKE_DB_*` names stay accepted so existing CI / shell setups keep working. */
+const env = (name: string): string => process.env[`E2E_DB_${name}`] || process.env[`SMOKE_DB_${name}`] || ''
+
 export function dbHttpBase(): string {
-  return (process.env.SMOKE_DB_HTTP || 'http://127.0.0.1:4000').replace(/\/$/, '')
+  return (env('HTTP') || 'http://127.0.0.1:4000').replace(/\/$/, '')
 }
 
 function authHeaders(opts: SqlClientOptions): Record<string, string> {
@@ -47,10 +50,16 @@ export async function runSql(sql: string, opts: SqlClientOptions = { baseUrl: db
   }
 }
 
-export function smokeAuthFromEnv(): Pick<SqlClientOptions, 'username' | 'password' | 'authHeader'> {
+export function authFromEnv(): Pick<SqlClientOptions, 'username' | 'password' | 'authHeader'> {
   return {
-    username: process.env.SMOKE_DB_USER || '',
-    password: process.env.SMOKE_DB_PASSWORD || '',
-    authHeader: process.env.SMOKE_DB_AUTH_HEADER || '',
+    username: env('USER'),
+    password: env('PASSWORD'),
+    authHeader: env('AUTH_HEADER'),
   }
+}
+
+/** Rows of the first statement's result set, or `[]` when it returned none. */
+export async function queryRows(sql: string, database: string): Promise<unknown[][]> {
+  const result: any = await runSql(sql, { baseUrl: dbHttpBase(), database, ...authFromEnv() })
+  return result?.output?.[0]?.records?.rows ?? []
 }
