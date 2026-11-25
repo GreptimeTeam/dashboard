@@ -4,7 +4,7 @@
     a-card.drilldown-top-card(:bordered="false")
       DrilldownTopBar
 
-    .traces-view-tabs(v-if="showTracesViews")
+    .traces-view-tabs(v-if="showTracesViews && !traceDetailOpen")
       SignalTabNav(
         mode="tabs"
         :aria-label="t('drilldown.nav.tracesViews')"
@@ -156,6 +156,8 @@
   const { signal } = ctx.connection
   const { setSignal } = ctx.actions
   const serviceMapActive = computed(() => route.query.view === 'service-map')
+  // Trace detail replaces the list like Metrics / Logs detail does: the breadcrumb is the only
+  // navigation there, so the Overview / Service Map tabs would be a second, duplicate "Overview".
   const showTracesViews = computed(() => serviceMapActive.value || signal.value === 'traces')
   const activeTracesView = computed(() => (serviceMapActive.value ? 'service-map' : 'overview'))
   const tracesViewItems = computed(() => [
@@ -177,6 +179,8 @@
   const logsFromTraceVisible = computed(() => Boolean(ctx.ui.logsTraceId.value))
   const tracesGanttVisible = computed(() => Boolean(ctx.ui.focusTraceId.value))
   const tracesHomeHidden = computed(() => tracesGanttVisible.value || logsFromTraceVisible.value)
+  // Service Map renders no detail drawer, so a stale trace id in the URL must not hide its tabs.
+  const traceDetailOpen = computed(() => tracesHomeHidden.value && !serviceMapActive.value)
   const focusTraceIdLabel = computed(() => ctx.ui.focusTraceId.value || '')
   const logsTraceIdLabel = computed(() => ctx.ui.logsTraceId.value || '')
   const metricOriginalName = ref<string | null>(null)
