@@ -6,7 +6,13 @@ DrilldownDrawer(
   :breadcrumbs="breadcrumbs"
   @close="emit('close')"
 )
-  TraceLogsPanel(v-if="traceId && target" :trace-id="traceId" :target="target")
+  TraceLogsPanel(
+    v-if="traceId && target"
+    :trace-id="traceId"
+    :target="target"
+    :trace-id-column="traceIdColumn"
+    :source="source"
+  )
 </template>
 
 <script setup lang="ts">
@@ -27,6 +33,10 @@ DrilldownDrawer(
   const props = defineProps<{
     traceId: string
     target?: TraceDetailTarget
+    /** Trace id column override (see TraceLogsPanel). */
+    traceIdColumn?: string
+    /** Usage scenario (see TraceLogsPanel). */
+    source?: 'query' | 'explore'
     popupContainer: string
   }>()
 

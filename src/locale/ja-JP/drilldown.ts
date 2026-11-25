@@ -250,6 +250,10 @@ export default {
     '{target} にこの Trace ID のログが見つかりません。{page} ページでログテーブルを選択してください。',
   'drilldown.traces.traceLogsNoTraceColumn':
     '{target} には trace id 列がありません。{page} ページでログテーブルを選択してください。',
+  'drilldown.traces.traceLogsEmptyExplore':
+    '{target} にこの Trace ID のログが見つかりません。シグナル探索の Logs タブでログテーブルを選択してください。',
+  'drilldown.traces.traceLogsNoTraceColumnExplore':
+    '{target} には trace id 列がありません。シグナル探索の Logs タブでログテーブルを選択してください。',
   'drilldown.traces.traceLogsNoTable':
     'ログテーブルがまだバインドされていません。先に {page} ページでクエリを実行するか、テーブルを選択してください。',
   'drilldown.traces.openLogs': 'ログを表示',

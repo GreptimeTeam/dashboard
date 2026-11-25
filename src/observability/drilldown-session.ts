@@ -1,3 +1,4 @@
+import { shallowReactive } from 'vue'
 import type { DrilldownActions, SignalSemanticSnapshot } from './context'
 import type { TraceLogsResolution } from './traces/logs-association'
 
@@ -59,7 +60,8 @@ export default function createDrilldownSession(): DrilldownSession {
     },
   }
   const binding: SignalBindingRuntime = { ready: false, impl: undefined }
-  const overlayLogs: OverlayLogsState = { active: false }
+  // Shallow-reactive so views can wait for an overlay bind (`active` / `pending` / `targetTable`).
+  const overlayLogs = shallowReactive<OverlayLogsState>({ active: false })
 
   const clearOverlayLogs = () => {
     overlayLogs.active = false

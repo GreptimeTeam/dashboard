@@ -250,6 +250,10 @@ export default {
     'No logs found for this Trace ID in {target}. Choose the logs table on the {page} page.',
   'drilldown.traces.traceLogsNoTraceColumn':
     '{target} has no trace id column. Choose the logs table on the {page} page.',
+  'drilldown.traces.traceLogsEmptyExplore':
+    'No logs found for this Trace ID in {target}. Choose the logs table on the Logs tab of Signals Explore.',
+  'drilldown.traces.traceLogsNoTraceColumnExplore':
+    '{target} has no trace id column. Choose the logs table on the Logs tab of Signals Explore.',
   'drilldown.traces.traceLogsNoTable': 'No logs table is bound yet. Run a query or pick a table on the {page} page.',
   'drilldown.traces.openLogs': 'View logs',
   'drilldown.traces.logsMappingAmbiguous': 'Multiple possible log tables — pick one in settings',

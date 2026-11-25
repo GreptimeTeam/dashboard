@@ -39,8 +39,19 @@
   })
 
   const props = defineProps<{
+    /** The trace id value to look up, e.g. `b63520cf...`. */
     traceId: string
     target: TraceDetailTarget
+    /**
+     * Name of the log table column that stores trace ids, e.g. `trace_id` (a mapped role in
+     * Explore). Empty or not in the table: find the column by name.
+     */
+    traceIdColumn?: string
+    /**
+     * Where the panel is used. It decides where the empty text sends the user to choose the
+     * log table: the Logs Query page (`query`) or Signals Explore's own Logs binding (`explore`).
+     */
+    source?: 'query' | 'explore'
   }>()
 
   /** One screenful of context is enough; the full set is a Logs Query away. */
@@ -62,12 +73,11 @@
     const count = data.value.length >= ROW_LIMIT ? `${data.value.length}+` : String(data.value.length)
     return t('drilldown.traces.traceLogsCount', { count })
   })
-  const resolvedEmptyText = computed(() =>
-    t(missingTraceColumn.value ? 'drilldown.traces.traceLogsNoTraceColumn' : 'drilldown.traces.traceLogsEmpty', {
-      target: targetLabel.value,
-      page: t('menu.dashboard.logsQuery'),
-    })
-  )
+  const resolvedEmptyText = computed(() => {
+    const suffix = props.source === 'explore' ? 'Explore' : ''
+    const key = missingTraceColumn.value ? 'drilldown.traces.traceLogsNoTraceColumn' : 'drilldown.traces.traceLogsEmpty'
+    return t(`${key}${suffix}`, { target: targetLabel.value, page: t('menu.dashboard.logsQuery') })
+  })
 
   // Only the latest request may write results: props can change while a query is in flight.
   let requestId = 0
@@ -96,8 +106,9 @@
 
       // A table without a trace id column cannot be filtered by this trace: stay empty rather
       // than listing unrelated rows.
-      const traceColumn = findTraceIdColumn(schema)
-      if (!traceColumn) {
+      const mapped = props.traceIdColumn?.trim()
+      const idColumn = mapped && schema.some((column) => column.name === mapped) ? mapped : findTraceIdColumn(schema)
+      if (!idColumn) {
         missingTraceColumn.value = true
         return
       }
@@ -106,7 +117,7 @@
         schema.find((column) => column.name === 'timestamp')?.name
 
       // ±12h around the span timestamp for partition pruning.
-      const whereParts = [`${quoteIdent(traceColumn)} = '${escapeSqlString(id)}'`]
+      const whereParts = [`${quoteIdent(idColumn)} = '${escapeSqlString(id)}'`]
       if (timeColumn && start !== undefined && end !== undefined) {
         whereParts.push(`${quoteIdent(timeColumn)} >= FROM_UNIXTIME(${start})`)
         whereParts.push(`${quoteIdent(timeColumn)} <= FROM_UNIXTIME(${end})`)
@@ -154,7 +165,14 @@
   }
 
   watch(
-    () => [props.traceId, props.target.table, props.target.database, props.target.start, props.target.end],
+    () => [
+      props.traceId,
+      props.target.table,
+      props.target.database,
+      props.target.start,
+      props.target.end,
+      props.traceIdColumn,
+    ],
     () => {
       fetchLogs()
     },
