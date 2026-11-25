@@ -70,6 +70,7 @@
         source="explore"
         :trace-id="logsTraceIdLabel"
         :target="traceLogsTarget"
+        :binding="traceLogsBinding"
         :trace-id-column="traceLogsIdColumn"
         @close="closeLogsForTraceDrawer"
       )
@@ -93,6 +94,7 @@
         source="explore"
         :trace-id="logsTraceIdLabel"
         :target="traceLogsTarget"
+        :binding="traceLogsBinding"
         :trace-id-column="traceLogsIdColumn"
         @close="closeLogsForTraceDrawer"
       )
@@ -167,7 +169,11 @@
   const traceDetailOpen = computed(() => tracesHomeHidden.value && !serviceMapActive.value)
   const focusTraceIdLabel = computed(() => ctx.ui.focusTraceId.value || '')
   const logsTraceIdLabel = computed(() => ctx.ui.logsTraceId.value || '')
-  const { target: traceLogsTarget, traceIdColumn: traceLogsIdColumn } = useTraceLogsTarget(ctx)
+  const {
+    target: traceLogsTarget,
+    traceIdColumn: traceLogsIdColumn,
+    binding: traceLogsBinding,
+  } = useTraceLogsTarget(ctx)
   const metricOriginalName = ref<string | null>(null)
 
   watch(

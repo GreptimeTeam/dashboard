@@ -7,9 +7,10 @@ DrilldownDrawer(
   @close="emit('close')"
 )
   TraceLogsPanel(
-    v-if="traceId && target"
+    v-if="traceId"
     :trace-id="traceId"
     :target="target"
+    :binding="binding"
     :trace-id-column="traceIdColumn"
     :source="source"
   )
@@ -20,11 +21,14 @@ DrilldownDrawer(
   import { useI18n } from 'vue-i18n'
   import DrilldownDrawer from '@/views/dashboard/drilldown/components/drilldown-drawer.vue'
   import type { TraceDetailTarget } from '@/observability/traces/trace-detail-target'
+  import type { TraceLogsPanelSource } from '@/observability/traces/trace-logs-empty-state'
   import TraceLogsPanel from './TraceLogsPanel.vue'
 
   /**
    * Logs of one trace, opened from a span in the trace drawer and stacked on top of it.
    * The trace id breadcrumb returns to the trace; empty `traceId` closes the drawer.
+   * The panel — not the caller — explains why there are no logs, so the drawer opens even
+   * when no logs table is bound yet.
    */
   defineOptions({
     name: 'TraceLogsDrawer',
@@ -36,7 +40,9 @@ DrilldownDrawer(
     /** Trace id column override (see TraceLogsPanel). */
     traceIdColumn?: string
     /** Usage scenario (see TraceLogsPanel). */
-    source?: 'query' | 'explore'
+    source?: TraceLogsPanelSource
+    /** The logs binding is still resolving its table (see TraceLogsPanel). */
+    binding?: boolean
     popupContainer: string
   }>()
 

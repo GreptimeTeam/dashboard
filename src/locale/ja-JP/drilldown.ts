@@ -241,7 +241,7 @@ export default {
   'drilldown.traces.spanScopeAllHint':
     'チャートと内訳はすべてのスパンを集計します。一覧は一致するスパンを含むトレースのルートスパンを表示し、範囲内にルートがないトレースは表示されません。',
   'drilldown.traces.rowCount': '{count} 件のトレース',
-  'drilldown.traces.noRows': '現在の時間範囲にルートスパンがありません',
+  'drilldown.traces.noRows': '現在の時間範囲にデータがありません',
   'drilldown.traces.traceIdSearchPlaceholder': 'トレース ID を貼り付け',
   'drilldown.traces.traceIdSearchAction': '表示',
   'drilldown.traces.traceLogsTitle': 'Trace ログ',
@@ -256,6 +256,8 @@ export default {
     '{target} には trace id 列がありません。シグナル探索の Logs タブでログテーブルを選択してください。',
   'drilldown.traces.traceLogsNoTable':
     'ログテーブルがまだバインドされていません。先に {page} ページでクエリを実行するか、テーブルを選択してください。',
+  'drilldown.traces.traceLogsNoTableExplore':
+    'ログテーブルがまだバインドされていません。シグナル探索の Logs タブで選択してください。',
   'drilldown.traces.openLogs': 'ログを表示',
   'drilldown.traces.logsMappingAmbiguous': '複数のログテーブルが候補として見つかりました。設定から 1 つ選んでください',
   'drilldown.traces.logsMappingFallbackHint':

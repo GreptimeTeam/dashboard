@@ -101,7 +101,6 @@
   import { listSignalTables } from '@/observability/semantics'
   import { TRACES_QUERY_STORAGE_KEY, writeQueryTable } from '@/observability/query-table-pref'
   import useUiPref from '@/composables/use-ui-pref'
-  import { Message } from '@arco-design/web-vue'
   import { useI18n } from 'vue-i18n'
   import { buildTraceDetailTarget } from '@/observability/traces/trace-detail-target'
   import resolveTraceLogsDrawerTarget from '@/observability/traces/open-logs-from-trace'
@@ -254,12 +253,9 @@
   function openLogs(span: Record<string, any>) {
     const traceId = String(span?.trace_id || traceDrawerId.value || '').trim()
     if (!traceId) return
-    const target = resolveTraceLogsDrawerTarget(span?.timestamp)
-    if (!target) {
-      Message.warning(t('drilldown.traces.traceLogsNoTable', { page: t('menu.dashboard.logsQuery') }))
-      return
-    }
-    openLogsDrawer(traceId, target)
+    // No logs table chosen yet is the panel's business, not a reason to refuse the click:
+    // open the drawer and let it say why there is nothing to show (same as Explore).
+    openLogsDrawer(traceId, resolveTraceLogsDrawerTarget(span?.timestamp))
   }
 
   function handleFilterConditionAdd({ columnName, operator, value }) {

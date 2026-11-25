@@ -2,14 +2,14 @@
 .trace-logs-panel
   .drilldown-toolbar.trace-logs-toolbar
     .drilldown-toolbar__left
-      span.trace-logs-target(:title="targetLabel") {{ targetLabel }}
+      span.trace-logs-target(v-if="targetLabel" :title="targetLabel") {{ targetLabel }}
       a-tag(v-if="countLabel") {{ countLabel }}
   .trace-logs-body
     LogTableData(
-      v-if="data.length || loading"
+      v-if="data.length || showLoading"
       :data="data"
       :columns="columns"
-      :loading="loading"
+      :loading="showLoading"
       :ts-column="tsColumn"
       :size="'small'"
     )
@@ -28,6 +28,11 @@
   import { escapeSqlString } from '@/observability/logs/query-state'
   import { findTraceIdColumn } from '@/observability/traces/open-trace-from-log'
   import type { TraceDetailTarget } from '@/observability/traces/trace-detail-target'
+  import {
+    traceLogsEmptyKey,
+    traceLogsEmptyReason,
+    type TraceLogsPanelSource,
+  } from '@/observability/traces/trace-logs-empty-state'
   import LogTableData from '@/views/dashboard/logs/query/LogsTable.vue'
 
   /**
@@ -41,7 +46,11 @@
   const props = defineProps<{
     /** The trace id value to look up, e.g. `b63520cf...`. */
     traceId: string
-    target: TraceDetailTarget
+    /**
+     * Where to read the logs from. Absent when the caller has no logs table to point at yet:
+     * the panel then explains that instead of staying blank.
+     */
+    target?: TraceDetailTarget
     /**
      * Name of the log table column that stores trace ids, e.g. `trace_id` (a mapped role in
      * Explore). Empty or not in the table: find the column by name.
@@ -51,7 +60,12 @@
      * Where the panel is used. It decides where the empty text sends the user to choose the
      * log table: the Logs Query page (`query`) or Signals Explore's own Logs binding (`explore`).
      */
-    source?: 'query' | 'explore'
+    source?: TraceLogsPanelSource
+    /**
+     * The logs binding is still resolving its table (Explore's overlay bind). Wait instead of
+     * reporting a missing table.
+     */
+    binding?: boolean
   }>()
 
   /** One screenful of context is enough; the full set is a Logs Query away. */
@@ -65,18 +79,26 @@
   const tsColumn = ref<TSColumn | null>(null)
   const missingTraceColumn = ref(false)
 
-  const targetLabel = computed(() =>
-    props.target.database ? `${props.target.database}.${props.target.table}` : props.target.table
-  )
+  const targetLabel = computed(() => {
+    const target = props.target
+    if (!target) return ''
+    return target.database ? `${target.database}.${target.table}` : target.table
+  })
+  const showLoading = computed(() => props.binding === true || loading.value)
   const countLabel = computed(() => {
     if (!data.value.length) return ''
     const count = data.value.length >= ROW_LIMIT ? `${data.value.length}+` : String(data.value.length)
     return t('drilldown.traces.traceLogsCount', { count })
   })
   const resolvedEmptyText = computed(() => {
-    const suffix = props.source === 'explore' ? 'Explore' : ''
-    const key = missingTraceColumn.value ? 'drilldown.traces.traceLogsNoTraceColumn' : 'drilldown.traces.traceLogsEmpty'
-    return t(`${key}${suffix}`, { target: targetLabel.value, page: t('menu.dashboard.logsQuery') })
+    const reason = traceLogsEmptyReason({
+      hasTarget: Boolean(props.target),
+      missingTraceColumn: missingTraceColumn.value,
+    })
+    return t(traceLogsEmptyKey(reason, props.source), {
+      target: targetLabel.value,
+      page: t('menu.dashboard.logsQuery'),
+    })
   })
 
   // Only the latest request may write results: props can change while a query is in flight.
@@ -93,12 +115,14 @@
     requestId += 1
     const currentRequest = requestId
     const id = props.traceId.trim()
-    const { table, database, start, end } = props.target
+    const target = props.target
     reset()
-    if (!id) {
+    // No table to read (or its bind is still in flight): the empty text explains why.
+    if (!id || !target || props.binding === true) {
       loading.value = false
       return
     }
+    const { table, database, start, end } = target
     loading.value = true
     try {
       const schema = await useTableSchemaStore().ensureTableSchema(table, database)
@@ -167,11 +191,13 @@
   watch(
     () => [
       props.traceId,
-      props.target.table,
-      props.target.database,
-      props.target.start,
-      props.target.end,
+      props.target?.table,
+      props.target?.database,
+      props.target?.start,
+      props.target?.end,
       props.traceIdColumn,
+      // The bind finishing is what makes the table available: re-read the logs then.
+      props.binding,
     ],
     () => {
       fetchLogs()

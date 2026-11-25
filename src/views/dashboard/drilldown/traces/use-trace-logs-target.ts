@@ -9,6 +9,11 @@ export interface TraceLogsView {
   target: ComputedRef<TraceDetailTarget | undefined>
   /** Trace id column from the logs field map / settings roles (`''` falls back to name matching). */
   traceIdColumn: ComputedRef<string>
+  /**
+   * The logs binding has not settled on its table yet (a queued open, or an overlay bind in
+   * flight). The panel waits while this is true instead of claiming no table is bound.
+   */
+  binding: ComputedRef<boolean>
 }
 
 /**
@@ -37,15 +42,20 @@ export default function useTraceLogsTarget(ctx: DrilldownContext): TraceLogsView
     { immediate: true }
   )
 
-  const target = computed<TraceDetailTarget | undefined>(() => {
-    if (!ctx.ui.logsTraceId.value) return undefined
+  const binding = computed(() => {
+    if (!ctx.ui.logsTraceId.value) return false
     const { overlayLogs } = ctx.session
     // A queued open has not bound its table yet; the slot still holds the page binding.
-    if (overlayLogs.pending) return undefined
+    if (overlayLogs.pending) return true
+    // Overlay bind still in flight: the semantics slot is not the target table yet.
+    const table = ctx.semantics.logs.table.value
+    return Boolean(overlayLogs.active && overlayLogs.targetTable && overlayLogs.targetTable !== table)
+  })
+
+  const target = computed<TraceDetailTarget | undefined>(() => {
+    if (!ctx.ui.logsTraceId.value || binding.value) return undefined
     const table = ctx.semantics.logs.table.value
     if (!table) return undefined
-    // Overlay bind still in flight: do not query the page table meanwhile.
-    if (overlayLogs.active && overlayLogs.targetTable && overlayLogs.targetTable !== table) return undefined
     const database = ctx.semantics.logs.database.value || ctx.connection.logsDatabase.value
     return {
       table,
@@ -59,5 +69,5 @@ export default function useTraceLogsTarget(ctx: DrilldownContext): TraceLogsView
     return roles.traceId || roles.trace_id || ''
   })
 
-  return { target, traceIdColumn }
+  return { target, traceIdColumn, binding }
 }

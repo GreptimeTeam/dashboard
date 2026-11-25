@@ -234,7 +234,7 @@ export default {
   'drilldown.traces.spanScopeAllHint':
     '图表和 Breakdown 统计所有 Span；列表展示含匹配 Span 的 Trace 的根 Span，当前范围内没有根 Span 的 Trace 不会列出。',
   'drilldown.traces.rowCount': '{count} 条 Trace',
-  'drilldown.traces.noRows': '当前时间范围内无根 Span',
+  'drilldown.traces.noRows': '当前时间范围内无数据',
   'drilldown.traces.traceIdSearchPlaceholder': '粘贴 Trace ID',
   'drilldown.traces.traceIdSearchAction': '查看',
   'drilldown.traces.traceLogsTitle': 'Trace 日志',
@@ -245,6 +245,7 @@ export default {
     '在 {target} 中未找到该 Trace ID 的日志。请在信号探索的 Logs 页签中选择日志表。',
   'drilldown.traces.traceLogsNoTraceColumnExplore': '{target} 没有 trace id 列。请在信号探索的 Logs 页签中选择日志表。',
   'drilldown.traces.traceLogsNoTable': '尚未绑定日志表，请先到 {page} 页面执行查询或选择表。',
+  'drilldown.traces.traceLogsNoTableExplore': '尚未绑定日志表，请在信号探索的 Logs 页签中选择日志表。',
   'drilldown.traces.openLogs': '查看日志',
   'drilldown.traces.logsMappingAmbiguous': '发现多张可能关联的日志表，请在设置中指定',
   'drilldown.traces.logsMappingFallbackHint': '未配置映射的 service 将使用 Logs 页当前绑定表（{table}）。',
