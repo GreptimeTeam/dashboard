@@ -53,7 +53,7 @@ artifact, a different database) and all have working defaults:
 | `E2E_EXPLORE_DB` | `public` | Read-only database for Explore/Drilldown and the trace fixtures. |
 | `E2E_DB_HTTP` | `http://127.0.0.1:4000` | GreptimeDB for seeding/read-backs; also drives the preview `/v1` proxy. A non-loopback host requires `E2E_REMOTE=1`. |
 | `E2E_DB_USER` / `E2E_DB_PASSWORD` / `E2E_DB_AUTH_HEADER` | empty | Auth for `/v1` (legacy `SMOKE_DB_*` names also work). |
-| `E2E_DIST_DIR` | `dist` | Build under test; skips the "dist older than src" check (used by `smoke:release:tag`). |
+| `E2E_DIST_DIR` | `dist` | Build under test; skips the "dist older than src" check (used by `pnpm e2e:release`). |
 | `E2E_HOST` / `E2E_PORT` | `127.0.0.1` / `4173` | Where the preview server is expected. |
 | `E2E_TRACES_TABLE` / `E2E_TRACES_LOGS_TABLE` / `E2E_TRACES_WINDOW_*` | `opentelemetry_traces_v2` / `opentelemetry_logs` / Nov 4 2026 | OTel data used by `06`/`10`; those tests skip when the window is empty (the skip reason is printed). |
 
@@ -70,6 +70,22 @@ the newest log row deliberately contains quotes, `&`, `<b>` and an emoji.
 Data that is not seeded (`TRACES_*`, the `EXPLORE` logs window) belongs to `EXPLORE_DB`; the tests
 that need it skip, and the reporter prints every skip reason in the summary line and the header.
 Skips are printed in the summary and the report header, so a run where the trace fixtures were missing cannot look silently complete.
+
+## Verifying a published release
+
+```bash
+pnpm e2e:release            # latest release (resolved from the releases/latest redirect)
+pnpm e2e:release v0.14.7    # a specific tag
+```
+
+Downloads the release's `build.tar.gz` (the HTML bundle the workflow publishes), verifies its
+`sha256.txt`, extracts it under `artifacts/release-verify/<tag>/` and runs the `@smoke` subset
+against it as `dist/` — no build, no token, no flags. The run writes its own report to
+`artifacts/release-verify/<tag>/report.html`; delete that directory to download again.
+
+Only `@smoke` runs: the full suite asserts behaviour added after a given release, while these six
+cases answer "does this build still open and talk to GreptimeDB". Measured on v0.14.7: 6 passed,
+~20s.
 
 ## Known limitation: self-hosting the trace fixtures
 

@@ -20,11 +20,9 @@
     "lint-staged": "npx lint-staged",
     "prepare": "husky install",
     "update:lock": "pnpm i --lockfile-only",
-    "smoke:release": "playwright test -c playwright.e2e.config.ts --grep @smoke",
-    "smoke:release:build": "pnpm run build && pnpm run smoke:release",
-    "smoke:release:tag": "bash scripts/verify-release.sh",
     "e2e:seed": "esbuild tests/e2e/data/cli.ts --bundle --platform=node --format=esm --outfile=artifacts/e2e/seed-cli.mjs --log-level=warning && node artifacts/e2e/seed-cli.mjs",
     "e2e:smoke": "playwright test -c playwright.e2e.config.ts --grep @smoke",
+    "e2e:release": "node scripts/test-release.mjs",
     "e2e": "playwright test -c playwright.e2e.config.ts",
     "e2e:report": "open artifacts/e2e/report.html"
   },

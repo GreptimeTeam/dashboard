@@ -11,7 +11,7 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    // Playwright specs (`pnpm e2e`, `pnpm e2e:smoke`, `pnpm smoke:release`) never run under vitest.
+    // Playwright specs (`pnpm e2e`, `pnpm e2e:smoke`, `pnpm e2e:release`) never run under vitest.
     exclude: [
       '**/node_modules/**',
       '**/dist/**',

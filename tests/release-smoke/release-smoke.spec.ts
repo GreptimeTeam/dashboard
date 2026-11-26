@@ -34,9 +34,7 @@ test.beforeAll(() => {
   const distDir = path.resolve(process.env.SMOKE_DIST_DIR || path.join(process.cwd(), 'dist'))
   const indexHtml = path.join(distDir, 'index.html')
   if (!fs.existsSync(indexHtml)) {
-    throw new Error(
-      `dist is missing at ${indexHtml}. Run "pnpm run build" or "pnpm run smoke:release:tag <version>" first.`
-    )
+    throw new Error(`dist is missing at ${indexHtml}. Run "pnpm run build" or "pnpm e2e:release <version>" first.`)
   }
   fs.mkdirSync(screenshotDir, { recursive: true })
 })
