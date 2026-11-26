@@ -1,18 +1,19 @@
 #!/usr/bin/env node
 /**
- * Verify a published dashboard release: download its HTML bundle, serve it as `dist/` and run the
- * `@smoke` subset against it.
+ * Run the e2e suite against a published dashboard release: download its HTML bundle, serve it as
+ * `dist/`, and test that build instead of the local one.
  *
- *   pnpm e2e:release              # latest release
- *   pnpm e2e:release v0.14.7      # a specific tag
+ *   pnpm e2e:release                   # latest release, full suite (the same cases as pnpm e2e)
+ *   pnpm e2e:release v0.14.7           # a specific tag
+ *   pnpm e2e:release:smoke             # the six @smoke cases only (version-independent gate)
  *
  * No token and no API rate limit: the tag comes from the `releases/latest` redirect, and the
  * `build.tar.gz` asset is downloaded from the public release page. Everything is cached under
  * `artifacts/release-verify/<tag>/` — delete that directory to download again.
  *
- * Only `@smoke` runs on purpose: the full suite asserts behaviour added after a given release
- * (that is what the local `pnpm e2e` is for), while the six smoke cases answer "does this build
- * still open and talk to GreptimeDB".
+ * Expect failures when the release predates features on this branch: the suite describes the
+ * current UI, so a tag cut before a feature existed cannot satisfy its cases. `--smoke` is the
+ * version-independent subset; the script says so when a full run fails.
  */
 import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
@@ -55,10 +56,12 @@ function findDist(root, depth = 0) {
     .find(Boolean)
 }
 
-const tag = await resolveTag(process.argv[2])
+const smoke = process.argv.includes('--smoke')
+const tagArgument = process.argv.slice(2).find((argument) => !argument.startsWith('--'))
+const tag = await resolveTag(tagArgument)
 const workDir = path.join(WORK_ROOT, tag)
 const tarball = path.join(workDir, 'build.tar.gz')
-log(`${tag}${process.argv[2] ? '' : ' (latest)'}`)
+log(`${tag}${tagArgument ? '' : ' (latest)'} — ${smoke ? '@smoke' : 'full suite'}`)
 
 let dist = findDist(workDir)
 if (dist) {
@@ -94,12 +97,23 @@ if (dist) {
 const entry = /src="([^"]*assets\/index-[^"]+\.js)"/.exec(readFileSync(path.join(dist, 'index.html'), 'utf8'))?.[1]
 log(`serving ${path.relative(ROOT, dist)}${entry ? ` (${entry})` : ''}`)
 
-const report = path.join(workDir, 'report.html')
-const result = spawnSync('pnpm', ['exec', 'playwright', 'test', '-c', 'playwright.e2e.config.ts', '--grep', '@smoke'], {
-  cwd: ROOT,
-  stdio: 'inherit',
-  env: { ...process.env, E2E_DIST_DIR: dist, E2E_REPORT_FILE: report },
-})
+const report = path.join(workDir, smoke ? 'report-smoke.html' : 'report.html')
+const result = spawnSync(
+  'pnpm',
+  ['exec', 'playwright', 'test', '-c', 'playwright.e2e.config.ts', ...(smoke ? ['--grep', '@smoke'] : [])],
+  {
+    cwd: ROOT,
+    stdio: 'inherit',
+    env: { ...process.env, E2E_DIST_DIR: dist, E2E_REPORT_FILE: report },
+  }
+)
 
-console.log(`\n[release] ${tag}: ${result.status === 0 ? 'PASS' : 'FAIL'} — report: ${path.relative(ROOT, report)}`)
+const passed = result.status === 0
+console.log(`\n[release] ${tag}: ${passed ? 'PASS' : 'FAIL'} — report: ${path.relative(ROOT, report)}`)
+if (!passed && !smoke) {
+  console.log(
+    `[release] If ${tag} predates features on this branch those cases cannot pass; ` +
+      '`pnpm e2e:release:smoke` is the version-independent gate.'
+  )
+}
 process.exit(result.status ?? 1)

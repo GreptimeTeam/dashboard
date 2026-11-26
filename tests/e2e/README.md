@@ -71,21 +71,25 @@ Data that is not seeded (`TRACES_*`, the `EXPLORE` logs window) belongs to `EXPL
 that need it skip, and the reporter prints every skip reason in the summary line and the header.
 Skips are printed in the summary and the report header, so a run where the trace fixtures were missing cannot look silently complete.
 
-## Verifying a published release
+## Testing a published release
 
 ```bash
-pnpm e2e:release            # latest release (resolved from the releases/latest redirect)
+pnpm e2e:release            # latest release, full suite — the same cases as `pnpm e2e`
 pnpm e2e:release v0.14.7    # a specific tag
+pnpm e2e:release:smoke      # the six @smoke cases only
 ```
 
-Downloads the release's `build.tar.gz` (the HTML bundle the workflow publishes), verifies its
-`sha256.txt`, extracts it under `artifacts/release-verify/<tag>/` and runs the `@smoke` subset
-against it as `dist/` — no build, no token, no flags. The run writes its own report to
-`artifacts/release-verify/<tag>/report.html`; delete that directory to download again.
+One command, no build and no token: the tag comes from the `releases/latest` redirect, the
+release's `build.tar.gz` (the HTML bundle the workflow publishes) is downloaded, its `sha256.txt`
+verified and extracted under `artifacts/release-verify/<tag>/`, and the suite then runs against
+that directory as `dist/`. Cached — delete the directory to download again. Reports land next to
+it (`report.html` for the full run, `report-smoke.html` for smoke).
 
-Only `@smoke` runs: the full suite asserts behaviour added after a given release, while these six
-cases answer "does this build still open and talk to GreptimeDB". Measured on v0.14.7: 6 passed,
-~20s.
+Expect failures when the tag predates features on this branch: the suite describes the current UI,
+so a build cut before a feature existed cannot satisfy its cases. Measured on v0.14.7 (latest at
+the time of writing): full suite **39 passed / 5 failed**, the five being trace features added
+after that tag (timeline attributes, trace → logs, all-spans toggle); `pnpm e2e:release:smoke`
+**6/6 in ~20s**. A release that contains the current branch should be green on both.
 
 ## Known limitation: self-hosting the trace fixtures
 

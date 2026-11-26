@@ -23,6 +23,7 @@
     "e2e:seed": "esbuild tests/e2e/data/cli.ts --bundle --platform=node --format=esm --outfile=artifacts/e2e/seed-cli.mjs --log-level=warning && node artifacts/e2e/seed-cli.mjs",
     "e2e:smoke": "playwright test -c playwright.e2e.config.ts --grep @smoke",
     "e2e:release": "node scripts/test-release.mjs",
+    "e2e:release:smoke": "node scripts/test-release.mjs --smoke",
     "e2e": "playwright test -c playwright.e2e.config.ts",
     "e2e:report": "open artifacts/e2e/report.html"
   },
