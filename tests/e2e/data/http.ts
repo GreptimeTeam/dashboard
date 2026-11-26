@@ -1,4 +1,4 @@
-import { dbHttpBase, smokeAuthFromEnv } from './sql'
+import { dbHttpBase, authFromEnv } from './sql'
 
 type HttpOpts = {
   baseUrl?: string
@@ -6,7 +6,7 @@ type HttpOpts = {
 }
 
 function authHeaders(): Record<string, string> {
-  const { authHeader, username, password } = smokeAuthFromEnv()
+  const { authHeader, username, password } = authFromEnv()
   if (authHeader) return { Authorization: authHeader }
   if (username) {
     const token = Buffer.from(`${username}:${password || ''}`).toString('base64')
@@ -15,7 +15,7 @@ function authHeaders(): Record<string, string> {
   return {}
 }
 
-export const SMOKE_PIPELINE_YAML = `processors: []
+export const E2E_PIPELINE_YAML = `processors: []
 transform:
   - fields:
       - message
@@ -133,4 +133,14 @@ export async function deleteDashboard(name: string, opts: HttpOpts = {}): Promis
   if (!res.ok && res.status !== 404) {
     throw new Error(`deleteDashboard ${name}: ${res.status} ${await res.text()}`)
   }
+}
+
+/** Parsed Perses dashboard document as stored on the server, or `undefined` when it does not exist. */
+export async function readDashboard(name: string, opts: HttpOpts = {}): Promise<any | undefined> {
+  const item: any = (await listDashboards(opts)).find((entry) => entry.name === name)
+  if (!item) return undefined
+  const raw = item.definition ?? item.content
+  const outer = typeof raw === 'string' ? JSON.parse(raw) : raw
+  const content = outer?.content ?? outer
+  return typeof content === 'string' ? JSON.parse(content) : content
 }
