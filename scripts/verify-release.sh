@@ -105,7 +105,7 @@ else
   pnpm exec playwright test -c playwright.e2e.config.ts --grep @smoke
 fi
 
-REPORT_LATEST="${ROOT_DIR}/artifacts/e2e/report/index.html"
+REPORT_LATEST="${ROOT_DIR}/artifacts/e2e/report.html"
 echo "==> PASS: release ${TAG} verification succeeded"
 echo "    report:      ${REPORT_LATEST}"
 echo "    report URL:  file://${REPORT_LATEST}"

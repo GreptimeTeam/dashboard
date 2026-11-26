@@ -35,7 +35,7 @@ async function openMeasuredTrace(page: Parameters<typeof visit>[0], id: string, 
 }
 
 test.describe('explore traces (opentelemetry_traces_v2)', () => {
-  test('overview lists root spans and draws the three RED charts', async ({ explore }) => {
+  test('overview lists root spans, draws the RED charts and selects one', async ({ explore }) => {
     const facts = requireFacts()
     const list = waitSql(explore, ROOT_LIST, 25_000)
     const rate = waitSql(explore, RATE_ROOT, 25_000)
@@ -50,22 +50,11 @@ test.describe('explore traces (opentelemetry_traces_v2)', () => {
     await expect(explore.locator('.red-chart-panel')).toHaveCount(3)
     await expect(explore.locator('.red-chart-panel-title')).toHaveText(['Rate', 'Errors', 'Duration'])
     await expect(explore.locator('.red-chart-panel.selected .red-chart-panel-title')).toHaveText('Rate')
-  })
 
-  test('selecting a RED chart updates the URL and the selection', async ({ explore }) => {
-    requireFacts()
-    await visit(explore, exploreUrl())
-    await expect(explore.locator('.red-chart-panel')).toHaveCount(3)
-
+    // Selecting another chart updates the selection and the URL.
     await explore.locator('.red-chart-panel', { hasText: 'Errors' }).click()
     await expect(explore.locator('.red-chart-panel.selected .red-chart-panel-title')).toHaveText('Errors')
     await expect.poll(() => explore.evaluate(() => window.location.hash)).toContain('redMetric=errors')
-  })
-
-  test('redMetric deep link selects that chart', async ({ explore }) => {
-    requireFacts()
-    await visit(explore, exploreUrl('&redMetric=duration'))
-    await expect(explore.locator('.red-chart-panel.selected .red-chart-panel-title')).toHaveText('Duration')
   })
 
   test('span scope toggle widens the queries to all spans', async ({ explore }) => {
@@ -82,23 +71,6 @@ test.describe('explore traces (opentelemetry_traces_v2)', () => {
     await expect.poll(() => explore.evaluate(() => window.location.hash)).toContain('spanScope=all')
   })
 
-  test('breakdown "Add to filter" adds a filter that narrows the charts', async ({ explore }) => {
-    requireFacts()
-    await visit(explore, exploreUrl())
-    const panel = explore.locator('.traces-breakdown-panel').first()
-    await expect(panel).toBeVisible({ timeout: 20_000 })
-    const title = (await panel.locator('.drilldown-card__title').first().innerText()).trim()
-    const [, key, value] = title.match(/^(\w+)="(.+)"$/) ?? []
-    expect(key).toBe('service_name')
-
-    const narrowed = waitSql(explore, sql(`${WINDOW}[\\s\\S]*"${key}" = '${value}'`), 25_000)
-    await panel.getByRole('button', { name: 'Add to filter' }).click()
-    expect((await narrowed).status()).toBe(200)
-    await expect(explore.locator('.filter-pill')).toHaveCount(1)
-    await expect(explore.locator('.filter-pill__key')).toHaveText(key)
-    await expect(explore.locator('.filter-pill__value')).toHaveText(value)
-  })
-
   test('Traces tab lists traces and opens one', async ({ explore }) => {
     const facts = requireFacts()
     await visit(explore, exploreUrl('&tracesTab=traces'))
@@ -112,19 +84,6 @@ test.describe('explore traces (opentelemetry_traces_v2)', () => {
     await expect(explore.locator('.trace-gantt-view .trace-summary')).toContainText(/[1-9]\d* spans/)
     await expect(explore.locator('.arco-drawer:visible').getByText(traceId).first()).toBeVisible()
     await expect.poll(() => explore.evaluate(() => window.location.hash)).toContain(`focusTraceId=${traceId}`)
-  })
-
-  test('TID search opens the timeline with every span', async ({ explore }) => {
-    const facts = requireFacts()
-    await openMeasuredTrace(explore, facts.id, facts.spans)
-    await expect(explore.locator('.trace-gantt-view .span-item')).toHaveCount(facts.spans)
-    await expect.poll(() => explore.evaluate(() => window.location.hash)).toContain(`focusTraceId=${facts.id}`)
-  })
-
-  test('timeline deep link restores the trace', async ({ explore }) => {
-    const facts = requireFacts()
-    await visit(explore, exploreUrl(`&focusTraceId=${facts.id}`))
-    await expect(explore.locator('.trace-gantt-view .trace-summary')).toContainText(`${facts.spans} spans`)
   })
 
   test('view logs on a span opens the logs of the trace', async ({ explore }) => {

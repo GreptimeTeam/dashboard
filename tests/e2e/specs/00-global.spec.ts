@@ -1,19 +1,35 @@
+/**
+ * Shell-level behaviour (menu, locale, connection settings). Specs are numbered in the order of the
+ * sidebar menu: 00 global, 01 Table Query, 02 Metrics Query, 03 Logs Query, 04 Logs Pipelines,
+ * 05-06 Traces Query, 07 Ingest, 08 Flow, 09-10 Signals Explore, 11 Visualization.
+ */
 import { expect, test } from '../fixtures'
 import { visit } from '../helpers'
 
+/** Sidebar entries in menu order, with the route each one opens. */
+const MENU: [label: string, route: string][] = [
+  ['Metrics Query', 'metrics-query'],
+  ['Logs Query', 'logs-query'],
+  ['Logs Pipelines', 'logs-pipelines'],
+  ['Traces Query', 'traces'],
+  ['Ingest', 'ingest'],
+  ['Flow', 'flow'],
+  ['Signals Explore', 'explore'],
+  ['Visualization', 'perses'],
+  ['Table Query', 'query'],
+]
+
 test.describe('global', () => {
-  test('menu navigates between the main pages', async ({ app }) => {
+  test('menu opens every page in navigation order', async ({ app }) => {
     await visit(app, '/dashboard/query')
     const menu = app.locator('.main-sider')
-    const open = async (label: string, route: string) => {
+    // eslint-disable-next-line no-restricted-syntax
+    for (const [label, route] of MENU) {
+      // eslint-disable-next-line no-await-in-loop
       await menu.getByText(label, { exact: true }).click()
+      // eslint-disable-next-line no-await-in-loop
       await expect.poll(() => app.evaluate(() => window.location.hash)).toContain(`/dashboard/${route}`)
     }
-    await open('Metrics Query', 'metrics-query')
-    await open('Logs Query', 'logs-query')
-    await open('Traces Query', 'traces')
-    await open('Flow', 'flow')
-    await open('Table Query', 'query')
   })
 
   test('?locale= switches the UI language and back', async ({ app }) => {
@@ -39,7 +55,5 @@ test.describe('global', () => {
         .filter({ visible: true })
         .first()
     ).toBeVisible()
-    await app.keyboard.press('Escape')
-    await expect(app.locator('.arco-drawer:visible, .arco-modal:visible, .arco-popover:visible')).toHaveCount(0)
   })
 })

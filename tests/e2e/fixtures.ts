@@ -7,12 +7,14 @@
  *  - `app`     : page configured for the fixed test database (E2E_DB)
  *  - `explore` : page configured for the existing database (EXPLORE_DB), booted lazily
  */
-import { test as base, expect, type Browser, type Page, type TestInfo } from '@playwright/test'
+import { test as base, expect, type Browser, type Page, type Request, type TestInfo } from '@playwright/test'
 import { BASE_URL, E2E_DB, EXPLORE_DB } from './env'
 
 type Collector = { hard: string[]; warn: string[] }
 
 const collectors = new WeakMap<Page, Collector>()
+/** Requests currently in flight per page — a screenshot is only taken once these have drained. */
+const inflight = new WeakMap<Page, Set<Request>>()
 
 const RUNTIME_ERROR =
   /uncaught|typeerror|referenceerror|syntaxerror|cannot read|failed to fetch dynamically imported module/i
@@ -20,6 +22,12 @@ const RUNTIME_ERROR =
 function watch(page: Page): Collector {
   const collector: Collector = { hard: [], warn: [] }
   collectors.set(page, collector)
+
+  const pending = new Set<Request>()
+  inflight.set(page, pending)
+  page.on('request', (request) => pending.add(request))
+  page.on('requestfinished', (request) => pending.delete(request))
+  page.on('requestfailed', (request) => pending.delete(request))
 
   page.on('console', (msg) => {
     if (msg.type() !== 'error') return
@@ -39,6 +47,47 @@ function watch(page: Page): Collector {
     ;(failedAsset ? collector.hard : collector.warn).push(`[requestfailed] ${detail}`)
   })
   return collector
+}
+
+/** Visible loading indicators: arco spinners, grid/chart loading masks, skeletons. */
+const LOADING =
+  '.arco-spin-loading, .arco-spin-mask, .arco-spin-icon, .arco-icon-loading, .vxe-loading.is--visible, .arco-skeleton, [class*="loading-tip"]'
+
+/**
+ * Resolves once the page looks finished: no request in flight and no visible loading indicator for a
+ * quiet period (charts animate in during it). Capped, so a long-poll can never hang a test.
+ */
+export async function settle(page: Page, cap = 8000): Promise<void> {
+  const pending = inflight.get(page)
+  const deadline = Date.now() + cap
+  let quietSince = Date.now()
+  while (Date.now() < deadline) {
+    // eslint-disable-next-line no-await-in-loop
+    const spinning = await page
+      .evaluate(
+        (selector) =>
+          [...document.querySelectorAll(selector)].some((el) => {
+            const box = el.getBoundingClientRect()
+            const style = getComputedStyle(el)
+            // Only what is on screen counts: charts below the fold load lazily and spin until scrolled to.
+            const onScreen = box.width > 0 && box.height > 0 && box.bottom > 0 && box.top < window.innerHeight
+            return onScreen && style.visibility !== 'hidden' && style.opacity !== '0'
+          }),
+        LOADING
+      )
+      .catch(() => false)
+    if (spinning || (pending && pending.size > 0)) quietSince = Date.now()
+    else if (Date.now() - quietSince >= 600) return
+    // eslint-disable-next-line no-await-in-loop
+    await page.waitForTimeout(100)
+  }
+}
+
+/** Attaches a screenshot of the (settled) page to the report; use it for intermediate steps of a flow. */
+export async function snap(page: Page, name: string): Promise<void> {
+  await settle(page)
+  const body = await page.screenshot().catch(() => undefined)
+  if (body) await base.info().attach(name, { body, contentType: 'image/png' })
 }
 
 async function openApp(browser: Browser, database: string): Promise<Page> {
@@ -75,12 +124,8 @@ async function lend(page: Page, use: (shared: Page) => Promise<void>, testInfo: 
 
   // Every test ends with a screenshot of the page as the test left it (before cleanup below), so the
   // HTML report shows what each case verified — passed or failed.
-  // Let in-flight loading indicators clear first, so the picture shows results rather than spinners.
-  await page
-    .waitForFunction(() => !document.querySelector('.arco-spin-loading, .arco-spin-mask, .arco-spin-icon'), undefined, {
-      timeout: 4000,
-    })
-    .catch(() => undefined)
+  // Let the page finish loading first, so the picture shows results rather than spinners.
+  await settle(page)
   const body = await page.screenshot().catch(() => undefined)
   if (body) {
     const failed = testInfo.status !== testInfo.expectedStatus

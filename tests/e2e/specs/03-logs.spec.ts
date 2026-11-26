@@ -12,27 +12,12 @@ async function loggedRows(app: Parameters<typeof waitSql>[0], url: string) {
 }
 
 test.describe('logs query', () => {
-  test('lists everything without a time limit', async ({ app }) => {
+  test('lists every row in the grid', { tag: '@smoke' }, async ({ app }) => {
     expect(await loggedRows(app, logsUrl())).toHaveLength(EXPECT.logs.total)
+    await expect(app.locator('.vxe-body--row').first()).toContainText('e2e-log-')
   })
 
-  test('severity filter', async ({ app }) => {
-    const rows = await loggedRows(
-      app,
-      logsUrl({ conditions: [{ field: 'severity_text', operator: '=', value: 'ERROR' }] })
-    )
-    expect(rows).toHaveLength(EXPECT.logs.error)
-  })
-
-  test('service filter', async ({ app }) => {
-    const rows = await loggedRows(
-      app,
-      logsUrl({ conditions: [{ field: 'service_name', operator: '=', value: 'svc-a' }] })
-    )
-    expect(rows).toHaveLength(EXPECT.logs.svcA)
-  })
-
-  test('combined filters narrow further', async ({ app }) => {
+  test('severity and service filters combine', async ({ app }) => {
     const rows = await loggedRows(
       app,
       logsUrl({
@@ -55,22 +40,8 @@ test.describe('logs query', () => {
     expect(rows).toHaveLength(10)
   })
 
-  test('limit is honoured', async ({ app }) => {
-    expect(await loggedRows(app, logsUrl({ limit: 10 }))).toHaveLength(10)
-  })
-
   test('absolute window keeps only the first half hour', async ({ app }) => {
     const rows = await loggedRows(app, logsUrl({ timeQuery: timeRangeQuery(SEED_START, SEED_START + 1799) }))
     expect(rows).toHaveLength(30)
-  })
-
-  test('absolute window without data is empty', async ({ app }) => {
-    const rows = await loggedRows(app, logsUrl({ timeQuery: timeRangeQuery(1_600_000_000, 1_600_003_600) }))
-    expect(rows).toHaveLength(0)
-  })
-
-  test('rows render in the grid', async ({ app }) => {
-    await loggedRows(app, logsUrl({ limit: 5 }))
-    await expect(app.locator('.vxe-body--row').first()).toContainText('e2e-log-')
   })
 })

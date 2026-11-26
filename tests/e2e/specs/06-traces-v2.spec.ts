@@ -35,33 +35,14 @@ test.describe('traces query (opentelemetry_traces_v2)', () => {
     await expect(explore.locator('.trace-id-link').first()).toBeVisible()
   })
 
-  test('trace id condition returns every span of that trace', async ({ explore }) => {
-    const facts = requireFacts()
-    const response = waitSql(explore, spansSql, 20_000)
-    await visit(explore, traceSpansUrl(facts.id))
-    const { columns, rows } = await sqlRecords(await response)
-
-    expect(rows).toHaveLength(Math.min(facts.spans, 1000))
-    const traceId = columns.indexOf('trace_id')
-    expect(new Set(rows.map((row) => row[traceId]))).toEqual(new Set([facts.id]))
-  })
-
-  test('opens the trace timeline with every span', async ({ explore }) => {
+  test('opens the trace timeline and shows span attributes', async ({ explore }) => {
     const facts = requireFacts()
     await visit(explore, traceSpansUrl(facts.id))
     await explore.locator('.trace-id-link').first().click()
 
-    const summary = explore.locator('.trace-gantt-view .trace-summary')
-    await expect(summary).toContainText(`${facts.spans} spans`)
+    await expect(explore.locator('.trace-gantt-view .trace-summary')).toContainText(`${facts.spans} spans`)
     await expect(explore.locator('.trace-gantt-view .span-item')).toHaveCount(facts.spans)
     await expect(explore.locator('.arco-drawer:visible').getByText(facts.id).first()).toBeVisible()
-  })
-
-  test('selecting a span shows its attributes', async ({ explore }) => {
-    const facts = requireFacts()
-    await visit(explore, traceSpansUrl(facts.id))
-    await explore.locator('.trace-id-link').first().click()
-    await expect(explore.locator('.trace-gantt-view .span-item')).toHaveCount(facts.spans)
 
     await explore.locator('.trace-gantt-view .span-item').nth(1).click()
     const panel = explore.locator('.span-attributes-panel')

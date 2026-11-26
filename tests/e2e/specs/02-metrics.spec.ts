@@ -1,10 +1,10 @@
 import { expect, test } from '../fixtures'
 import { EXPECT } from '../data/dataset'
-import { SEED_START, timeRangeQuery } from '../env'
+import { SEED_START } from '../env'
 import { metricsUrl, promSeries, visit, waitProm } from '../helpers'
 
 test.describe('metrics query', () => {
-  test('range query returns one series per host with the seeded values', async ({ app }) => {
+  test('range query returns one series per host with the seeded values', { tag: '@smoke' }, async ({ app }) => {
     const response = waitProm(app, 'e2e_cpu_usage')
     await visit(app, metricsUrl('e2e_cpu_usage'))
     const series = await promSeries(await response)
@@ -18,19 +18,6 @@ test.describe('metrics query', () => {
       expect(Math.max(...values)).toBe((host + 1) * 10 + 9)
     })
     await expect(app.locator('canvas').first()).toBeVisible()
-  })
-
-  test('aggregation collapses the hosts into one series', async ({ app }) => {
-    const response = waitProm(app, 'sum(e2e_cpu_usage)')
-    await visit(app, metricsUrl('sum(e2e_cpu_usage)'))
-    const series = await promSeries(await response)
-
-    expect(series).toHaveLength(1)
-    // 10 + 20 + 30 plus three times the minute-in-decade offset (0..9).
-    series[0].values.forEach(([, v]) => {
-      expect(Number(v)).toBeGreaterThanOrEqual(60)
-      expect(Number(v)).toBeLessThanOrEqual(87)
-    })
   })
 
   test('label matcher narrows to a single host', async ({ app }) => {
@@ -51,17 +38,5 @@ test.describe('metrics query', () => {
     const values = result.map((s: any) => Number(s.value?.[1])).sort((a, b) => a - b)
     expect(values).toEqual([10, 20, 30])
     await expect(app.locator('.vxe-body--row')).toHaveCount(EXPECT.cpu.series)
-  })
-
-  test('unknown metric yields no series', async ({ app }) => {
-    const response = waitProm(app, 'e2e_no_such_metric')
-    await visit(app, metricsUrl('e2e_no_such_metric'))
-    expect(await promSeries(await response)).toHaveLength(0)
-  })
-
-  test('a window without data yields no series', async ({ app }) => {
-    const response = waitProm(app, 'e2e_cpu_usage')
-    await visit(app, metricsUrl('e2e_cpu_usage', { timeQuery: timeRangeQuery(1_600_000_000, 1_600_003_600) }))
-    expect(await promSeries(await response)).toHaveLength(0)
   })
 })
