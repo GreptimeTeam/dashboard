@@ -5,10 +5,11 @@ import editorAPI from '@/api/editor'
 import type { AxiosRequestConfig } from 'axios'
 import { postPipelineLogs } from '@/api/pipeline'
 import dayjs from 'dayjs'
-import { dateTypes } from '@/views/dashboard/config'
+import { dateTypes } from '@/constants/column-types'
 import { AnyObject } from '@/types/global'
 import { HttpResponse, OutputType } from '@/api/interceptor'
 import { isObject } from '@/utils/is'
+import { formatInDashboardTz } from '@/utils/timezone'
 import { parseSqlStatements } from '@/utils/sql'
 import { Log, ResultInLog } from '@/types/log'
 import { ResultType, DimensionType, SchemaType, PromForm } from '@/store/modules/code-run/types'
@@ -17,7 +18,7 @@ const resultKeyCount = reactive<{ [key: string]: number }>({})
 const explainResultKeyCount = ref(0)
 const refreshCounter = ref(0)
 
-export type RunCodeAbortKey = 'run-part' | 'run-all' | 'explain'
+export type RunCodeAbortKey = 'run-part' | 'run-all' | 'explain' | 'tour-sql'
 
 const abortControllers: Partial<Record<RunCodeAbortKey, AbortController>> = {}
 
@@ -149,8 +150,8 @@ const createLogFromResponse = (
       ;[start, end] = params.range
     }
     log.promInfo = {
-      Start: dayjs.unix(+start).format('YYYY-MM-DD HH:mm:ss'),
-      End: dayjs.unix(+end).format('YYYY-MM-DD HH:mm:ss'),
+      Start: formatInDashboardTz(+start * 1000),
+      End: formatInDashboardTz(+end * 1000),
       Step: params.step,
       Query: codeInfo,
     }

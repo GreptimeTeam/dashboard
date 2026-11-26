@@ -1,7 +1,7 @@
 <template lang="pug">
 .step-selector
   a-dropdown(:popup-max-height="false" @select="handleDropdownSelect")
-    a-button.step-selector-trigger(type="outline" size="small" :title="'Select step resolution or enter custom value'")
+    a-button.step-selector-trigger(type="outline" size="small" :title="$t('metrics.stepSelectorTitle')")
       template(#icon)
         svg.icon-16.icon-color
           use(href="#step")
@@ -21,9 +21,9 @@
     v-if="currentSelection === 'custom'"
     v-model="customStepInput"
     size="small"
-    placeholder="e.g., 30s, 2m, 1h"
     style="width: 80px"
-    title="Enter custom step with time units (s, m, h) or just seconds"
+    :placeholder="$t('metrics.stepPlaceholder')"
+    :title="$t('metrics.stepTooltip')"
     :status="isCustomStepValid ? 'normal' : 'error'"
   )
 </template>

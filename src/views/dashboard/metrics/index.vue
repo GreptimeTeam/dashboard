@@ -15,7 +15,7 @@ a-layout.new-layout.new-layout--workspace
         PromQLEditor(
           ref="promqlEditorRef"
           v-model="currentQuery"
-          placeholder="Enter PromQL query"
+          :placeholder="$t('metrics.queryPlaceholder')"
           :query-loading="queryLoading"
           @query="handleRunQuery"
         )
@@ -51,20 +51,17 @@ a-layout.new-layout.new-layout--workspace
               TimezoneInstantPicker(
                 v-model="instantQueryTime"
                 size="small"
-                placeholder="Evaluation time"
                 allow-clear
                 style="width: 210px"
+                :placeholder="$t('metrics.evalTime')"
               )
 
           .table-section.gpt-table-panel
-            DataTable(
+            DataGrid(
               :data="tableData"
               :columns="tableColumns"
               :loading="queryLoading"
               :show-context-menu="false"
-              :enable-cell-expand="false"
-              :pagination="false"
-              :bordered="false"
               :show-header="false"
             )
               template(#column-series="{ record }")
@@ -87,13 +84,14 @@ a-layout.new-layout.new-layout--workspace
   import { ref, computed, onMounted, watch, nextTick, provide } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useRoute, useRouter } from 'vue-router'
-  import { useStorage } from '@vueuse/core'
   import { useSeries } from '@/hooks/use-series'
+  import useUiPref from '@/composables/use-ui-pref'
   import TimezoneInstantPicker from '@/components/time-select/instant-picker.vue'
   import { Message } from '@arco-design/web-vue'
   import { storeToRefs } from 'pinia'
   import { useAppStore } from '@/store'
-  import DataTable from '@/components/data-table/index.vue'
+  import DataGrid from '@/components/data-grid/DataGrid.vue'
+  import { promInstantResultToTableRows } from '@/observability/metrics/prom-instant-table'
   import type { MetricsContext } from './types'
   import MetricSidebar from './components/metric-sidebar.vue'
   import PromQLEditor from './components/prom-ql-editor.vue'
@@ -120,7 +118,7 @@ a-layout.new-layout.new-layout--workspace
     instantQueryTime,
   } = seriesHook
 
-  const sidebarWidth = useStorage('metrics-sidebar-width', 228)
+  const sidebarWidth = useUiPref('metricsSidebarWidth', 228)
   const activeTab = ref(route.query.tab || 'table')
   const chartType = ref('line')
   const stepSelectionType = ref('medium')
@@ -244,45 +242,7 @@ a-layout.new-layout.new-layout--workspace
     return Math.max(minWidth, Math.min(sidebarWidth.value, maxWidth))
   })
 
-  const tableData = computed(() => {
-    if (!tableResults.value || tableResults.value.length === 0) return []
-    const rows: any[] = []
-    tableResults.value.forEach((series) => {
-      const metricName = series.metric?.__name__
-      const seriesLabels = { ...series.metric }
-      delete seriesLabels.__name__
-
-      const labelStr = Object.entries(seriesLabels)
-        .map(([k, v]) => `${k}="${v}"`)
-        .join(', ')
-      const seriesName = labelStr ? `${metricName}{${labelStr}}` : metricName
-
-      const labels = Object.entries(seriesLabels).map(([key, value]) => ({
-        key,
-        value,
-      }))
-
-      if (series.value !== undefined) {
-        let valuesList
-        if (Array.isArray(series.value) && series.value.length === 2 && !Array.isArray(series.value[0])) {
-          valuesList = series.value[1]
-        } else if (Array.isArray(series.value) && Array.isArray(series.value[0])) {
-          valuesList = series.value
-            .map((valuePoint: [number, string]) => `${valuePoint[0]} @${valuePoint[1]}`)
-            .join('\n')
-        }
-
-        rows.push({
-          series: seriesName,
-          metricName,
-          labels,
-          values: valuesList,
-        })
-      }
-    })
-
-    return rows
-  })
+  const tableData = computed(() => promInstantResultToTableRows(tableResults.value))
 
   const tableColumns = [
     { name: 'series', data_type: 'string', title: 'Series' },
@@ -322,9 +282,9 @@ a-layout.new-layout.new-layout--workspace
   const handleCopyText = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text)
-      Message.success('Copied to clipboard')
+      Message.success(t('metrics.copiedToClipboard'))
     } catch (err) {
-      Message.error('Failed to copy to clipboard')
+      Message.error(t('metrics.copyFailed'))
     }
   }
 
@@ -332,7 +292,7 @@ a-layout.new-layout.new-layout--workspace
     if (promqlEditorRef.value) {
       promqlEditorRef.value.replaceEditorContent(text)
     } else {
-      currentQuery.value = text.replace(/[\r\n]+/g, ' ').trim()
+      currentQuery.value = text
     }
   }
 

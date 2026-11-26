@@ -1,6 +1,7 @@
 import { format as sqlFormat } from 'sql-formatter'
 import { formatPromqlQuery, type PromqlFormatResponse } from '@/api/formatter'
 import { Message } from '@arco-design/web-vue'
+import i18n from '@/locale'
 
 export const parseSqlStatements = (sql: string): { text: string; start: number; end: number }[] => {
   if (!sql) return []
@@ -138,7 +139,7 @@ export const sqlFormatter = (code: string) => {
       formatted = formatted.endsWith(';') ? formatted : `${formatted};`
     } catch (formattingError) {
       console.warn(`Failed to format SQL statement: ${formattingError}`)
-      Message.warning('Failed to format. Please check console for details.')
+      Message.warning(i18n.global.t('sql.formatFailed'))
       formatted = trimmed.endsWith(';') ? trimmed : `${trimmed};`
     }
     return formatted
@@ -211,28 +212,67 @@ export function replaceTimePlaceholders(sql: string, timeRanges: any[]): string 
   return result
 }
 
+/** Quote a single SQL identifier (column or bare table/schema name). Not for `schema.table`. */
+export function quoteIdent(id: string): string {
+  return `"${String(id).replace(/"/g, '""')}"`
+}
+
+function unquoteIdent(segment: string): string {
+  return segment.replace(/^["'`]|["'`]$/g, '')
+}
+
 /**
- * Table reference for use in SQL (e.g. in FROM clause).
- * - When database is provided (builder mode), both database and table are quoted safely.
- * - When only table is provided, it may already contain schema prefix (e.g. "temp_data"."cpu_metrics")
- *   or be unqualified (e.g. my_schema.my_table). In the latter case each part is safely quoted.
+ * Last identifier of a table ref for information_schema / queryState.table.
+ * `"db"."t"` / `db.t` / `"t"` / `t` → `t`
+ */
+export function bareTableName(tableRef: string): string {
+  const trimmed = (tableRef || '').trim()
+  if (!trimmed) return ''
+  const segments = trimmed.split('.')
+  const last = segments[segments.length - 1] || ''
+  return unquoteIdent(last)
+}
+
+/**
+ * Schema (or catalog.schema first segment) from a table ref, if qualified.
+ * `"public"."t"` / `public.t` → `public`; bare `t` → undefined
+ */
+export function schemaFromTableRef(tableRef: string): string | undefined {
+  const trimmed = (tableRef || '').trim()
+  if (!trimmed || !trimmed.includes('.')) return undefined
+  const segments = trimmed.split('.')
+  if (segments.length < 2) return undefined
+  const first = unquoteIdent(segments[0] || '')
+  return first || undefined
+}
+
+/**
+ * Canonical table reference for SQL FROM / JOIN.
+ *
+ * Rules (do not reinvent elsewhere — no `"${db}"."${table}"` or quoteIdent(qualified)):
+ * - Bare table + database → `"db"."table"` (builder / normalized code-mode state)
+ * - Already quoted or `schema.table` → normalize without re-prefixing database
+ *   (legacy code-mode state that still holds a full SQL ref)
  */
 export function getTableRefForSql(state: { table: string; database?: string }): string {
-  const quote = (id: string) => `"${id.replace(/"/g, '""')}"`
   const { table, database } = state
+  const trimmed = (table || '').trim()
+  if (!trimmed) return ''
+
+  // Already a usable SQL identifier reference — do not re-quote or prefix.
+  if (/^["'`]/.test(trimmed)) {
+    return trimmed
+  }
+  if (trimmed.includes('.')) {
+    return trimmed
+      .split('.')
+      .map((part) => quoteIdent(part))
+      .join('.')
+  }
 
   if (database) {
-    return `${quote(database)}.${quote(table)}`
+    return `${quoteIdent(database)}.${quoteIdent(trimmed)}`
   }
 
-  // Text / free-sql mode: respect fully quoted references
-  if (/^["'`]/.test(table)) {
-    return table
-  }
-
-  // Quote each identifier segment (schema.table or just table)
-  return table
-    .split('.')
-    .map((part) => quote(part))
-    .join('.')
+  return quoteIdent(trimmed)
 }

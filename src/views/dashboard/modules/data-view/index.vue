@@ -106,7 +106,7 @@ a-tabs.panel-tabs(
             :result-key="result.key"
             :data="tableModelMap[result.key]?.rows || []"
             :columns="tableModelMap[result.key]?.columns || []"
-            :displayed-columns="tableModelMap[result.key]?.displayedColumns || []"
+            :displayed-columns="tableModelMap[result.key]?.displayedColumns ?? null"
             :ts-column="tableModelMap[result.key]?.tsColumn || null"
             :show-context-menu="false"
             :wrap-line="wrapLines"
@@ -122,8 +122,10 @@ a-tabs.panel-tabs(
 
 <script lang="ts" name="DataView" setup>
   import { Message } from '@arco-design/web-vue'
-  import { useStorage } from '@vueuse/core'
+  import { useI18n } from 'vue-i18n'
+  import { storeToRefs } from 'pinia'
   import fileDownload from 'js-file-download'
+  import { useAppStore } from '@/store'
   import useDataChart from '@/hooks/data-chart'
   import type { PromForm, ResultType } from '@/store/modules/code-run/types'
   import { normalizeRecordsToTableModel } from '@/utils/table-normalizer'
@@ -131,6 +133,8 @@ a-tabs.panel-tabs(
   import ExplainTabs from '@/components/explain-tabs/index.vue'
   import { runWithFormat } from '@/services/code-run'
   import { useQuerySession } from '@/views/dashboard/query/use-query-session'
+
+  const { t } = useI18n()
 
   const props = withDefaults(
     defineProps<{
@@ -149,7 +153,7 @@ a-tabs.panel-tabs(
   const refreshingKeys = ref(new Set<string | number>())
   const exportingKeys = ref(new Set<string | number>())
   const resultViewMap = ref<Record<string | number, 'table' | 'chart'>>({})
-  const compactRows = useStorage('query-table-compact-rows', false)
+  const { compactRows } = storeToRefs(useAppStore())
   const tableSize = computed(() => (compactRows.value ? 'mini' : 'medium'))
   const wrapLines = ref(false)
   // Add a method to select specific tab
@@ -213,10 +217,10 @@ a-tabs.panel-tabs(
     try {
       const res = await runWithFormat(result.query, result.type, {} as PromForm, 'csvWithNames')
       fileDownload(res as unknown as string, `export_${result.type}_${result.key}_greptimedb.csv`)
-      Message.success('Exported successfully')
+      Message.success(t('dashboard.exportSuccess'))
     } catch (error) {
       console.error(error)
-      Message.error('Failed to export CSV')
+      Message.error(t('dashboard.exportCsvFailed'))
     } finally {
       exportingKeys.value.delete(result.key)
     }

@@ -12,11 +12,15 @@ VCharts(
   import { ref, computed, watch, shallowRef, nextTick } from 'vue'
   import VCharts from 'vue-echarts'
   import * as echarts from 'echarts'
+  import { useI18n } from 'vue-i18n'
   import editorAPI from '@/api/editor'
   import type { QueryState } from '@/types/query'
   import { replaceTimePlaceholders, getTableRefForSql } from '@/utils/sql'
+  import { parseTsColumnFromSql } from '@/views/dashboard/logs/query/until'
   import { convertTimestampToMilliseconds } from '@/utils/date-time'
   import { useDateTimeFormat } from '@/hooks'
+
+  const { t } = useI18n()
 
   interface Props {
     queryState: QueryState
@@ -122,7 +126,7 @@ VCharts(
           left: 'center',
           top: 'middle',
           style: {
-            text: data.value.length ? '' : 'No data',
+            text: data.value.length ? '' : t('common.noData'),
             fill: '#999',
             fontSize: 14,
             fontFamily: 'Geist Mono, ui-monospace, monospace',
@@ -160,7 +164,9 @@ VCharts(
 
   const countSql = computed(() => {
     const { table, sql, tsColumn, timeRangeValues, database } = props.queryState
-    if (!table || !sql || !tsColumn?.name) {
+    // Prefer the column the SQL filters on; schema TIMESTAMP can differ (e.g. ts vs timestamp).
+    const timeColumn = parseTsColumnFromSql(sql) || tsColumn?.name
+    if (!table || !sql || !timeColumn) {
       return ''
     }
 
@@ -174,7 +180,7 @@ VCharts(
     const tableName = getTableRefForSql({ table, database })
 
     return `SELECT
-            date_bin('${intervalSeconds.value} seconds', "${tsColumn.name}") AS time_bucket,
+            date_bin('${intervalSeconds.value} seconds', "${timeColumn}") AS time_bucket,
             COUNT(*) AS event_count
         FROM ${tableName}
         ${whereClause}
@@ -247,10 +253,9 @@ VCharts(
     // This would need to be handled by the parent component
   }
 
-  if (countSql.value) {
-    countQuery()
-  }
-  // Expose the method to parent component
+  // Parent owns when to fetch (Run / expand / time-range). Do not auto-query on
+  // mount — traces mounts this only after sql is set, and also calls
+  // executeCountQuery, which would duplicate the date_bin request on refresh.
   defineExpose({
     executeCountQuery,
   })

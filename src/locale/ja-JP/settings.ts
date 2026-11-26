@@ -1,0 +1,33 @@
+export default {
+  'settings.auth': '認証',
+  'settings.database': 'データベース',
+  'settings.host': 'ホスト',
+  'settings.password': 'パスワード',
+  'settings.save': '保存してテスト',
+  'settings.title': '設定',
+  'settings.username': 'ユーザー名',
+  'settings.timezone': 'タイムゾーン',
+  'settings.timezoneBrowser': 'ブラウザ',
+  'settings.timezoneTip':
+    'ダッシュボード内の時刻表示の整形に使用され、SQL クエリの x-greptime-timezone ヘッダーとして送信されます。',
+  'settings.timezoneExtra': 'UTC オフセットまたは地域名を選択してください(夏時間に対応)。任意の',
+  'settings.timezoneInvalid':
+    '無効なタイムゾーンです。+05:30 のようなオフセット、または America/New_York のような IANA 名を使用してください。',
+  'settings.timezoneGroupCommon': 'UTC とブラウザ',
+  'settings.timezoneGroupOffsets': 'UTC オフセット',
+  'settings.timezoneGroupRegions': '地域',
+  'settings.timezoneStatusTip': '時刻は {tz} で表示されています。クリックして変更します。',
+  'settings.saveTip': '認証に失敗しました。設定を確認してください。',
+  'settings.saveSuccess': '成功しました!',
+  'settings.authHeader': '認証ヘッダー名',
+  'settings.authHeaderTip': '認証に使用される HTTP ヘッダーの名前です。',
+  'settings.mcp.title': 'GreptimeDB MCP',
+  'settings.mcp.promptIntro':
+    '次の mcpServers 設定を使って、AI クライアントに GreptimeDB のデモ環境の MCP を接続してください：',
+  'settings.mcp.copyHint': 'プロンプト全体をコピーして、AI アシスタントに貼り付けてください。',
+  'settings.mcp.promptOutro':
+    '接続メモ：\n- この MCP は GreptimeDB のデモ環境（公開プレイグラウンド）に接続するもので、自前のクラスタではありません。設定キーを `greptimedb-demo` にしているのは、既存の他の GreptimeDB MCP と衝突しないようにするためです。キー名はそのままにしてください。\n- 未インストールなら `pip install greptimedb-mcp-server`（Python 3.11 以上）を実行し、設定後に `health_check` で接続を確認します（初回は 10 秒ほどかかることがあります）。起動できない場合は `command` をバイナリの絶対パスにしてください。GUI クライアントはシェルの PATH を継承しません。\n- クエリは MySQL（既定 4002）、ダッシュボード系ツールは HTTP です。HTTPS では `--http-port 443 --http-protocol https`。\n- SQL は MySQL 方言で、識別子はバッククォート、時間窓は `INTERVAL 15 MINUTE`。二重引用符は文字列になります。',
+  'settings.mcp.repo': 'GitHub 上の MCP サーバー',
+  'settings.mcp.copy': 'プロンプトをコピー',
+  'settings.mcp.copied': 'コピーしました',
+}

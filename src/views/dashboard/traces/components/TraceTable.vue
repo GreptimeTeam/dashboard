@@ -3,65 +3,79 @@ a-card(:bordered="false")
   template(#title)
     .results-header
       span {{ $t('logsQuery.results') }}
-      span.results-count(v-if="totalResults > 0") 
-        | ({{ totalResults }} {{ totalResults === 1 ? 'record' : 'records' }}
-        template(v-if="totalResults > pageSize")
-          | , showing {{ Math.min((currentPage - 1) * pageSize + 1, totalResults) }}-{{ Math.min(currentPage * pageSize, totalResults) }}
-        | )
   template(#extra)
     a-space
       a-trigger(v-if="columns.length" trigger="click" :unmount-on-close="false")
         a-button(type="text")
           span.gpt-text-secondary {{ $t('logsQuery.columns') }}
+          span.gpt-text-secondary(v-if="hiddenColumnCount" style="margin-left: 6px; font-size: 12px") · {{ $t('logsQuery.hiddenColumnsHint', { count: hiddenColumnCount }) }}
         template(#content)
           a-card.gpt-popover-panel.gpt-popover-panel--wide
-            .column-controls
-              a-space(direction="vertical" size="small")
-                a-space
-                  a-button(type="text" size="mini" @click="selectAllColumns") Select All
-                  a-button(type="text" size="mini" @click="deselectAllColumns") Deselect All
-                a-checkbox-group(v-model="displayedColumns" direction="vertical")
-                  a-checkbox(v-for="column in columns" :key="column.name" :value="column.name")
-                    | {{ column.name }}
+            ColumnLayoutPanel(
+              :ordered-names="orderedOrderableNames"
+              :visible-names="visibleOrderableColumnNames"
+              @update:ordered-names="onPanelOrder"
+              @update:visible-names="onPanelVisible"
+            )
 
-      a-pagination(
-        v-if="totalResults > pageSize"
-        v-model:current="currentPage"
-        v-model:page-size="pageSize"
-        size="small"
-        simple
-        :total="totalResults"
-        :show-total="false"
-        :show-jumper="false"
-        :show-page-size="true"
-        :page-size-options="[10, 20, 50, 100]"
-        @change="handlePageChange"
-        @page-size-change="handlePageSizeChange"
-      )
-
-  DataTable(
-    :data="paginatedResults"
+  DataGrid(
+    v-model:page="currentPage"
+    v-model:page-size="pageSize"
+    :pagination="paginationConfig"
+    :data="data"
     :columns="visibleColumns"
     :loading="loading"
     :column-mode="'separate'"
-    :displayed-columns="displayedColumns"
-    :ts-column="{ name: 'timestamp', data_type: 'TimestampNanosecond' }"
+    :displayed-columns="visibleColumnNames"
+    :ts-column="tsColumn"
+    :column-drag="true"
+    :pinned-column-fields="pinnedColumnFields"
+    :show-context-menu="queryState.editorType === 'builder'"
     :class="{ builder_type: queryState.editorType === 'builder', trace_table: true }"
     @filter-condition-add="$emit('filterConditionAdd', $event)"
+    @column-order-change="handleColumnOrderChange"
   )
-    template(#column-trace_id="{ record, showContextMenu, handleContextMenu }")
-      a-link(@click="handleTraceClick(record.trace_id)") {{ record.trace_id }}
-      svg.td-config-icon(v-if="showContextMenu" @click="(event) => handleContextMenu(record, 'trace_id', event)")
-        use(href="#menu")
+    template(#column-trace_id="{ record }")
+      span.trace-id-actions
+        button.trace-id-link(type="button" @click="handleTraceClick(record)") {{ record.trace_id }}
+        a-dropdown(
+          v-if="showLogsTraceMenu"
+          trigger="click"
+          @select="(value) => handleLogsMenuSelect(String(value), record)"
+        )
+          button.trace-id-logs-trigger(type="button" :aria-label="$t('drilldown.traces.openLogs')" @click.stop)
+            icon-down
+          template(#content)
+            a-doption(value="logs")
+              span.logs-menu-row
+                span {{ $t('drilldown.traces.openLogs') }}
+                span.logs-menu-target(v-if="logsTargetLabel(record)" :title="logsTargetLabel(record)") {{ logsTargetLabel(record) }}
+            a-doption(v-if="logsAmbiguousService(record)" value="mapping")
+              | {{ $t('drilldown.traces.logsMappingAmbiguous') }}
 </template>
 
 <script setup lang="ts">
   import { computed, ref, watch } from 'vue'
-  import { useLocalStorage } from '@vueuse/core'
-  import { useRouter } from 'vue-router'
-  import { IconSettings } from '@arco-design/web-vue/es/icon'
+  import { IconDown } from '@arco-design/web-vue/es/icon'
   import type { PropType } from 'vue'
   import type { ColumnType, QueryState } from '@/types/query'
+  import useTraceTablePrefs from '@/observability/use-trace-table-prefs'
+  import ColumnLayoutPanel from '@/components/column-layout-panel/ColumnLayoutPanel.vue'
+  import DataGrid from '@/components/data-grid/DataGrid.vue'
+
+  function isTraceIdColumn(name: string): boolean {
+    return name === 'trace_id' || name === 'traceid'
+  }
+
+  function isPinnedTraceColumn(name: string): boolean {
+    return isTraceIdColumn(name) || name === 'timestamp'
+  }
+
+  interface LogsTargetInfo {
+    database: string
+    table: string
+    source: 'manual' | 'auto' | 'current'
+  }
 
   interface TableData {
     [key: string]: any
@@ -84,97 +98,97 @@ a-card(:bordered="false")
       type: Object as PropType<QueryState>,
       default: () => ({}),
     },
+    /** Drilldown embed: adds the logs action to the row menu. Trace click always emits `traceClick`. */
+    embedMode: {
+      type: Boolean,
+      default: false,
+    },
+    /** Embed mode only. Shows a logs action when the resolved logs schema has a trace id column. */
+    logsTraceEnabled: {
+      type: Boolean,
+      default: false,
+    },
+    /** Pre-resolved trace → logs routing per service (traces home fills this at table load). */
+    logsTargets: {
+      type: Object as PropType<Record<string, LogsTargetInfo>>,
+      default: () => ({}),
+    },
+    /** Services whose probe matched several tables — surfaced so the user can pick. */
+    logsAmbiguous: {
+      type: Object as PropType<Record<string, string[]>>,
+      default: () => ({}),
+    },
   })
 
-  const emit = defineEmits(['filterConditionAdd'])
-  const router = useRouter()
+  const emit = defineEmits<{
+    (e: 'filterConditionAdd', payload: unknown): void
+    (e: 'traceClick', payload: { traceId: string; timestamp?: unknown }): void
+    (e: 'logsTraceClick', payload: { traceId: string; service?: string }): void
+    (e: 'openLogsSettings'): void
+  }>()
 
-  // Default columns to show for traces (when no selection is made)
-  const defaultTraceColumns = ['trace_id', 'service_name', 'span_name', 'timestamp', 'duration_nano']
+  // Column layout is stored per trace table (`traceTableColumns`).
+  const {
+    displayedColumnsFor,
+    orderedColumnsFor,
+    setColumnLayout,
+    setVisibleColumns,
+    setColumnOrder,
+    hiddenColumnCountFor,
+  } = useTraceTablePrefs(() => props.queryState.table || '')
+  const columnNames = computed(() => props.columns.map((column) => column.name))
+  const orderableColumnNames = computed(() => columnNames.value.filter((name) => !isPinnedTraceColumn(name)))
+  const visibleOrderableColumnNames = computed(() => displayedColumnsFor(orderableColumnNames.value))
+  // Panel order covers hidden columns too, so their order can be dragged and kept.
+  const orderedOrderableNames = computed(() => orderedColumnsFor(orderableColumnNames.value))
+  // Pin trace_id (and let DataGrid pin timestamp); layout array covers the rest.
+  const visibleColumnNames = computed(() => {
+    const ordered = visibleOrderableColumnNames.value
+    const traceId = columnNames.value.find(isTraceIdColumn)
+    const ts = columnNames.value.includes('timestamp') ? 'timestamp' : ''
+    const head = [traceId, ts].filter((name): name is string => Boolean(name))
+    return [...head, ...ordered.filter((name) => !isPinnedTraceColumn(name))]
+  })
+  const hiddenColumnCount = computed(() => hiddenColumnCountFor(orderableColumnNames.value))
 
-  // Column visibility state with localStorage persistence
-  const displayedColumns = useLocalStorage<string[]>('trace-displayed-columns', [])
-
-  // Pagination and results info for title
   const pageSize = ref(20)
   const currentPage = ref(1)
-  const totalResults = computed(() => props.data.length)
-
-  // Computed paginated results
-  const paginatedResults = computed(() => {
-    const start = (currentPage.value - 1) * pageSize.value
-    const end = start + pageSize.value
-    return props.data.slice(start, end)
+  // Stable references — inline objects would rebuild DataGrid columns every render.
+  const tsColumn = { name: 'timestamp', data_type: 'TimestampNanosecond' } as const
+  const pinnedColumnFields = computed(() => {
+    const pinned = [tsColumn.name]
+    const traceId = columnNames.value.find(isTraceIdColumn)
+    if (traceId) {
+      pinned.push(traceId)
+    }
+    return pinned
   })
+  const pageSizeOptions = [10, 20, 50, 100]
+  const paginationConfig = computed(() => ({
+    pageSize: pageSize.value,
+    pageSizeOptions,
+  }))
 
-  // Computed visible columns based on selection
   const visibleColumns = computed(() => {
-    let columnsToShow = []
-
-    if (displayedColumns.value.length === 0) {
-      // Show default trace columns if available, otherwise show all
-      const availableDefaults = props.columns.filter(
-        (col) => defaultTraceColumns.includes(col.name.toLowerCase()) || defaultTraceColumns.includes(col.name)
-      )
-      columnsToShow = availableDefaults.length > 0 ? availableDefaults : props.columns
-    } else {
-      columnsToShow = props.columns.filter((col) => displayedColumns.value.includes(col.name))
-    }
-
-    // Sort columns to ensure trace_id is always first
-    return columnsToShow.sort((a, b) => {
-      const isATraceId = a.name === 'trace_id' || a.name === 'traceid'
-      const isBTraceId = b.name === 'trace_id' || b.name === 'traceid'
-
-      if (isATraceId && !isBTraceId) return -1
-      if (!isATraceId && isBTraceId) return 1
-
-      // Keep original order for other columns
-      return 0
-    })
+    const ordered = visibleColumnNames.value
+    const rank = new Map(ordered.map((name, index) => [name, index]))
+    return props.columns
+      .filter((col) => rank.has(col.name))
+      .sort((a, b) => (rank.get(a.name) ?? 0) - (rank.get(b.name) ?? 0))
   })
 
-  // Column selection functions
-  function selectAllColumns() {
-    displayedColumns.value = props.columns.map((col) => col.name)
+  function onPanelOrder(names: string[]) {
+    setColumnLayout(orderableColumnNames.value, names, visibleOrderableColumnNames.value)
   }
 
-  function deselectAllColumns() {
-    displayedColumns.value = []
+  function onPanelVisible(names: string[]) {
+    setVisibleColumns(orderableColumnNames.value, names)
   }
 
-  // Watch for column changes and update displayed columns if empty
-  watch(
-    () => props.columns,
-    (newColumns) => {
-      if (displayedColumns.value.length === 0 && newColumns.length > 0) {
-        // Set default selection to common trace fields if they exist
-        const defaultColumns = newColumns
-          .filter(
-            (col) => defaultTraceColumns.includes(col.name.toLowerCase()) || defaultTraceColumns.includes(col.name)
-          )
-          .map((col) => col.name)
-
-        if (defaultColumns.length > 0) {
-          displayedColumns.value = defaultColumns
-        } else {
-          displayedColumns.value = newColumns.map((col) => col.name)
-        }
-      }
-    }
-  )
-
-  // Pagination handlers
-  function handlePageChange(page: number) {
-    currentPage.value = page
+  function handleColumnOrderChange(fields: string[]) {
+    setColumnOrder(orderableColumnNames.value, fields)
   }
 
-  function handlePageSizeChange(size: number) {
-    pageSize.value = size
-    currentPage.value = 1 // Reset to first page when page size changes
-  }
-
-  // Reset pagination when data changes
   watch(
     () => props.data,
     () => {
@@ -182,16 +196,42 @@ a-card(:bordered="false")
     }
   )
 
-  // Handle trace ID link click
-  function handleTraceClick(traceId: string) {
-    router.push({
-      name: 'dashboard-TraceDetail',
-      params: { id: traceId },
-      query: {
-        table: props.queryState.table,
-        ...(props.queryState.database ? { database: props.queryState.database } : {}),
-      },
-    })
+  const showLogsTraceMenu = computed(() => props.embedMode && props.logsTraceEnabled)
+
+  function openLogsTrace(traceId: string, service?: string) {
+    emit('logsTraceClick', { traceId, service })
+  }
+
+  function logsTargetInfo(record: TableData): LogsTargetInfo | undefined {
+    const service = record?.service_name
+    return service ? props.logsTargets[service] : undefined
+  }
+
+  function logsTargetLabel(record: TableData): string {
+    const target = logsTargetInfo(record)
+    return target ? `${target.database}.${target.table}` : ''
+  }
+
+  function logsAmbiguousService(record: TableData): string[] | undefined {
+    const service = record?.service_name
+    const tables = service ? props.logsAmbiguous[service] : undefined
+    return tables?.length ? tables : undefined
+  }
+
+  function handleLogsMenuSelect(value: string, record: TableData) {
+    if (value === 'logs') {
+      openLogsTrace(record.trace_id, record.service_name)
+      return
+    }
+    if (value === 'mapping') {
+      emit('openLogsSettings')
+    }
+  }
+
+  function handleTraceClick(record: TableData) {
+    const traceId = String(record?.trace_id ?? '')
+    // The parent decides where the detail opens (drawer on the list page, no URL change).
+    emit('traceClick', { traceId, timestamp: record?.timestamp })
   }
 </script>
 
@@ -203,22 +243,67 @@ a-card(:bordered="false")
     font-weight: normal;
   }
 
-  .results-count {
-    color: var(--gpt-text-muted);
-    font-size: var(--gpt-font-base);
-    font-weight: normal;
+  .trace-id-actions {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    min-width: 0;
+    gap: 2px;
   }
 
-  .column-controls {
-    min-width: 200px;
-  }
-
-  .td-config-icon {
-    margin-left: 3px;
+  // Match the time column accent (global `.timestamp-cell`, dataView.less) —
+  // a-link's Arco link color broke the table's unified cell colors.
+  .trace-id-link {
+    max-width: 100%;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    background: transparent;
+    color: var(--gpt-accent-ts);
+    font: inherit;
+    text-align: inherit;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     cursor: pointer;
-    visibility: hidden;
-    width: 12px;
-    height: 12px;
-    color: var(--gpt-main-purple);
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  .trace-id-logs-trigger {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--gpt-radius-sm);
+    background: transparent;
+    color: var(--color-text-3);
+    cursor: pointer;
+
+    &:hover {
+      color: var(--color-text-1);
+      background: var(--color-fill-2);
+    }
+  }
+
+  .logs-menu-row {
+    display: inline-flex;
+    max-width: 100%;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .logs-menu-target {
+    overflow: hidden;
+    color: var(--gpt-text-muted);
+    font-family: var(--font-mono);
+    font-size: var(--gpt-font-sm);
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 </style>

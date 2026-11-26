@@ -2,7 +2,7 @@
 .code-editor.editor-card(:bordered="false")
   .code
     CodeMirror(v-model="code" :disabled="true" :extensions="[mapLanguages(lang)()]")
-    a-button.copy(type="text" title="Copy Code" @click="copy")
+    a-button.copy(type="text" :title="$t('common.copyCode')" @click="copy")
       svg
         use(href="#copy-new")
 </template>

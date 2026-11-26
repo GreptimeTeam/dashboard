@@ -1,3 +1,4 @@
+import ExploreIcon from '@/assets/svg/explore.svg'
 import { AppRouteRecordRaw } from '../types'
 
 export const DEFAULT_LAYOUT = () => import('@/layout/default-layout.vue')
@@ -110,21 +111,6 @@ const DASHBOARD: AppRouteRecordRaw = {
         requiresAuth: false,
         icon: 'Icon7',
         roles: ['admin', 'cloud'],
-        keepAlive: true,
-        componentName: 'TraceQuery',
-      },
-    },
-    {
-      path: 'traces/detail/:id',
-      name: 'dashboard-TraceDetail',
-      component: () => import('@/views/dashboard/traces/[id].vue'),
-      meta: {
-        requiresAuth: false,
-        roles: ['admin', 'cloud'],
-        hideInMenu: true,
-        activeMenu: 'trace-query',
-        keepAlive: false,
-        ignoreCache: true,
       },
     },
     {
@@ -222,6 +208,31 @@ const DASHBOARD: AppRouteRecordRaw = {
         requiresAuth: false,
         icon: 'Icon8',
         roles: ['admin', 'cloud'],
+      },
+    },
+    {
+      path: 'drilldown',
+      redirect: (to) => ({
+        path: '/dashboard/explore',
+        query: to.query,
+        hash: to.hash,
+      }),
+      component: () => import('@/views/dashboard/drilldown/index.vue'),
+      meta: {
+        hideInMenu: true,
+        requiresAuth: false,
+      },
+    },
+    {
+      path: 'explore',
+      name: 'explore',
+      component: () => import('@/views/dashboard/drilldown/index.vue'),
+      meta: {
+        locale: 'menu.dashboard.drilldown',
+        requiresAuth: false,
+        icon: ExploreIcon,
+        roles: ['admin', 'cloud'],
+        ignoreCache: true,
       },
     },
     {

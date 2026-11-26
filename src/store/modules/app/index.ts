@@ -3,27 +3,158 @@ import axios from 'axios'
 import { isTauri } from '@tauri-apps/api/core'
 import defaultSettings from '@/config/settings.json'
 import editorAPI from '@/api/editor'
+import { setDashboardTimezone } from '@/utils/timezone'
+import { writeJSON } from '@/utils/storage'
 import type { Ref } from 'vue'
+import { getDashboardRuntimeConfig, hasRuntimeDemoAuth } from '@/utils/dashboard-runtime-config'
 import type { AppState, ConnectionConfig, DbConnectionStatus, StoredConfig, UiConfig } from './types'
+import { applyUrlInfoToConfig, consumeUrlInfo, omitAuthFromConfig } from './consume-url-info'
 
 const useAppStore = defineStore('app', () => {
   // Persistent storage — declared first so state refs can use stored values as defaults
   const configStorage = useStorage<Partial<StoredConfig>>('config', {}, localStorage)
   const uiConfigStorage = useStorage<Partial<UiConfig>>('uiConfig', {}, localStorage)
 
-  // Apply URL-injected config once at startup (e.g. from cloud entry point)
-  const urlParams = new URLSearchParams(window.location.search)
-  const urlInfo = urlParams.get('info')
-  if (urlInfo) {
-    try {
-      const urlConfig = JSON.parse(atob(urlInfo))
-      configStorage.value = { ...configStorage.value, ...urlConfig }
-    } catch {
-      // ignore malformed info param
+  // One-time cleanup of UI keys that moved into `uiConfig` or are no longer persisted.
+  {
+    const ui = uiConfigStorage.value as Record<string, unknown>
+    let changed = false
+    if ('menuSelectedKey' in ui) {
+      delete ui.menuSelectedKey
+      changed = true
     }
-    urlParams.delete('info')
-    const cleanUrl = [window.location.pathname, urlParams.toString()].filter(Boolean).join('?')
-    window.history.replaceState(null, '', cleanUrl)
+    if (ui.compactRows === undefined) {
+      try {
+        const legacy = localStorage.getItem('query-table-compact-rows')
+        if (legacy !== null) {
+          ui.compactRows = legacy === 'true'
+          changed = true
+          localStorage.removeItem('query-table-compact-rows')
+        }
+      } catch {
+        // ignore storage failures
+      }
+    }
+    // These used to be standalone keys. Read them once so existing profiles keep
+    // their layout; the REMOVED_STORAGE_KEYS pass below deletes the old keys.
+    const legacyUiPrefs: Array<{ field: keyof UiConfig; legacyKey: string; kind: 'number' | 'boolean' }> = [
+      { field: 'querySidebarWidth', legacyKey: 'sidebarWidth', kind: 'number' },
+      { field: 'metricsSidebarWidth', legacyKey: 'metrics-sidebar-width', kind: 'number' },
+      { field: 'persesSidebarWidth', legacyKey: 'perses-sidebar-width', kind: 'number' },
+      {
+        field: 'drilldownMetricsSidebarWidth',
+        legacyKey: 'drilldown-metrics-sidebar-width',
+        kind: 'number',
+      },
+      { field: 'queryEditorHeight', legacyKey: 'queryEditorHeight', kind: 'number' },
+      { field: 'logQueryChartExpanded', legacyKey: 'logquery-chart-expanded', kind: 'boolean' },
+      { field: 'traceChartExpanded', legacyKey: 'trace-chart-expanded', kind: 'boolean' },
+      {
+        field: 'persesSkillAlertDismissed',
+        legacyKey: 'perses-skill-alert-dismissed',
+        kind: 'boolean',
+      },
+    ]
+    legacyUiPrefs.forEach(({ field, legacyKey, kind }) => {
+      if (ui[field] !== undefined) return
+      try {
+        const raw = localStorage.getItem(legacyKey)
+        if (raw === null) return
+        const value = JSON.parse(raw)
+        if (kind === 'number' && typeof value === 'number') {
+          ui[field] = value
+          changed = true
+        } else if (kind === 'boolean' && typeof value === 'boolean') {
+          ui[field] = value
+          changed = true
+        }
+      } catch {
+        // ignore malformed legacy values
+      }
+    })
+    if (typeof ui.locale === 'string' && !['en-US', 'zh-CN', 'ja-JP'].includes(ui.locale)) {
+      delete ui.locale
+      changed = true
+    }
+    if (ui.locale === undefined) {
+      try {
+        const legacy = localStorage.getItem('greptime-locale')
+        if (legacy) {
+          ui.locale = legacy
+          changed = true
+          localStorage.removeItem('greptime-locale')
+        }
+      } catch {
+        // ignore storage failures
+      }
+    }
+    // Column layout needs no eager migration here: per-table layouts live in
+    // `*TableColumns`, and the released global hidden list is drained per table by
+    // `useTableColumnLayoutPref` as each table is customized.
+
+    if (changed) {
+      uiConfigStorage.value = { ...ui } as Partial<UiConfig>
+      // Write through synchronously: initLocale reads the raw value before the
+      // useStorage watcher flushes, and by then the legacy locale key is gone.
+      writeJSON('uiConfig', uiConfigStorage.value)
+    }
+  }
+
+  // Keys whose owners moved into uiConfig or sessionStorage, or which are no longer used.
+  // Removing them once keeps existing browser profiles from carrying dead state forever.
+  const REMOVED_STORAGE_KEYS = [
+    'greptime-locale',
+    'query-table-compact-rows',
+    'queryEditorHeight',
+    'sidebarWidth',
+    'metrics-sidebar-width',
+    'perses-sidebar-width',
+    'drilldown-metrics-sidebar-width',
+    'logquery-chart-expanded',
+    'trace-chart-expanded',
+    'perses-skill-alert-dismissed',
+    'trace-displayed-columns',
+    'drilldown-logs-table-column-visible',
+    'drilldown-logs-table-column-offered',
+    'logquery-table-column-visible',
+    'logquery-table-column-offered',
+    'logs-query-table-filters-cleared',
+    'traces-query-table-filters-cleared',
+    'sql-builder-last-table-quick-filters',
+    'sql-builder-last-table-filters-cleared',
+    'greptime_news_cache',
+    'greptime_anon_id',
+    'contact_form_last_submission',
+    'drilldown-recent-metrics',
+  ]
+  REMOVED_STORAGE_KEYS.forEach((key) => {
+    try {
+      localStorage.removeItem(key)
+    } catch {
+      // ignore storage failures
+    }
+  })
+
+  // Apply URL-injected config once at startup (search or hash query; e.g. cloud / shared links).
+  // Live-demo pack may also inject demo auth via window.__GREPTIME_DASHBOARD_RUNTIME__.
+  {
+    const runtime = getDashboardRuntimeConfig()
+    const runtimeAuth = hasRuntimeDemoAuth(runtime)
+    const { pathname, search, hash } = window.location
+    const { info, nextUrl } = consumeUrlInfo(pathname, search, hash)
+    if (info) {
+      configStorage.value = applyUrlInfoToConfig(configStorage.value, info, { omitAuth: runtimeAuth })
+      if (nextUrl !== `${pathname}${search}${hash}`) {
+        window.history.replaceState(null, '', nextUrl)
+      }
+    }
+    if (runtimeAuth && runtime) {
+      configStorage.value = {
+        ...omitAuthFromConfig(configStorage.value as Record<string, unknown>),
+        username: runtime.username,
+        password: runtime.password,
+      }
+    }
   }
 
   const cfg = configStorage.value
@@ -51,7 +182,7 @@ const useAppStore = defineStore('app', () => {
   const menuCollapse = ref(ui.menuCollapse ?? defaultSettings.menuCollapse)
   const footer = ref(ui.footer ?? defaultSettings.footer)
   const menuWidth = ref(ui.menuWidth ?? defaultSettings.menuWidth)
-  const menuSelectedKey = ref(ui.menuSelectedKey ?? defaultSettings.menuSelectedKey)
+  const menuSelectedKey = ref(defaultSettings.menuSelectedKey)
   const hideSidebar = ref(ui.hideSidebar ?? defaultSettings.hideSidebar)
 
   // Runtime-only state (not persisted)
@@ -106,7 +237,25 @@ const useAppStore = defineStore('app', () => {
     'menuWidth',
     'device',
     'hideSidebar',
-    'menuSelectedKey',
+    'locale',
+    'compactRows',
+    'querySidebarWidth',
+    'metricsSidebarWidth',
+    'persesSidebarWidth',
+    'drilldownMetricsSidebarWidth',
+    'queryEditorHeight',
+    'logQueryChartExpanded',
+    'traceChartExpanded',
+    'persesSkillAlertDismissed',
+    'logsTableSingleColumn',
+    'logsTableShowKeys',
+    'logsTableCompactRows',
+    'logsTableWrapLines',
+    'logsTableColumns',
+    'traceTableColumns',
+    // Released global deny lists: read as a fallback and drained per table until empty.
+    'logsTableHiddenColumns',
+    'traceTableHiddenColumns',
   ] as const
 
   const normalizeConnectionConfig = (config: Partial<StoredConfig>): Partial<StoredConfig> => {
@@ -138,6 +287,7 @@ const useAppStore = defineStore('app', () => {
     },
     { immediate: true, flush: 'sync' }
   )
+  watch(userTimezone, (val) => setDashboardTimezone(val), { immediate: true, flush: 'sync' })
   watch(
     theme,
     (val) => {
@@ -155,6 +305,34 @@ const useAppStore = defineStore('app', () => {
 
   const saveUiConfig = (config: Partial<UiConfig>) => {
     uiConfigStorage.value = { ...uiConfigStorage.value, ...normalizeUiConfig(config) }
+  }
+
+  /** Result-table density, persisted with the rest of the UI preferences. */
+  const compactRows = computed({
+    get: () => uiConfigStorage.value.compactRows ?? false,
+    set: (value: boolean) => saveUiConfig({ compactRows: value }),
+  })
+
+  /** Read a persisted UI preference. Reactive: it touches the storage ref. */
+  const getUiConfigValue = <K extends keyof UiConfig>(key: K): UiConfig[K] | undefined => uiConfigStorage.value[key]
+
+  const setUiConfigValue = <K extends keyof UiConfig>(key: K, value: UiConfig[K]): void => {
+    saveUiConfig({ [key]: value } as Partial<UiConfig>)
+  }
+
+  /** Drop keys from uiConfig (e.g. after migrating legacy column layout fields). */
+  const removeUiConfigKeys = (keys: (keyof UiConfig)[]): void => {
+    const next = { ...uiConfigStorage.value }
+    let changed = false
+    keys.forEach((key) => {
+      if (key in next) {
+        delete next[key]
+        changed = true
+      }
+    })
+    if (changed) {
+      uiConfigStorage.value = next
+    }
   }
 
   const setConnectionConfig = (config: Partial<StoredConfig>) => {
@@ -211,12 +389,18 @@ const useAppStore = defineStore('app', () => {
   }
 
   const validateAndSaveConnection = async (form: Partial<StoredConfig> = {}): Promise<boolean> => {
+    const previousHost = host.value
     try {
       setConnectionConfig(form)
       await validateConnection()
       const { resetDataStatus } = useUserStore()
       resetDataStatus()
       saveConnectionConfig(form)
+      // A host switch invalidates every in-memory binding (tables, field maps, schema
+      // caches). Reload once so all of them are re-resolved against the new server.
+      if (previousHost !== host.value && typeof window !== 'undefined') {
+        window.setTimeout(() => window.location.reload(), 600)
+      }
       return true
     } catch (error) {
       const { resetData } = useDataBaseStore()
@@ -286,6 +470,7 @@ const useAppStore = defineStore('app', () => {
     guideModalVisible,
     menuCollapse,
     footer,
+    compactRows,
     dbId,
     lifetime,
     menuSelectedKey,
@@ -299,6 +484,9 @@ const useAppStore = defineStore('app', () => {
 
     // Actions
     applyUiConfig,
+    getUiConfigValue,
+    setUiConfigValue,
+    removeUiConfigKeys,
     ensureConnectionHost,
     validateAndSaveConnection,
     checkDbConnection,

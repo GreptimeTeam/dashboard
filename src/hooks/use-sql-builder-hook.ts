@@ -1,19 +1,21 @@
-import { computed, type Ref, reactive, watchEffect, ref } from 'vue'
+import { computed, type Ref, reactive } from 'vue'
 import type { Condition, BuilderFormState, TSColumn } from '@/types/query'
+import { jsonAttributeValueKind } from '@/observability/filters'
+import { sqlJsonAttrExpr } from '@/observability/logs/json-field-keys'
+import type { DrilldownFilterOp } from '@/observability/types'
+import { getTableRefForSql } from '@/utils/sql'
 
 export interface SqlBuilderHookOptions {
   /** Time range values for SQL generation */
   timeRangeValues: Ref<string[]>
   /** Timestamp column for time-based filtering */
   tsColumn?: Ref<TSColumn | null>
-  /** Storage key for persisting form state */
-  storageKey?: string
   /** Default form state */
   defaultFormState?: Partial<BuilderFormState> | null
 }
 
 export function useSqlBuilderHook(options: SqlBuilderHookOptions) {
-  const { timeRangeValues, tsColumn, storageKey, defaultFormState } = options
+  const { timeRangeValues, tsColumn, defaultFormState } = options
   const initState = {
     table: '',
     conditions: [],
@@ -25,24 +27,6 @@ export function useSqlBuilderHook(options: SqlBuilderHookOptions) {
   }
   // Initialize builder form state as reactive
   const builderFormState = reactive<BuilderFormState>({ ...initState })
-
-  // // Persist form state to localStorage if storageKey is provided
-  // if (storageKey) {
-  //   const savedState = localStorage.getItem(`${storageKey}-form-state`)
-  //   if (savedState) {
-  //     try {
-  //       const parsed = JSON.parse(savedState)
-  //       Object.assign(builderFormState, parsed)
-  //     } catch (error) {
-  //       console.warn('Failed to parse saved form state:', error)
-  //     }
-  //   }
-
-  //   // Watch for changes and save to localStorage
-  //   watchEffect(() => {
-  //     localStorage.setItem(`${storageKey}-form-state`, JSON.stringify(builderFormState))
-  //   })
-  // }
 
   function escapeSqlString(value: string) {
     if (typeof value !== 'string') return value
@@ -58,36 +42,53 @@ export function useSqlBuilderHook(options: SqlBuilderHookOptions) {
         return Number(val)
       }
       if (fieldType === 'Boolean') {
-        return Boolean(val)
+        return val === true || String(val).toLowerCase() === 'true' ? 'TRUE' : 'FALSE'
       }
       return `'${escapeSqlString(val)}'`
     }
 
+    // JSON2 attribute chips have no column: render the JSON path, read as the comparator's
+    // type (range operators need a numeric cast, otherwise "1000" sorts before "900").
+    const { jsonAttribute } = condition
+    // The field type decides the read (a numeric key also casts for IN lists); fall back to
+    // the comparator heuristic for string-typed attributes used with range operators.
+    let jsonKind = jsonAttributeValueKind(operator as DrilldownFilterOp, String(value ?? ''))
+    if (condition.fieldType === 'Number') {
+      jsonKind = 'number'
+    } else if (condition.fieldType === 'Boolean') {
+      jsonKind = 'boolean'
+    }
+    const target = jsonAttribute ? sqlJsonAttrExpr(jsonAttribute.column, jsonAttribute.path, jsonKind) : `"${field}"`
+
     switch (operator) {
       case 'LIKE':
-        return `"${field}" LIKE '%${escapeSqlString(String(value))}%'`
+        return `${target} LIKE '%${escapeSqlString(String(value))}%'`
       case 'NOT LIKE':
-        return `"${field}" NOT LIKE '%${escapeSqlString(String(value))}%'`
+        return `${target} NOT LIKE '%${escapeSqlString(String(value))}%'`
+      case 'MATCH':
+        return `${target} @@ '${escapeSqlString(String(value))}'`
+      case 'NOT MATCH':
+        return `NOT ${target} @@ '${escapeSqlString(String(value))}'`
       case 'IN': {
         const inVal = (value as string)
           .split(',')
           .map((v) => formatValue(v.trim(), condition.fieldType))
           .join(',')
-        return `"${field}" IN (${inVal})`
+        return `${target} IN (${inVal})`
       }
       case 'NOT IN': {
         const inVal = (value as string)
           .split(',')
           .map((v) => formatValue(v.trim(), condition.fieldType))
           .join(',')
-        return `"${field}" NOT IN (${inVal})`
+        return `${target} NOT IN (${inVal})`
       }
       case 'Exist':
-        return `"${field}" IS NOT NULL`
+        return `${target} IS NOT NULL`
       case 'Not Exist':
-        return `"${field}" IS NULL`
+        return `${target} IS NULL`
       default:
-        return `"${field}"${operator}${formatValue(value, condition.fieldType)}`
+        return `${target}${operator}${formatValue(value, condition.fieldType)}`
     }
   }
 
@@ -137,8 +138,7 @@ export function useSqlBuilderHook(options: SqlBuilderHookOptions) {
       }
     }
 
-    // Build SQL with database prefix if database is provided
-    const tableName = form.database ? `"${form.database}"."${form.table}"` : `"${form.table}"`
+    const tableName = getTableRefForSql({ table: form.table, database: form.database })
     let sql = `SELECT * FROM ${tableName}`
     if (timeConditions.length > 0) {
       sql += ` WHERE ${timeConditions.join(' ')}`

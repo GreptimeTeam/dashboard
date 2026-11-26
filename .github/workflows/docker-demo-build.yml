@@ -1,0 +1,191 @@
+# Build & push live-demo dashboard Docker image (GA + demo auth injected).
+# Does not push :latest or plain SHA tags used by OSS docker-manual-build.
+#
+# Triggers:
+# - push tag docker-demo-* (runs on that tagged commit; need not be merged to main)
+# - workflow_dispatch (visible in Actions UI after this file exists on the default branch)
+on:
+  push:
+    tags:
+      # Keep off v*.*.* / live-demo-* so other workflows are not triggered.
+      - 'docker-demo-*'
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: 'the dashboard commit sha (or ref)'
+        required: true
+
+name: Build demo docker image
+
+jobs:
+  docker:
+    name: Build demo docker image
+    runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'GreptimeTeam' }}
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+        with:
+          # Tag push: github.ref is refs/tags/docker-demo-*. Dispatch: use input commit.
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.commit || github.ref }}
+
+      - name: Login to Dockerhub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to AliCloud Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: greptime-registry.cn-hangzhou.cr.aliyuncs.com
+          username: ${{ secrets.ALICLOUD_USERNAME }}
+          password: ${{ secrets.ALICLOUD_PASSWORD }}
+
+      - name: Configure image tag
+        shell: bash
+        run: |
+          commitShortSHA=$(git rev-parse --short=8 HEAD)
+          # demo- prefix so OSS manual SHA tags are never overwritten.
+          echo "IMAGE_TAG=demo-${commitShortSHA}" >> "$GITHUB_ENV"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Send GitHub Action trigger data to Slack workflow
+        id: slack_start
+        uses: slackapi/slack-github-action@v1.23.0
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        with:
+          payload: |
+            {"text": "Building **demo** dashboard image (GA + auth inject). ref: `${{ github.event_name == 'workflow_dispatch' && github.event.inputs.commit || github.ref_name }}`"}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Update GitHub stars fallback
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/update-github-stars.mjs
+
+      - name: Run build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm run build:docker
+
+      # Values from Actions config (not in OSS application source):
+      #   vars.LIVE_DEMO_GA_ID
+      #   vars.LIVE_DEMO_USERNAME
+      #   secrets.LIVE_DEMO_PASSWORD
+      # queryGuide is always true for this workflow.
+      - name: Inject live-demo GA and auth into index.html
+        env:
+          LIVE_DEMO_GA_ID: ${{ vars.LIVE_DEMO_GA_ID }}
+          LIVE_DEMO_USERNAME: ${{ vars.LIVE_DEMO_USERNAME }}
+          LIVE_DEMO_PASSWORD: ${{ secrets.LIVE_DEMO_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          INDEX_HTML="dist/index.html"
+          if [[ ! -f "$INDEX_HTML" ]]; then
+            echo "Missing $INDEX_HTML" >&2
+            exit 1
+          fi
+          if [[ -z "${LIVE_DEMO_GA_ID}" || -z "${LIVE_DEMO_USERNAME}" || -z "${LIVE_DEMO_PASSWORD}" ]]; then
+            echo "Set repo Actions vars/secrets before running this workflow:" >&2
+            echo "  vars.LIVE_DEMO_GA_ID" >&2
+            echo "  vars.LIVE_DEMO_USERNAME" >&2
+            echo "  secrets.LIVE_DEMO_PASSWORD" >&2
+            exit 1
+          fi
+          node <<'NODE'
+          const fs = require('fs')
+          const indexPath = 'dist/index.html'
+          const gaId = process.env.LIVE_DEMO_GA_ID
+          const username = process.env.LIVE_DEMO_USERNAME
+          const password = process.env.LIVE_DEMO_PASSWORD
+          const j = (v) => JSON.stringify(String(v))
+
+          let html = fs.readFileSync(indexPath, 'utf8')
+          const parts = []
+
+          if (!html.includes('googletagmanager.com/gtag/js')) {
+            parts.push(`<script async src="https://www.googletagmanager.com/gtag/js?id=${gaId}"></script>
+          <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){ dataLayer.push(arguments); }
+          gtag('js', new Date());
+          gtag('config', ${j(gaId)}, { send_page_view: false });
+          function trackPv(){
+            gtag('event', 'page_view', {
+              send_to: ${j(gaId)},
+              page_path: location.hash.slice(1) || '/',
+              page_location: location.href,
+              page_title: document.title
+            });
+          }
+          trackPv();
+          addEventListener('hashchange', trackPv);
+          </script>`)
+          }
+
+          if (!html.includes('__GREPTIME_DASHBOARD_RUNTIME__')) {
+            parts.push(`<script>
+          window.__GREPTIME_DASHBOARD_RUNTIME__ = {
+            username: ${j(username)},
+            password: ${j(password)},
+            queryGuide: true
+          };
+          </script>`)
+          }
+
+          if (parts.length === 0) {
+            console.log('Snippets already present; skip inject')
+            process.exit(0)
+          }
+
+          const needle = '</head>'
+          const idx = html.indexOf(needle)
+          if (idx < 0) {
+            console.error('No </head> in', indexPath)
+            process.exit(1)
+          }
+          html = html.slice(0, idx) + parts.join('\n') + '\n' + html.slice(idx)
+          fs.writeFileSync(indexPath, html)
+          console.log('Injected live-demo GA + runtime into', indexPath)
+          NODE
+
+      - name: Build and push
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          file: ./docker/Dockerfile.runtimeonly
+          push: true
+          platforms: linux/amd64
+          tags: |
+            greptime/greptimedb-dashboard:${{ env.IMAGE_TAG }}
+            greptime-registry.cn-hangzhou.cr.aliyuncs.com/greptime/greptimedb-dashboard:${{ env.IMAGE_TAG }}
+
+      - name: Send GitHub Action trigger data to Slack workflow
+        id: slack_finish
+        uses: slackapi/slack-github-action@v1.23.0
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        with:
+          payload: |
+            {"text": "**Demo** dashboard image is ready. Tag: `greptime/greptimedb-dashboard:${{ env.IMAGE_TAG }}`"}

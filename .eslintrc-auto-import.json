@@ -13,6 +13,7 @@
     "MaybeRefOrGetter": true,
     "PropType": true,
     "Ref": true,
+    "TABLE_OPTION_LIMIT": true,
     "VNode": true,
     "WritableComputedRef": true,
     "acceptHMRUpdate": true,
@@ -101,7 +102,6 @@
     "useIngest": true,
     "useIngestStore": true,
     "useLink": true,
-    "useLogTimePagination": true,
     "useModel": true,
     "useNews": true,
     "useQueryCode": true,
@@ -114,6 +114,8 @@
     "useSqlBuilderHook": true,
     "useStatusBarStore": true,
     "useTabBarStore": true,
+    "useTableOptions": true,
+    "useTableSchemaStore": true,
     "useTemplateRef": true,
     "useTextEditorState": true,
     "useTimeRange": true,
@@ -122,6 +124,7 @@
     "watch": true,
     "watchEffect": true,
     "watchPostEffect": true,
-    "watchSyncEffect": true
+    "watchSyncEffect": true,
+    "useDrawerUrlSync": true
   }
 }

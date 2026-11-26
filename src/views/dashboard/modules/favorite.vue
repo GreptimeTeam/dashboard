@@ -1,13 +1,12 @@
 <template lang="pug">
 a-list(:data="favoriteList")
   template(#header)
-    | Favorite
+    | {{ $t('dashboard.favorite') }}
   template(#item="{ item }")
     a-list-item
-      a-tooltip(content="This is tooltip content")
-        a-list-item-meta(:description="item.title")
+      a-list-item-meta(:description="item.title")
       template(#actions)
-        a-tooltip(content="Insert Code Into Editor" mini background-color="#722ED1")
+        a-tooltip(mini background-color="#722ED1" :content="$t('dashboard.favoriteInsertHint')")
           icon-copy(style="font-size: 20px")
         icon-delete(style="font-size: 20px")
 </template>

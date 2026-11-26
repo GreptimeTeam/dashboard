@@ -2,100 +2,185 @@
 .query-layout.query-layout--surface.flow-page.query-container
   .page-header.gpt-page-header.flow-page-header
     .page-header-main
-      | Flow
+      | {{ $t('menu.dashboard.flow') }}
       span.page-header-subtitle.gpt-text-page-subtitle
-        | Real-time computation of data streams.
+        | {{ $t('flow.subtitle') }}
         a.flow-page-learn-more(
           href="https://docs.greptime.com/user-guide/flow-computation/overview"
           target="_blank"
           rel="noopener noreferrer"
         )
-          | Learn more
+          | {{ $t('flow.learnMore') }}
           svg.icon-12
             use(href="#import")
     a-button(type="primary" size="medium" @click="showCreate")
       template(#icon)
         icon-plus
-      | New Flow
+      | {{ $t('flow.new') }}
 
   .content-wrapper.query-layout-cards
     a-card.flow-results-card.gpt-surface-card(:bordered="false")
       template(#title)
         span.gpt-surface-card__title {{ $t('logsQuery.results') }}
         span.gpt-surface-card__badge(v-if="totalResults > 0") {{ totalResults }}
-      DataTable.flow-table.gpt-table-page(
-        leftover-strategy="proportional"
-        :data="data"
+      .flow-filter-toolbar.gpt-results-toolbar
+        a-space.flow-filter-controls(:size="12")
+          a-input.flow-filter-search(
+            v-model="searchKeyword"
+            size="small"
+            allow-clear
+            :style="{ width: '240px' }"
+            :placeholder="$t('flow.filterSearchPlaceholder')"
+          )
+            template(#prefix)
+              svg.icon-12.icon-color
+                use(href="#search")
+          a-select.flow-filter-select(
+            v-model="sourceTableFilter"
+            size="small"
+            allow-clear
+            allow-search
+            :style="{ width: '240px' }"
+            :placeholder="$t('flow.filterSourcePlaceholder')"
+            :options="sourceTableOptions"
+          )
+          a-select.flow-filter-select(
+            v-model="sinkTableFilter"
+            size="small"
+            allow-clear
+            allow-search
+            :style="{ width: '240px' }"
+            :placeholder="$t('flow.filterSinkPlaceholder')"
+            :options="sinkTableOptions"
+          )
+      DataGrid.flow-table.gpt-table-page(
+        leftover-strategy="last-column"
+        :fill-height="false"
+        :fit-container="true"
+        :pagination="true"
+        :data="filteredFlows"
         :columns="columns"
         :loading="loading"
         :show-context-menu="false"
-        :scroll="flowTableScroll"
       )
-        template(#column-status="{ record }")
-          span.gpt-status-pill(v-if="record.status" :class="getStatusClass(record.status)")
-            span.gpt-status-pill__dot
-            | {{ record.status }}
-          span(v-else) —
+        template(#column-flow_name="{ record }")
+          button.flow-name-link(type="button" @click="showEdit(record)") {{ record.flow_name }}
         template(#column-operate="{ record }")
           a-space(:size="8")
-            a-button(size="small" @click="showEdit(record)") Edit
-            a-popconfirm(content="Confirm deletion?" type="warning" @ok="del(record)")
-              a-button(size="small" status="danger") Delete
+            a-button(size="small" @click="showEdit(record)") {{ $t('common.edit') }}
+            a-popconfirm(type="warning" :content="$t('common.deleteConfirm')" @ok="del(record)")
+              a-button(size="small" status="danger") {{ $t('common.delete') }}
 
     FlowDetailModal(
-      :key="editData?.flow_id"
+      :key="modalInstanceKey"
       v-model:visible="modalVisible"
       :edit-data="editData"
-      :raw-data="textEditorData"
       :schema-columns="schemaColumns"
       @saved="handleFlowSaved"
-      @clone="handleClone"
     )
 </template>
 
 <script setup name="FlowList" lang="ts">
   import { Message } from '@arco-design/web-vue'
+  import { useI18n } from 'vue-i18n'
   import type { ColumnType } from '@/types/query'
   import editorAPI from '@/api/editor'
-  import DataTable from '@/components/data-table/index.vue'
+  import DataGrid from '@/components/data-grid/DataGrid.vue'
   import FlowDetailModal from './components/flow-detail-modal.vue'
+  import apiErrorMessage from './utils/api-error'
+  import { quoteFlowIdent } from './utils/flow-sql'
   import { toObj } from '../logs/query/until'
+
+  const { t } = useI18n()
 
   const displayedColumns = [
     'flow_name',
     'sink_table_name',
     'source_table_names',
     'comment',
-    'status',
     'created_time',
     'updated_time',
     'operate',
   ]
 
   const columns = shallowRef<Array<ColumnType>>([])
-  const data = shallowRef<Array<any>>([])
+  const allFlows = shallowRef<Array<any>>([])
   const loading = ref(false)
-  const totalResults = ref(0)
   const modalVisible = ref(false)
-  const isEdit = ref(false)
+  const modalInstanceKey = ref(0)
   const editData = ref(null)
-  const textEditorData = ref('')
   const schemaColumns = shallowRef<Array<ColumnType>>([])
 
-  /** 不按父级撑满，表格高度随数据行数 */
-  const flowTableScroll = { y: undefined }
+  const searchKeyword = ref('')
+  const sourceTableFilter = ref<string | undefined>()
+  const sinkTableFilter = ref<string | undefined>()
 
-  const getStatusClass = (status: unknown) => {
-    const value = String(status ?? '').toLowerCase()
-    if (['running', 'active', 'started'].includes(value)) return 'is-running'
-    if (['error', 'failed', 'stopped', 'stop'].includes(value)) return 'is-error'
-    return 'is-default'
+  const splitSourceTables = (value: unknown): string[] =>
+    String(value ?? '')
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean)
+
+  /** Hide catalog: greptime.public.t → public.t */
+  const toDbTableName = (qualifiedName: string): string => {
+    const parts = qualifiedName.split('.').filter(Boolean)
+    if (parts.length >= 3) return parts.slice(-2).join('.')
+    return qualifiedName
   }
+
+  const uniqueSorted = (values: string[]) => [...new Set(values)].sort((a, b) => a.localeCompare(b))
+
+  const sourceTableOptions = computed(() =>
+    uniqueSorted(allFlows.value.flatMap((flow) => splitSourceTables(flow.source_table_names).map(toDbTableName))).map(
+      (value) => ({
+        label: value,
+        value,
+      })
+    )
+  )
+
+  const sinkTableOptions = computed(() =>
+    uniqueSorted(
+      allFlows.value
+        .map((flow) => String(flow.sink_table_name ?? '').trim())
+        .filter(Boolean)
+        .map(toDbTableName)
+    ).map((value) => ({
+      label: value,
+      value,
+    }))
+  )
+
+  const filteredFlows = computed(() => {
+    const keyword = searchKeyword.value.trim().toLowerCase()
+    const source = sourceTableFilter.value
+    const sink = sinkTableFilter.value
+
+    return allFlows.value.filter((flow) => {
+      if (keyword) {
+        const haystack = [flow.flow_name, flow.comment, flow.sink_table_name, flow.source_table_names]
+          .map((part) => String(part ?? '').toLowerCase())
+          .join('\n')
+        if (!haystack.includes(keyword)) return false
+      }
+      if (source && !splitSourceTables(flow.source_table_names).map(toDbTableName).includes(source)) {
+        return false
+      }
+      if (sink && toDbTableName(String(flow.sink_table_name ?? '').trim()) !== sink) return false
+      return true
+    })
+  })
+
+  const totalResults = computed(() => filteredFlows.value.length)
+
+  // SELECT * for schema compatibility (new columns like eval_*). UI still filters via
+  // displayedColumns; flow_definition may be present but edit uses SHOW CREATE FLOW.
+  const FLOW_LIST_SQL = `SELECT * FROM information_schema.flows ORDER BY created_time DESC`
 
   function list() {
     loading.value = true
     editorAPI
-      .runSQL('select * from  INFORMATION_SCHEMA.FLOWS order by created_time desc')
+      .runSQL(FLOW_LIST_SQL, undefined, { suppressErrorToast: true })
       .then((result) => {
         const schemas = result.output[0].records.schema.column_schemas
 
@@ -107,8 +192,10 @@
 
         const operateColumn = {
           name: 'operate',
-          title: 'Actions',
+          title: t('common.actions'),
           data_type: 'string',
+          // Two buttons + gap + cell padding; estimated width only sees "Actions".
+          width: 168,
         }
 
         const allColumns = [...schemaColumns.value, operateColumn]
@@ -123,11 +210,15 @@
             if (columnName === 'sink_table_name') {
               return { ...col, cellClass: 'flow-sink-cell' }
             }
+            // Absorb leftover here instead of stretching the Actions column.
+            if (columnName === 'comment') {
+              return { ...col, flex: true }
+            }
             return col
           })
           .filter(Boolean) as ColumnType[]
 
-        data.value = result.output[0].records.rows.map((row, index) => {
+        allFlows.value = result.output[0].records.rows.map((row, index) => {
           const obj = toObj(row, schemas, index, null)
           const expireAfterSchema = schemas.filter((v) => v.name === 'expire_after')
           if (expireAfterSchema[0]?.data_type === 'Int64' && obj.expire_after !== null) {
@@ -136,14 +227,13 @@
           return obj
         })
 
-        totalResults.value = data.value.length
         loading.value = false
       })
       .catch((error) => {
         console.error('Failed to load flows:', error)
         loading.value = false
-        totalResults.value = 0
-        Message.error('Failed to load flows list')
+        allFlows.value = []
+        Message.error(t('flow.loadFailed', { msg: apiErrorMessage(error, t('common.unknownError')) }))
       })
   }
 
@@ -162,9 +252,8 @@
   }
 
   function showCreate() {
-    isEdit.value = false
     editData.value = null
-    textEditorData.value = ''
+    modalInstanceKey.value += 1
     modalVisible.value = true
   }
 
@@ -182,28 +271,25 @@
   )
 
   function showEdit(record) {
-    isEdit.value = true
     editData.value = record
+    modalInstanceKey.value += 1
     modalVisible.value = true
   }
 
   function del(record) {
+    // Flow names are identifiers: quote them so `my-flow` or mixed-case names work.
     editorAPI
-      .runSQL(`DROP FLOW IF EXISTS ${record.flow_name}`)
+      .runSQL(`DROP FLOW IF EXISTS ${quoteFlowIdent(record.flow_name)}`, undefined, {
+        suppressErrorToast: true,
+      })
       .then(() => {
-        Message.success('Flow deleted successfully')
+        Message.success(t('flow.deleted'))
         list()
       })
       .catch((error) => {
         console.error('Delete flow failed:', error)
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-        Message.error(`Delete flow failed: ${errorMessage}`)
+        Message.error(t('flow.deleteFailed', { msg: apiErrorMessage(error, t('common.unknownError')) }))
       })
-  }
-
-  function handleClone(cloneData: any) {
-    editData.value = cloneData.formData
-    textEditorData.value = cloneData.rawData
   }
 </script>
 
@@ -253,11 +339,36 @@
     font-weight: 500;
   }
 
+  .flow-filter-toolbar {
+    justify-content: flex-start;
+  }
+
   .flow-table {
-    :deep(.flow-name-cell .cell-content),
-    :deep(.flow-name-cell .arco-table-td-content) {
-      font-weight: 700;
-      color: var(--gpt-text-primary);
+    width: 100%;
+
+    :deep(.dg-grid-host),
+    :deep(.vxe-table),
+    :deep(.vxe-grid) {
+      width: 100%;
+      max-width: 100%;
+    }
+
+    .flow-name-link {
+      max-width: 100%;
+      padding: 0;
+      border: 0;
+      overflow: hidden;
+      background: transparent;
+      color: var(--gpt-accent-ts);
+      font: inherit;
+      text-align: left;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      cursor: pointer;
+
+      &:hover {
+        text-decoration: underline;
+      }
     }
 
     :deep(.flow-sink-cell .cell-content),

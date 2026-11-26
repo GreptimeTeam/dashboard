@@ -1,5 +1,5 @@
 <template lang="pug">
-.query-layout.query-layout--stack.logs-query-container.query-container
+.query-layout.query-layout--stack.logs-query-container.query-container.drilldown-body
   .page-header.gpt-page-header
     | {{ $t('menu.dashboard.logsQuery') }}
   .content-wrapper.query-layout-cards
@@ -52,7 +52,9 @@
         SQLBuilder(
           v-if="editorType === 'builder'"
           ref="sqlBuilderRef"
-          storage-key="logs-query-table"
+          remember-table
+          signal-database-kind="logs"
+          :storage-key="LOGS_QUERY_STORAGE_KEY"
           :form-state="builderFormState"
           :default-form-state="defaultFormState"
         )
@@ -104,8 +106,6 @@
 
       template(#extra)
         a-space
-          .logs-virtual-columns-clipped-hint(v-if="showVirtualColumnsClippedHint && columns && columns.length")
-            | {{ $t('logsQuery.virtualColumnsHint') }}
           a-trigger(
             v-if="columns && columns.length"
             trigger="click"
@@ -114,51 +114,86 @@
           )
             a-button(type="text")
               span.gpt-text-secondary {{ $t('logsQuery.columns') }}
+              span.gpt-text-secondary(v-if="hiddenColumnCount" style="margin-left: 6px; font-size: 12px") · {{ $t('logsQuery.hiddenColumnsHint', { count: hiddenColumnCount }) }}
             template(#content)
-              a-card.gpt-popover-panel
-                a-checkbox-group(v-model="displayedColumns[queryState.table]" direction="vertical")
-                  a-checkbox(v-for="column in columns" :value="column.name")
-                    | {{ column.name }}
-          Pagination(
-            v-if="!refresh && editorType === 'builder' && builderFormState.tsColumn"
-            :key="paginationKey"
-            :rows="rows"
-            :columns="columns"
-            :query-state="queryState"
-            @update:rows="handlePaginationRowsUpdate"
-          )
+              a-card.gpt-popover-panel.gpt-popover-panel--wide
+                ColumnLayoutPanel(
+                  :ordered-names="orderedSelectableColumnNames"
+                  :visible-names="visibleSelectableColumnNames"
+                  @update:ordered-names="onPanelOrder"
+                  @update:visible-names="onPanelVisible"
+                )
       LogTableData(
         :key="`${queryState.table}-${columnModeKey}`"
         :wrap-line="wrap"
         :size="size"
         :data="rows"
         :columns="columns"
+        :loading="queryLoading"
+        :has-more="hasMore"
+        :loading-more="loadingMore"
         :sql-mode="queryState.editorType"
         :ts-column="queryState.tsColumn"
-        :column-mode="mergeColumn && showKeys ? 'merged-with-keys' : mergeColumn ? 'merged' : 'separate'"
-        :displayed-columns="displayedColumns[queryState.table] || []"
+        :column-mode="columnMode"
+        :displayed-columns="visibleColumnNames"
+        :column-drag="columnMode === 'separate'"
+        :pinned-column-fields="timestampColumnName ? [timestampColumnName] : []"
+        :trace-id-column="traceIdColumn"
+        @trace-click="openTrace"
         @filter-condition-add="handleFilterConditionAdd"
-        @virtualColumnsClipped="handleVirtualColumnsClipped"
+        @reach-end="loadMore"
+        @column-order-change="handleColumnOrderChange"
       )
 
     ExportModal(v-model:visible="exportModalVisible" :sql="exportSqlText" @confirm="handleExportConfirm")
+    TraceDetailDrawer(
+      popup-container=".logs-query-container"
+      :parent-label="$t('menu.dashboard.logsQuery')"
+      :empty-text="traceEmptyText"
+      :trace-id="traceDrawerId"
+      :target="traceDrawerTarget"
+      @close="closeTraceDrawer"
+    )
 </template>
 
-<script setup lang="ts" name="LogsQuery">
-  import { ref, computed, watch, onMounted, toRefs, nextTick } from 'vue'
-  import { useStorage, useLocalStorage } from '@vueuse/core'
+<script setup lang="ts">
+  import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue'
+  import { useRoute } from 'vue-router'
+  import { Message } from '@arco-design/web-vue'
+  import { useI18n } from 'vue-i18n'
   import SQLBuilder from '@/components/sql-builder/index.vue'
   import SqlTextEditor from '@/components/sql-text-editor/index.vue'
   import { replaceTimePlaceholders } from '@/utils/sql'
+  import { isQueryGuideEnabled } from '@/utils/query-guide-enabled'
+  import useLogsTablePrefs from '@/observability/use-logs-table-prefs'
+  import { getSignalDatabase } from '@/observability/signal-database'
+  import { LOGS_QUERY_STORAGE_KEY, writeQueryTable } from '@/observability/query-table-pref'
+  import { findTraceIdColumn, resolveTraceDetailTarget } from '@/observability/traces/open-trace-from-log'
+  import useTraceDrawerUrlSync from '@/observability/traces/use-trace-drawer-url-sync'
+  import TraceDetailDrawer from '@/views/dashboard/traces/components/TraceDetailDrawer.vue'
+  import ColumnLayoutPanel from '@/components/column-layout-panel/ColumnLayoutPanel.vue'
   import ChartContainer from './ChartContainer.vue'
   import ExportModal from './ExportModal.vue'
   import LogTableData from './LogsTable.vue'
-  import Pagination from './Pagination.vue'
 
+  defineOptions({
+    name: 'LogsQuery',
+  })
+
+  const route = useRoute()
+  const { t } = useI18n()
+  const isLogsQueryRoute = () => route.name === 'log-query'
+  // Guide step switching is browse-only. Preserve the normal page's initial auto query,
+  // but in guide mode wait for the guide's explicit "Run query" action (`tourApply`).
+  const shouldAutoExecuteInitialQuery = () => !isQueryGuideEnabled() || Boolean(route.query.tourApply)
   const timeRange = useTimeRange()
   const { rangeTime, time, timeRangeValues } = timeRange
 
-  const builder = useSqlBuilderHook({ storageKey: 'logsquery-table', timeRangeValues })
+  const builder = useSqlBuilderHook({
+    timeRangeValues,
+    // Text mode has no DB selector; start it on the same per-signal DB as the builder.
+    defaultFormState: { database: getSignalDatabase('logs') },
+  })
   const { builderFormState, addFilterCondition, generateSql, defaultFormState } = builder
 
   const textEditor = useTextEditorState()
@@ -166,9 +201,12 @@
   const {
     editorType,
     executeQuery,
+    loadMore,
     exportToCSV,
     queryState,
     loading: queryLoading,
+    loadingMore,
+    hasMore,
     columns,
     rows,
     totalRowCount,
@@ -182,31 +220,117 @@
     editorType,
   })
 
-  const { initializeFromQuery, updateQueryParams } = urlSync
+  const { initializeFromQuery, updateQueryParams, isApplyingLocalUrlUpdate } = urlSync
   initializeFromQuery()
-  // Local UI state
-  const mergeColumn = useStorage('logquery-merge-column', true)
-  const showKeys = useStorage('logquery-show-keys', true)
-  const displayedColumns = useStorage('logquery-table-column-visible', {})
-  const columnModeKey = computed(() => {
-    if (!mergeColumn.value) return 'separate'
-    return showKeys.value ? 'merged-with-keys' : 'merged'
+
+  // Local UI state — shared with drilldown logs detail table.
+  const {
+    mergeColumn,
+    showKeys,
+    compactRows,
+    wrap,
+    size,
+    columnMode,
+    columnModeKey,
+    hiddenColumnsFor,
+    displayedColumnsFor,
+    orderedColumnsFor,
+    setColumnLayout,
+    setVisibleColumns,
+    setColumnOrder,
+  } = useLogsTablePrefs(() => queryState.table || '')
+
+  const columnNames = computed(() => columns.value.map((column) => column.name))
+  // The logs table pins the timestamp column first; it is not a configurable column.
+  const timestampColumnName = computed(
+    () =>
+      queryState.tsColumn?.name ||
+      columns.value.find((column) => column.data_type?.toLowerCase().includes('timestamp'))?.name ||
+      ''
+  )
+  // A `trace_id` column makes every value a link to the Trace detail page. The log row only
+  // claims a trace (no foreign key), so existence is checked by the detail page itself.
+  const traceIdColumn = computed(() => findTraceIdColumn(columns.value))
+
+  // Trace detail opens as a drawer over this page, so the Logs Query stays mounted. The drawer
+  // state lives in the URL query (not the path), so a refresh reopens it next to the list.
+  const {
+    traceId: traceDrawerId,
+    target: traceDrawerTarget,
+    open: openTraceDrawer,
+    close: closeTraceDrawer,
+  } = useTraceDrawerUrlSync('log-query')
+
+  /**
+   * Publish the table this page just queried, so the Traces Query page reads the same trace
+   * table from the Logs → trace link. Code mode has no SQLBuilder, so this is the only writer
+   * in that mode. Any defaulting (first table in the list) stays inside the page, never in the
+   * link: the link only follows what the page published.
+   */
+  function publishQueryTable() {
+    if (!queryState.table || !queryState.database) return
+    writeQueryTable(LOGS_QUERY_STORAGE_KEY, queryState.database, queryState.table)
+  }
+
+  function openTrace(traceId: string, row?: Record<string, unknown>) {
+    const id = String(traceId || '').trim()
+    if (!id) return
+    const anchor = timestampColumnName.value ? row?.[timestampColumnName.value] : undefined
+    const target = resolveTraceDetailTarget(anchor)
+    if (!target) {
+      Message.warning(t('logsQuery.traceNoTable', { page: t('menu.dashboard.traces') }))
+      return
+    }
+    openTraceDrawer(id, target)
+  }
+
+  // Shown when the trace has no spans in the target table: says where to pick the table.
+  const traceEmptyText = computed(() => {
+    const target = traceDrawerTarget.value
+    if (!target) return undefined
+    const label = target.database ? `${target.database}.${target.table}` : target.table
+    return t('logsQuery.traceNotFound', { target: label, page: t('menu.dashboard.traces') })
   })
 
-  const chartContainerRef = ref()
-  const paginationKey = ref(0)
-  const refreshPagination = () => {
-    paginationKey.value += 1
+  const selectableColumnNames = computed(() => columnNames.value.filter((name) => name !== timestampColumnName.value))
+  // DataGrid always pins ts via tsColumn; stored layout covers selectable columns only.
+  const visibleColumnNames = computed(() => {
+    const ts = timestampColumnName.value
+    const selectable = displayedColumnsFor(selectableColumnNames.value)
+    return ts ? [ts, ...selectable.filter((name) => name !== ts)] : selectable
+  })
+  const visibleSelectableColumnNames = computed(() => displayedColumnsFor(selectableColumnNames.value))
+  // Panel order covers hidden columns too, so their order can be dragged and kept.
+  const orderedSelectableColumnNames = computed(() => orderedColumnsFor(selectableColumnNames.value))
+  const hiddenColumnCount = computed(() => hiddenColumnsFor(selectableColumnNames.value).length)
+
+  function onPanelOrder(names: string[]) {
+    setColumnLayout(selectableColumnNames.value, names, visibleSelectableColumnNames.value)
   }
+
+  function onPanelVisible(names: string[]) {
+    setVisibleColumns(selectableColumnNames.value, names)
+  }
+
+  function handleColumnOrderChange(fields: string[]) {
+    setColumnOrder(selectableColumnNames.value, fields)
+  }
+
+  const chartContainerRef = ref()
   const refresh = ref(false)
   function handleQuery(newQuery: boolean | MouseEvent = true) {
+    // A query can still be in flight when the user navigates away. Its completion must
+    // not replace the next route's query params with this page's builder state.
+    if (!isLogsQueryRoute()) return
+
     // If called from click event, newQuery will be a MouseEvent, so default to true
     const isNewQuery = typeof newQuery === 'boolean' ? newQuery : true
 
     executeQuery(isNewQuery).then(() => {
+      if (!isLogsQueryRoute()) return
       if (isNewQuery) {
         updateQueryParams()
-        refreshPagination()
+        publishQueryTable()
       }
     })
 
@@ -214,6 +338,22 @@
       chartContainerRef.value?.triggerCurrentChartQuery()
     })
   }
+
+  // Same-route tutorial click: form sync alone does not re-fire canExecuteInitialQuery.
+  watch(
+    () => [route.query.builderForm, route.query.tourApply] as const,
+    (next, prev) => {
+      if (!isLogsQueryRoute()) return
+      if (isApplyingLocalUrlUpdate()) return
+      if (!prev) return
+      if (next[0] === prev[0] && next[1] === prev[1]) return
+      if (!next[0] && !next[1]) return
+      initializeFromQuery()
+      nextTick(() => {
+        handleQuery()
+      })
+    }
+  )
   // Export modal state
   const exportModalVisible = ref(false)
   const exportSqlText = ref('')
@@ -262,31 +402,16 @@
     }
   })
 
-  const compactRows = useStorage('query-table-compact-rows', false)
-  const size = computed(() => (compactRows.value ? 'mini' : 'medium'))
-
-  onMounted(() => {
-    if (localStorage.getItem('logquery-table-compact') === 'true' && !compactRows.value) {
-      compactRows.value = true
-      localStorage.removeItem('logquery-table-compact')
-    }
+  // Stop Live polling when leaving the page.
+  onBeforeUnmount(() => {
+    clearTimeout(refreshTimeout)
   })
-  const wrap = ref(false)
-
-  // Virtual-list: when columns are too many, Arco may clip some of them silently.
-  // We show a guiding hint next to the columns display button.
-  const showVirtualColumnsClippedHint = ref(false)
-  function handleVirtualColumnsClipped(visible: boolean) {
-    showVirtualColumnsClippedHint.value = visible
-  }
 
   // Chart/row logic
   function handleTimeRangeUpdate(newTimeRange) {
     time.value = 0 // Switch to custom mode
     rangeTime.value = newTimeRange
-    executeQuery().then(() => {
-      refreshPagination()
-    })
+    executeQuery()
     nextTick(() => {
       chartContainerRef.value?.triggerCurrentChartQuery()
     })
@@ -296,31 +421,17 @@
     addFilterCondition(columnName, operator, value)
   }
 
-  function handlePaginationRowsUpdate(newRows) {
-    rows.value = newRows
-  }
-
   function handleSqlInfoUpdate(sqlInfo) {
     Object.assign(textEditor.textEditorState, sqlInfo)
   }
 
-  watch(columns, () => {
-    if (!columns.value.length) {
-      return
-    }
-    if (!displayedColumns.value[queryState.table] || !displayedColumns.value[queryState.table].length) {
-      displayedColumns.value[queryState.table] = columns.value.map((c) => c.name)
-    }
-  })
-
   watch(
     canExecuteInitialQuery,
     (canExecute) => {
-      if (canExecute) {
-        nextTick(() => {
-          handleQuery()
-        })
-      }
+      if (!canExecute || !shouldAutoExecuteInitialQuery()) return
+      nextTick(() => {
+        handleQuery()
+      })
     },
     { immediate: true }
   )
@@ -333,40 +444,5 @@
     color: var(--gpt-text-muted);
     font-size: var(--gpt-font-base);
     font-weight: normal;
-  }
-
-  .logs-virtual-columns-clipped-hint {
-    position: relative;
-    padding: 4px 8px;
-    border-radius: 4px;
-    background: var(--warning-bg-color);
-    border: 1px solid var(--warning-color);
-    color: var(--warning-color);
-    font-size: var(--gpt-font-sm);
-    line-height: 1.2;
-    white-space: nowrap;
-    pointer-events: none;
-  }
-
-  .logs-virtual-columns-clipped-hint::before {
-    content: '';
-    position: absolute;
-    right: -7px;
-    top: 50%;
-    transform: translateY(-50%);
-    border-top: 7px solid transparent;
-    border-bottom: 7px solid transparent;
-    border-left: 7px solid var(--warning-color);
-  }
-
-  .logs-virtual-columns-clipped-hint::after {
-    content: '';
-    position: absolute;
-    right: -6px;
-    top: 50%;
-    transform: translateY(-50%);
-    border-top: 6px solid transparent;
-    border-bottom: 6px solid transparent;
-    border-left: 6px solid var(--warning-bg-color);
   }
 </style>

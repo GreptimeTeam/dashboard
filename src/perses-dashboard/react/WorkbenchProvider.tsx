@@ -23,6 +23,8 @@ export type WorkbenchContextType = {
   name: string
   file: PersesDashboardFile
   instance: string
+  /** Dashboard timezone setting (`''` = browser). */
+  timezone: string
 }
 
 type Props = {
@@ -34,6 +36,7 @@ type Props = {
   name: string
   file: PersesDashboardFile
   instance: string
+  timezone?: string
 }
 
 export const WorkbenchContext = createContext<WorkbenchContextType | undefined>(undefined)
@@ -48,8 +51,18 @@ export function WorkbenchProvider(props: Props) {
       name: props.name,
       file: props.file,
       instance: props.instance,
+      timezone: props.timezone ?? '',
     }),
-    [props.database, props.username, props.password, props.authHeader, props.name, props.file, props.instance]
+    [
+      props.database,
+      props.username,
+      props.password,
+      props.authHeader,
+      props.name,
+      props.file,
+      props.instance,
+      props.timezone,
+    ]
   )
 
   return <WorkbenchContext.Provider value={ctx}>{props.children}</WorkbenchContext.Provider>

@@ -1,0 +1,243 @@
+<template lang="pug">
+.trace-logs-panel
+  .drilldown-toolbar.trace-logs-toolbar
+    .drilldown-toolbar__left
+      span.trace-logs-target(v-if="targetLabel" :title="targetLabel") {{ targetLabel }}
+      a-tag(v-if="countLabel") {{ countLabel }}
+  .trace-logs-body
+    LogTableData(
+      v-if="data.length || showLoading"
+      :data="data"
+      :columns="columns"
+      :loading="showLoading"
+      :ts-column="tsColumn"
+      :size="'small'"
+    )
+    a-empty(v-else)
+      .trace-logs-empty-text {{ resolvedEmptyText }}
+</template>
+
+<script setup lang="ts">
+  import { computed, ref, watch } from 'vue'
+  import { useI18n } from 'vue-i18n'
+  import editorAPI from '@/api/editor'
+  import useTableSchemaStore from '@/store/modules/table-schema'
+  import type { ColumnType, TSColumn } from '@/types/query'
+  import { TsTypeMapping } from '@/utils/date-time'
+  import { getTableRefForSql, quoteIdent } from '@/utils/sql'
+  import { escapeSqlString } from '@/observability/logs/query-state'
+  import { findTraceIdColumn } from '@/observability/traces/open-trace-from-log'
+  import type { TraceDetailTarget } from '@/observability/traces/trace-detail-target'
+  import {
+    traceLogsEmptyKey,
+    traceLogsEmptyReason,
+    type TraceLogsPanelSource,
+  } from '@/observability/traces/trace-logs-empty-state'
+  import LogTableData from '@/views/dashboard/logs/query/LogsTable.vue'
+
+  /**
+   * Just a table of the logs that carry one trace id: no builder, chart or time picker. The
+   * log table is the one chosen on the Logs Query page; the user changes it there.
+   */
+  defineOptions({
+    name: 'TraceLogsPanel',
+  })
+
+  const props = defineProps<{
+    /** The trace id value to look up, e.g. `b63520cf...`. */
+    traceId: string
+    /**
+     * Where to read the logs from. Absent when the caller has no logs table to point at yet:
+     * the panel then explains that instead of staying blank.
+     */
+    target?: TraceDetailTarget
+    /**
+     * Name of the log table column that stores trace ids, e.g. `trace_id` (a mapped role in
+     * Explore). Empty or not in the table: find the column by name.
+     */
+    traceIdColumn?: string
+    /**
+     * Where the panel is used. It decides where the empty text sends the user to choose the
+     * log table: the Logs Query page (`query`) or Signals Explore's own Logs binding (`explore`).
+     */
+    source?: TraceLogsPanelSource
+    /**
+     * The logs binding is still resolving its table (Explore's overlay bind). Wait instead of
+     * reporting a missing table.
+     */
+    binding?: boolean
+  }>()
+
+  /** One screenful of context is enough; the full set is a Logs Query away. */
+  const ROW_LIMIT = 1000
+
+  const { t } = useI18n()
+
+  const loading = ref(false)
+  const columns = ref<ColumnType[]>([])
+  const data = ref<Record<string, unknown>[]>([])
+  const tsColumn = ref<TSColumn | null>(null)
+  const missingTraceColumn = ref(false)
+
+  const targetLabel = computed(() => {
+    const target = props.target
+    if (!target) return ''
+    return target.database ? `${target.database}.${target.table}` : target.table
+  })
+  const showLoading = computed(() => props.binding === true || loading.value)
+  const countLabel = computed(() => {
+    if (!data.value.length) return ''
+    const count = data.value.length >= ROW_LIMIT ? `${data.value.length}+` : String(data.value.length)
+    return t('drilldown.traces.traceLogsCount', { count })
+  })
+  const resolvedEmptyText = computed(() => {
+    const reason = traceLogsEmptyReason({
+      hasTarget: Boolean(props.target),
+      missingTraceColumn: missingTraceColumn.value,
+    })
+    return t(traceLogsEmptyKey(reason, props.source), {
+      target: targetLabel.value,
+      page: t('menu.dashboard.logsQuery'),
+    })
+  })
+
+  // Only the latest request may write results: props can change while a query is in flight.
+  let requestId = 0
+
+  function reset() {
+    columns.value = []
+    data.value = []
+    tsColumn.value = null
+    missingTraceColumn.value = false
+  }
+
+  async function fetchLogs() {
+    requestId += 1
+    const currentRequest = requestId
+    const id = props.traceId.trim()
+    const target = props.target
+    reset()
+    // No table to read (or its bind is still in flight): the empty text explains why.
+    if (!id || !target || props.binding === true) {
+      loading.value = false
+      return
+    }
+    const { table, database, start, end } = target
+    loading.value = true
+    try {
+      const schema = await useTableSchemaStore().ensureTableSchema(table, database)
+      if (currentRequest !== requestId) return
+
+      // A table without a trace id column cannot be filtered by this trace: stay empty rather
+      // than listing unrelated rows.
+      const mapped = props.traceIdColumn?.trim()
+      const idColumn = mapped && schema.some((column) => column.name === mapped) ? mapped : findTraceIdColumn(schema)
+      if (!idColumn) {
+        missingTraceColumn.value = true
+        return
+      }
+      const timeColumn =
+        schema.find((column) => column.semantic_type === 'TIMESTAMP')?.name ||
+        schema.find((column) => column.name === 'timestamp')?.name
+
+      // ±12h around the span timestamp for partition pruning.
+      const whereParts = [`${quoteIdent(idColumn)} = '${escapeSqlString(id)}'`]
+      if (timeColumn && start !== undefined && end !== undefined) {
+        whereParts.push(`${quoteIdent(timeColumn)} >= FROM_UNIXTIME(${start})`)
+        whereParts.push(`${quoteIdent(timeColumn)} <= FROM_UNIXTIME(${end})`)
+      }
+      const orderBy = timeColumn ? `ORDER BY ${quoteIdent(timeColumn)} ASC` : ''
+
+      const result = await editorAPI.runSQL(
+        `SELECT * FROM ${getTableRefForSql({ table, database })} WHERE ${whereParts.join(
+          ' AND '
+        )} ${orderBy} LIMIT ${ROW_LIMIT}`,
+        database
+      )
+      if (currentRequest !== requestId) return
+
+      const records = result.output?.[0]?.records as unknown as
+        | {
+            schema: { column_schemas: Array<{ name: string; data_type: string }> }
+            rows: unknown[][]
+          }
+        | undefined
+      if (!records) return
+
+      const schemas = records.schema.column_schemas
+      columns.value = schemas.map((column) => ({
+        name: column.name,
+        data_type: TsTypeMapping[column.data_type as keyof typeof TsTypeMapping] || column.data_type,
+        title: column.name,
+      }))
+      data.value = records.rows.map((row, index) => {
+        const record: Record<string, unknown> = { key: index, index }
+        schemas.forEach((column, columnIndex) => {
+          record[column.name] = row[columnIndex]
+        })
+        return record
+      })
+      const ts = timeColumn ? columns.value.find((column) => column.name === timeColumn) : undefined
+      tsColumn.value = ts ? { name: ts.name, data_type: ts.data_type } : null
+    } catch (error) {
+      console.error('Failed to fetch trace logs:', error)
+    } finally {
+      if (currentRequest === requestId) {
+        loading.value = false
+      }
+    }
+  }
+
+  watch(
+    () => [
+      props.traceId,
+      props.target?.table,
+      props.target?.database,
+      props.target?.start,
+      props.target?.end,
+      props.traceIdColumn,
+      // The bind finishing is what makes the table available: re-read the logs then.
+      props.binding,
+    ],
+    () => {
+      fetchLogs()
+    },
+    { immediate: true }
+  )
+</script>
+
+<style lang="less" scoped>
+  .trace-logs-panel {
+    display: flex;
+    flex: 1 1 0%;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .trace-logs-target {
+    overflow: hidden;
+    color: var(--gpt-text-muted);
+    font-family: var(--font-mono);
+    font-size: var(--gpt-font-sm);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .trace-logs-body {
+    display: flex;
+    flex: 1 1 0%;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .trace-logs-empty-text {
+    max-width: 480px;
+    margin: 0 auto;
+    color: var(--gpt-text-secondary);
+    font-size: var(--gpt-font-base);
+    line-height: 1.6;
+    text-align: center;
+  }
+</style>

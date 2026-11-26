@@ -29,6 +29,8 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Run build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm run build:docker
 
       - name: Calculate checksum and rename binary
@@ -69,6 +71,8 @@ jobs:
 
     runs-on: ${{ matrix.platform }}
     env:
+      # Vite production build (~9k modules) OOMs on macOS runners with Node's default ~2GB heap.
+      NODE_OPTIONS: --max-old-space-size=8192
       TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
       TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD}}
       RELEASE_TAG: ${{ needs.build.outputs.tag_name }} # Get the release tag from the build job

@@ -42,7 +42,7 @@
   display: grid;
   grid-template-columns: var(--gpt-table-sidebar-label-col-width) 1fr;
   gap: var(--gpt-gap-sm);
-  padding: var(--gpt-gap-md) 10px;
+  padding: var(--gpt-gap-md) var(--gpt-gap-lg);
   border-bottom: 1px solid var(--gpt-border-default);
 
   &__label,
@@ -53,7 +53,7 @@
     width: 100%;
     min-width: 0;
     min-height: 30px;
-    padding: 0 10px;
+    padding: 0 var(--gpt-gap-lg);
     border-radius: var(--gpt-radius-sm);
     background: var(--grey-bg-color);
     color: var(--gpt-text-primary);
@@ -87,8 +87,8 @@
     .arco-select-view-single,
     .arco-input-wrapper {
       min-height: 30px;
-      padding-right: 10px;
-      padding-left: 10px;
+      padding-right: var(--gpt-gap-lg);
+      padding-left: var(--gpt-gap-lg);
       border: none;
       background: transparent;
 
@@ -331,52 +331,6 @@
   overflow-y: auto;
 }
 
-.trace-detail-container {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
-  color: var(--gpt-text-primary);
-
-  .gpt-muted-bar {
-    color: var(--gpt-text-primary);
-  }
-
-  :deep(.arco-card-header-title) {
-    color: var(--gpt-text-primary);
-  }
-
-  :deep(.arco-tree-node-title) {
-    color: var(--gpt-text-primary);
-  }
-
-  :deep(.arco-tag) {
-    color: var(--gpt-text-primary);
-  }
-
-  :deep(.arco-tabs-tab) {
-    color: var(--gpt-text-primary);
-
-    &.arco-tabs-tab-active {
-      color: var(--gpt-main-purple);
-    }
-  }
-
-  > .gpt-page-header {
-    flex-shrink: 0;
-  }
-
-  .content-container {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    gap: var(--gpt-gap-md);
-    padding: 0 var(--gpt-gap-md);
-    overflow: hidden;
-  }
-}
-
 .gpt-form-panel {
   width: 100%;
   padding: var(--gpt-page-padding-y) var(--gpt-page-padding-x);
@@ -506,11 +460,10 @@
   .gpt-query-strip {
     display: flex;
     flex-shrink: 0;
-    align-items: center;
+    align-items: stretch;
     box-sizing: border-box;
-    height: var(--gpt-size-region-bar);
     min-height: var(--gpt-size-region-bar);
-    padding: 0 var(--gpt-page-padding-x);
+    padding: var(--gpt-toolbar-padding-y) var(--gpt-page-padding-x);
     background: var(--gpt-bg-panel);
     border-bottom: 1px solid var(--gpt-border-default);
 
@@ -531,6 +484,8 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
+    border-radius: 0;
+    box-shadow: none;
     background: var(--gpt-bg-panel);
 
     > .arco-card-body {
@@ -546,6 +501,8 @@
   .layout-content > .arco-card.metrics-result-card {
     flex: 1;
     min-height: 0;
+    border-radius: 0;
+    box-shadow: none;
   }
 
   .layout-content > .arco-card:not(.gpt-results-pane):not(.metrics-result-card) {

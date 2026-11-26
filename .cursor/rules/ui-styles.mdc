@@ -12,7 +12,7 @@ alwaysApply: false
 2. Prefer **global CSS classes** in `ui-regions.less`, `typography.less`, `button.less`, `dataView.less`. Vue scoped styles are for **page semantics only** (column emphasis, chart, pipeline colors).
 3. **No layout Vue wrappers** (`PageHeader.vue`, etc.). Compose modifier classes on existing DOM.
 4. **CSS selector = template class**: if scoped/CSS uses `.foo.gpt-bar`, the template must have `class="foo gpt-bar"`.
-5. Query results use **`QueryResultTable` → `PaginatedDataTable` → `DataTable`**. Do not reintroduce `data-grid.vue` or standalone `a-table` for SQL results.
+5. Query results use **`QueryResultTable` → `DataGrid`** (vxe). Do not reintroduce Arco `a-table` / `DataTable` for SQL results (except `explain-grid`).
 
 ## Layout modifiers (pick one on page root)
 
@@ -20,7 +20,7 @@ alwaysApply: false
 |----------|-------|------------|
 | `new-layout new-layout--workspace` | Table Query, Metrics, Perses | Panel: scroll inside table, pagination fixed at bottom |
 | `query-layout query-layout--stack` | Logs Query, Traces | Last card `flex:1`; toolbar via `.toolbar` in `ui-regions.less` |
-| `query-layout query-layout--surface` | Flow | Page scroll; `gpt-table-page` + `scroll.y: undefined` |
+| `query-layout query-layout--surface` | Flow | Page scroll; `gpt-table-page` + `DataGrid` `:fill-height="false"` |
 
 Files: `src/assets/style/ui-regions.less`, `src/assets/style/query-layout.less`.
 
@@ -31,7 +31,7 @@ Files: `src/assets/style/ui-regions.less`, `src/assets/style/query-layout.less`.
 - **Query strip** (workspace): `gpt-query-strip`.
 - **Results card** (workspace): `gpt-results-pane` on result `a-card`.
 - **Panel table** (internal scroll): `gpt-table-panel` on flex column container.
-- **Page table** (document scroll): `gpt-table-page` on `DataTable`.
+- **Page table** (document scroll): `gpt-table-page` on `DataGrid` with `:fill-height="false"`.
 - **Surface card**: `gpt-surface-card` + `gpt-surface-card__title` / `__badge` in `#title`.
 - **Editors**: `gpt-light-editor`, `gpt-light-editor-card`, `gpt-code-editor-frame` (+ `--h200/300/500`), `gpt-square-editor` when needed.
 - **Misc**: `gpt-divider-band`, `gpt-popover-panel`, `gpt-card-flush-body`, `gpt-status-pill` (+ `is-running` / `is-error` / `is-default`), `gpt-status-pill__dot`.
@@ -60,19 +60,19 @@ Regions: `.gpt-toolbar`, `.gpt-content-toolbar`, `.query-layout .toolbar` (`ui-r
 .result-container.gpt-table-panel
   .result-toolbar.gpt-results-toolbar
   .result-content (flex:1; min-height:0; overflow:hidden)
-    .table-panel → QueryResultTable → .paginated-data-table
-      .data-table-container (flex:1; scroll inside)
-      .grid-pagination (flex-shrink:0; fixed at bottom)
+    .table-panel → QueryResultTable → .data-grid
+      .dg-grid-host (flex:1; scroll inside)
+      .dg-pager (flex-shrink:0; fixed at bottom)
 ```
 
 Tab pane: `overflow: hidden` on content item (avoid outer scroll stealing from table). `data-view/index.vue` is the reference.
 
 ## Tables & font size
 
-- **`DataTable` default `size`: `medium`** (14px body via Arco). Do not default to `small` for main result tables.
-- `dataView.less` forces **12px** on `.arco-table-size-small` / `mini` cells — use only when density is intentional (compact mode).
+- **`DataGrid` default `size`: `medium`**. Do not default to `small` for main result tables.
+- Compact / mini sizes are intentional density only (Logs compact checkbox).
 - Logs: `medium` normal, `mini` when compact checkbox on.
-- Flow list: `gpt-table-page`, no virtual fill height.
+- Flow list: `gpt-table-page` + `:fill-height="false"`.
 
 ## Color system (`global.less` + `arco-theme.less`)
 
@@ -119,11 +119,11 @@ Checkbox/radio mask border: **1px** (`@checkbox-mask-border-width` / `@radio-bor
 
 ### Timestamp columns (global — `dataView.less`)
 
-All query result tables use **`DataTable`**. Do **not** override timestamp cells with page-local colors (`--color-primary-*`, main-dark, purple links).
+All query result tables use **`DataGrid`**. Do **not** override timestamp cells with page-local colors (`--color-primary-*`, main-dark, purple links).
 
 | Part | Class / prop | Style |
 |------|----------------|-------|
-| Header pill | `.gpt-semantic-th.timestamp` | `--gpt-semantic-timestamp` on `--gpt-semantic-timestamp-bg` |
+| Header pill | `.gpt-semantic-th.timestamp` | bg `--gpt-semantic-timestamp-bg`; text inherits like other th; icon `--gpt-semantic-timestamp` |
 | Body (toggle format) | `.timestamp-cell` | `--gpt-accent-ts`; click toggles formatted/raw |
 | Body (open detail) | `tsCellDetail` + `.timestamp-cell.ts-cell-detail-link` | `--gpt-accent-ts`; underline on hover only |
 
@@ -133,7 +133,7 @@ Logs Query and Table Query both use `tsCellDetail` + `@ts-cell-click` for log/de
 
 | Token | Use |
 |-------|-----|
-| `--gpt-semantic-field` / `tag` / `timestamp` (+ `-bg`) | Column type pills in `DataTable` |
+| `--gpt-semantic-field` / `tag` / `timestamp` (+ `-bg`) | Column type pills in `DataGrid` |
 | `--gpt-accent-ts` | Timestamp accent |
 | `--success-color` / `--warning-color` / `--danger-color` (+ `-bg`) | Status pills, danger buttons |
 | `--gpt-status-pill` modifiers (`ui-regions.less`) | Running / error badges |
@@ -219,19 +219,18 @@ Arco **primary palette**: `@color-primary-6` = main-dark (idle), `@color-primary
 | `dataView.less` | Table sizes, pagination, hover |
 | `query-layout.less` | Query page structure |
 | `editor.less` | CodeMirror |
-| `components/data-table/` | Shared table |
-| `components/paginated-data-table/` | Table + bottom pagination |
-| `components/query-result-table/` | Table Query wrapper |
+| `components/data-grid/` | Shared table (`DataGrid` / vxe) |
+| `components/query-result-table/` | Table Query wrapper (+ pagination via DataGrid) |
 
 ## Pre-commit checklist
 
 - [ ] Correct layout modifier on page root?
 - [ ] `gpt-page-header` / `gpt-results-toolbar` / `gpt-table-panel` on template where CSS expects them?
 - [ ] Panel vs page table class correct?
-- [ ] `DataTable` size appropriate (default medium for results)?
+- [ ] `DataGrid` size appropriate (default medium for results)?
 - [ ] No new hardcoded colors/font sizes?
 - [ ] Text uses correct **tier** (primary / secondary / muted / inverse) — not all main-dark?
 - [ ] Toolbar **controls** at 600; meta at secondary/muted; no `gpt-text-secondary` on peer toggles?
 - [ ] Purple only for hover, links, focus, or selected-state emphasis?
 - [ ] No new `--main-font-color` / `--brand-color` / `--color-text-*` in app UI?
-- [ ] No revived `data-grid`?
+- [ ] No revived Arco `DataTable` for query results?

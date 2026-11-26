@@ -214,6 +214,13 @@
     white-space: nowrap;
   }
 
+  .gpt-semantic-th-tz {
+    flex-shrink: 0;
+    font-size: var(--gpt-font-sm);
+    font-weight: var(--gpt-font-weight-regular);
+    opacity: 0.75;
+  }
+
   &.field {
     background-color: var(--gpt-semantic-field-bg);
     color: var(--gpt-semantic-field);
@@ -226,13 +233,22 @@
 
   &.timestamp {
     background-color: var(--gpt-semantic-timestamp-bg);
-    color: var(--gpt-semantic-timestamp);
+    // Text matches other header cells; only the time icon uses the accent.
+    color: inherit;
+
+    .icon-12 {
+      color: var(--gpt-semantic-timestamp);
+    }
   }
 }
 
-/* Timestamp column cells — Table Query, Logs Query, any DataTable */
+/* Timestamp column cells — Table Query, Logs Query, any DataTable / DataGrid */
 .timestamp-cell {
   color: var(--gpt-accent-ts);
+}
+
+.timestamp-cell--toggle {
+  cursor: pointer;
 }
 
 .ts-cell-detail-link {

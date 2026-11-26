@@ -13,6 +13,7 @@ import type { DashboardSpec } from '@perses-dev/spec'
 import bundledPluginLoader from './plugin'
 import { useWorkbenchContext } from './WorkbenchProvider'
 import { prepareSnapshotViewDashboard } from '../snapshot/prepareSnapshotViewDashboard'
+import { getEffectiveTimezone, toIanaTimezone } from '../../utils/timezone'
 import SnapshotBridge from './SnapshotBridge'
 import DashboardTitleToolbar, { type DashboardToolbarLabels } from './DashboardTitleToolbar'
 import SnapshotViewDashboard from './SnapshotViewDashboard'
@@ -39,7 +40,7 @@ export default function HelperDashboardView(props: GenericDashboardViewProps): J
     dashboardResource,
     toolbarLabels,
   } = props
-  const { database, username, password, authHeader, instance, name } = useWorkbenchContext()
+  const { database, username, password, authHeader, instance, name, timezone } = useWorkbenchContext()
   const sourceDashboardName = name.split('.')[0]
 
   const viewDashboardResource = React.useMemo(() => {
@@ -94,6 +95,7 @@ export default function HelperDashboardView(props: GenericDashboardViewProps): J
                 headers: {
                   [authHeader || 'Authorization']: `Basic ${btoa(`${username}:${password}`)}`,
                   'x-greptime-db-name': database,
+                  'x-greptime-timezone': getEffectiveTimezone(timezone),
                 },
               },
             },
@@ -150,6 +152,7 @@ export default function HelperDashboardView(props: GenericDashboardViewProps): J
     isVariableEnabled: true,
     isAnnotationEnabled: false,
     isDatasourceEnabled: !isSnapshotMode,
+    userPreferenceTimezone: toIanaTimezone(timezone),
     ...(!isSnapshotMode && toolbarLabels
       ? {
           dashboardTitleComponent: (

@@ -5,6 +5,11 @@ export interface Condition {
   relation?: 'AND' | 'OR'
   isTimeColumn?: boolean
   fieldType?: string
+  /**
+   * Set when the field is a JSON2 attribute chip (trace v2 tables): the SQL builder renders
+   * `json_get(...)` / `json_get_string(...)` instead of quoting a column.
+   */
+  jsonAttribute?: { column: string; path: string }
 }
 
 export type TSColumn = {
@@ -35,6 +40,12 @@ export type ColumnType = {
   data_type: string
   title: string
   semantic_type?: string
+  /**
+   * Explicit column width in px. Use for columns whose content is not text
+   * (action buttons, pills): width estimation only sees the header/cell strings,
+   * so such columns would otherwise be sized to their header.
+   */
+  width?: number
 }
 
 export interface QueryState extends BaseState {
@@ -42,6 +53,11 @@ export interface QueryState extends BaseState {
   timeRangeValues: any[]
   time: number
   rangeTime: any[]
+  /**
+   * Absolute unix-seconds window frozen at Run. Scroll loadMore must keyset
+   * inside this window and must not rewrite toolbar time.
+   */
+  frozenUnixRange?: readonly [number, number] | null
   sourceState: TextEditorFormState | BuilderFormState
   sql: string
   database?: string // Selected database name

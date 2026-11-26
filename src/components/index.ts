@@ -1,7 +1,7 @@
 import { App } from 'vue'
 import { use } from 'echarts/core'
-import { CanvasRenderer } from 'echarts/renderers'
-import { BarChart, LineChart, ScatterChart } from 'echarts/charts'
+import { CanvasRenderer, SVGRenderer } from 'echarts/renderers'
+import { BarChart, GraphChart, LineChart, ScatterChart } from 'echarts/charts'
 import {
   GridComponent,
   TooltipComponent,
@@ -20,7 +20,9 @@ import LangEditor from './lang-editor.vue'
 
 use([
   CanvasRenderer,
+  SVGRenderer,
   BarChart,
+  GraphChart,
   LineChart,
   ScatterChart,
   GridComponent,

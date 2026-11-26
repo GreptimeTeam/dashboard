@@ -1,0 +1,57 @@
+export type DrilldownSignal = 'metrics' | 'logs' | 'traces'
+
+/** Metric detail drawer tabs (URL `tab`, omit default `breakdown`). */
+export type MetricDetailTab = 'breakdown' | 'related-metrics' | 'query-results'
+
+export const METRIC_DETAIL_TABS: MetricDetailTab[] = ['breakdown', 'related-metrics', 'query-results']
+
+export function isMetricDetailTab(value: unknown): value is MetricDetailTab {
+  return typeof value === 'string' && METRIC_DETAIL_TABS.includes(value as MetricDetailTab)
+}
+
+/** Logs detail drawer section tabs (URL `logsTab`, omit default `logs`). */
+export type LogsDetailTab = 'logs' | 'labels'
+
+export const LOGS_DETAIL_TABS: LogsDetailTab[] = ['logs', 'labels']
+
+export function isLogsDetailTab(value: unknown): value is LogsDetailTab {
+  return typeof value === 'string' && LOGS_DETAIL_TABS.includes(value as LogsDetailTab)
+}
+
+/** Traces home panel tabs (URL `tracesTab`, omit default `breakdown`). */
+export type TracesHomeTab = 'breakdown' | 'traces'
+
+export const TRACES_HOME_TABS: TracesHomeTab[] = ['breakdown', 'traces']
+
+export function isTracesHomeTab(value: unknown): value is TracesHomeTab {
+  return typeof value === 'string' && TRACES_HOME_TABS.includes(value as TracesHomeTab)
+}
+
+export type LogsView = 'overview' | 'detail'
+
+export function isLogsView(value: unknown): value is LogsView {
+  return value === 'overview' || value === 'detail'
+}
+
+/** Comparison ops are only offered for numeric columns (`filterOpsForType`). */
+export type DrilldownFilterOp = '=' | '!=' | '=~' | '!~' | '>' | '>=' | '<' | '<='
+
+export interface DrilldownFilter {
+  key: string
+  op: DrilldownFilterOp
+  value: string
+}
+
+export type DrilldownGroupBy = 'none' | '__name__' | string
+
+export interface DrilldownSidebarFilters {
+  prefixes: string[]
+  suffixes: string[]
+  groupBy: DrilldownGroupBy
+}
+
+export const DEFAULT_SIDEBAR_FILTERS: DrilldownSidebarFilters = {
+  prefixes: [],
+  suffixes: [],
+  groupBy: 'none',
+}

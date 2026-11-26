@@ -29,7 +29,7 @@ a-modal.news-modal(
               template(#description)
                 .news-description(v-if="item.description") {{ item.description }}
         template(#empty)
-          EmptyStatus(:data="'No news available'")
+          EmptyStatus(:data="$t('news.noNewsAvailable')")
       .see-all-news(@click="openAllNewsLink")
         .see-all-content
           icon-apps

@@ -31,7 +31,7 @@ TimeSelect(
       showAnyTime?: boolean // New prop to control "Any time" option
     }>(),
     {
-      emptyStr: 'Any time',
+      emptyStr: '',
       buttonSize: 'small',
       showAnyTime: true, // Default to showing "Any time" option
       flexDirection: 'row-reverse',
@@ -62,9 +62,19 @@ TimeSelect(
     return [{ value: -1, label: t('time-select.anyTime') }, ...relativeTimeOptions.value]
   })
 
+  watch(
+    () => [props.showAnyTime, timeLength.value, timeRange.value.length] as const,
+    () => {
+      if (!props.showAnyTime && timeLength.value <= 0 && timeRange.value.length === 0) {
+        timeLength.value = 30
+      }
+    },
+    { immediate: true }
+  )
+
   // Read-only computed property: timeRangeValues - unified format
 
-  const isRelativeTime = computed(() => timeLength.value > 0)
+  const isRelativeTime = computed(() => timeLength.value > 0 && timeRange.value.length !== 2)
   const isAbsoluteTime = computed(() => timeRange.value.length === 2)
 
   // Expose everything for external access

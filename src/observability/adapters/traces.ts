@@ -1,0 +1,697 @@
+import editorApi from '@/api/editor'
+import { processSpanData, type Span } from '@/views/dashboard/traces/utils'
+import type { ColumnType } from '@/types/query'
+import { buildTraceDetailUnixRange } from '@/utils/trace-detail-time-range'
+import type { DrilldownContext } from '../context'
+import { filtersToSqlWhere } from '../filters'
+import { boundSignalDatabase } from '../signal-database'
+import { escapeSqlString, quoteIdent } from '../logs/query-state'
+import { buildDefaultTracesFieldMap, type TraceBreakdownAttribute } from '../traces/field-map'
+import { attributeContainersOf } from '../traces/attribute-keys'
+import { fetchTableAttributeKeys } from '../traces/attribute-sampling'
+import { isJsonAttributeContainerName, parseJsonFieldChipKey, sqlJsonGetStringExpr } from '../logs/json-field-keys'
+import {
+  bucketToUnixSeconds,
+  BREAKDOWN_CARD_LIMIT,
+  BREAKDOWN_NONE,
+  breakdownGroupKey,
+  breakdownSeriesIntervalSeconds,
+  buildBreakdownSeriesSql,
+  buildBreakdownValuesSql,
+  buildDurationHeatmapSql,
+  buildMatchedTraceIdsSql,
+  buildRedTimeseriesSql,
+  buildRootListOrderAndExtraWhere,
+  buildTraceIdInPredicate,
+  aggregateDurationHeatmapRows,
+  sharedBreakdownYAxis,
+  volumeIntervalSecondsFromRange,
+  type RedMetric,
+  type SpanScope,
+} from '../traces/red-queries'
+import type { HistogramHeatmapData } from '../metrics/prom-chart'
+
+export type { RedMetric, SpanScope }
+
+const ROOT_SPAN_LIMIT = 100
+
+function fieldMap(ctx: DrilldownContext): Record<string, string> {
+  const mapped = ctx.semantics.traces.fieldMap.value
+  return Object.keys(mapped).length ? mapped : buildDefaultTracesFieldMap()
+}
+
+function timeColumn(ctx: DrilldownContext): string {
+  return fieldMap(ctx).time || fieldMap(ctx).timestamp || 'timestamp'
+}
+
+function parentColumn(ctx: DrilldownContext): string {
+  return fieldMap(ctx).parentSpanId || 'parent_span_id'
+}
+
+function traceIdColumn(ctx: DrilldownContext): string {
+  return fieldMap(ctx).traceId || 'trace_id'
+}
+
+function durationColumn(ctx: DrilldownContext): string {
+  return fieldMap(ctx).duration || fieldMap(ctx).duration_nano || 'duration_nano'
+}
+
+function statusColumn(ctx: DrilldownContext): string {
+  return fieldMap(ctx).status || fieldMap(ctx).span_status_code || 'span_status_code'
+}
+
+function spanScope(ctx: DrilldownContext): SpanScope {
+  return ctx.ui.spanScope.value
+}
+
+/**
+ * Shared WHERE: time range + label chips + span population.
+ * Population follows `ctx.ui.spanScope` (root spans by default) unless `rootOnly` overrides it.
+ * `includeFilters: false` drops the label chips — the all-spans trace list applies them to the
+ * trace-id lookup instead of to the root rows it finally displays.
+ */
+export function buildTracesContextWhere(
+  ctx: DrilldownContext,
+  options?: {
+    rootOnly?: boolean
+    includeFilters?: boolean
+    extraEquals?: Array<{ column: string; value: string }>
+    extraWhere?: string[]
+  }
+): string {
+  const tableName = ctx.semantics.traces.table.value
+  if (!tableName) {
+    return ''
+  }
+
+  const map = fieldMap(ctx)
+  const whereParts: string[] = []
+  const unixRange = ctx.query.unixTimeRange()
+  const tsCol = timeColumn(ctx)
+
+  if (unixRange.length === 2) {
+    whereParts.push(`${quoteIdent(tsCol)} >= FROM_UNIXTIME(${unixRange[0]})`)
+    whereParts.push(`${quoteIdent(tsCol)} <= FROM_UNIXTIME(${unixRange[1]})`)
+  }
+
+  if (options?.rootOnly ?? spanScope(ctx) === 'root') {
+    whereParts.push(`${quoteIdent(parentColumn(ctx))} IS NULL`)
+  }
+
+  if (options?.includeFilters !== false) {
+    whereParts.push(
+      ...filtersToSqlWhere(ctx.query.filters.value, map, {
+        columns: ctx.semantics.traces.columns.value,
+        // Trace tables flatten attributes into physical dotted columns. Before the schema
+        // bind completes, JSON-chip guessing would misread `resource_attributes.service.name`
+        // as a `json_get_string("resource_attributes", …)` path — SQL the server rejects.
+        // Skip the chip read; the bind triggers a refresh with the real column list.
+        jsonChipWithoutColumns: false,
+        // Attribute columns are typed (bigint / boolean / …): literals must render accordingly,
+        // e.g. `"x" > 1000000000` and `"flag" = TRUE` instead of quoted strings.
+        typeOf: (column) => ctx.semantics.traces.columnTypes.value?.[column],
+      })
+    )
+  }
+
+  options?.extraEquals?.forEach(({ column, value }) => {
+    whereParts.push(`${quoteIdent(column)} = '${escapeSqlString(value)}'`)
+  })
+
+  options?.extraWhere?.forEach((clause) => {
+    if (clause.trim()) {
+      whereParts.push(clause)
+    }
+  })
+
+  return whereParts.join(' AND ')
+}
+
+export interface RootSpanRow {
+  trace_id: string
+  service_name?: string
+  span_name?: string
+  timestamp?: number | string
+  duration_nano?: number
+  span_status_code?: string
+  [key: string]: unknown
+}
+
+/**
+ * Canonical alias → physical column. Rows and table columns keep the canonical keys,
+ * so readers do not care which column the table actually stores the role in.
+ */
+function rootSpanSelectColumns(ctx: DrilldownContext): Array<{ alias: string; column: string }> {
+  const map = fieldMap(ctx)
+  return [
+    { alias: 'timestamp', column: timeColumn(ctx) },
+    { alias: 'trace_id', column: map.traceId || map.trace_id || 'trace_id' },
+    { alias: 'service_name', column: map.service || map.service_name || 'service_name' },
+    { alias: 'span_name', column: map.spanName || map.span_name || 'span_name' },
+    { alias: 'duration_nano', column: durationColumn(ctx) },
+    { alias: 'span_status_code', column: statusColumn(ctx) },
+    { alias: 'span_kind', column: map.kind || map.span_kind || 'span_kind' },
+  ]
+}
+
+function recordsToObjects(records: {
+  schema?: { column_schemas?: Array<{ name: string }> }
+  rows?: unknown[][]
+}): RootSpanRow[] {
+  const schemas = records?.schema?.column_schemas ?? []
+  const rows = records?.rows
+  if (!Array.isArray(rows) || !schemas.length) {
+    return []
+  }
+  return rows.map((row) => {
+    const obj: RootSpanRow = { trace_id: '' }
+    schemas.forEach((col, index) => {
+      obj[col.name] = row[index]
+    })
+    return obj
+  })
+}
+
+export interface RootSpanListResult {
+  rows: RootSpanRow[]
+  columns: ColumnType[]
+}
+
+function columnsFromRecords(records: {
+  schema?: { column_schemas?: Array<{ name: string; data_type?: string }> }
+}): ColumnType[] {
+  const schemas = records?.schema?.column_schemas ?? []
+  return schemas.map((col) => ({
+    name: col.name,
+    data_type: col.data_type || 'String',
+    title: col.name,
+  }))
+}
+
+/**
+ * Step 1 of the all-spans trace list: ids of traces holding at least one span that matches the
+ * label chips and the metric condition (e.g. an error span anywhere in the call chain).
+ * Resolves to `null` when the query fails.
+ */
+async function fetchMatchedTraceIds(
+  ctx: DrilldownContext,
+  tableName: string,
+  redMetric: RedMetric,
+  extraWhere: string[],
+  limit: number
+): Promise<string[] | null> {
+  const where = buildTracesContextWhere(ctx, { rootOnly: false, extraWhere })
+  if (!where) {
+    return []
+  }
+  const sql = buildMatchedTraceIdsSql({
+    tableName,
+    where,
+    traceIdColumn: traceIdColumn(ctx),
+    timeColumn: timeColumn(ctx),
+    durationColumn: durationColumn(ctx),
+    metric: redMetric,
+    limit,
+  })
+  try {
+    const response = await editorApi.runSQL(sql, boundSignalDatabase(ctx, 'traces'))
+    const rows = response?.output?.[0]?.records?.rows
+    if (!Array.isArray(rows)) {
+      return []
+    }
+    return (rows as unknown[][]).map((row) => String(row?.[0] ?? '').trim()).filter(Boolean)
+  } catch (error) {
+    console.error('Failed to fetch matched trace ids:', error)
+    return null
+  }
+}
+
+/**
+ * Trace list for traces home (TraceTable-compatible columns + rows). One row per trace: its root span.
+ *
+ * Root scope filters the root rows directly. All-spans scope keeps the same row shape but picks the
+ * traces by any span: chips and the Errors condition apply to every span, in two queries (trace ids
+ * first, root rows by literal id list second). A joined subquery reads every root row of the window.
+ * Rate / Duration without chips match every trace, so they stay a single root query.
+ * Traces whose root is outside the window or missing cannot be shown.
+ */
+export async function fetchRootSpanList(
+  ctx: DrilldownContext,
+  options?: { limit?: number; redMetric?: RedMetric }
+): Promise<RootSpanListResult> {
+  const empty: RootSpanListResult = { rows: [], columns: [] }
+  const tableName = ctx.semantics.traces.table.value
+  if (!tableName) {
+    return empty
+  }
+
+  const redMetric = options?.redMetric ?? 'rate'
+  const limit = options?.limit ?? ROOT_SPAN_LIMIT
+  const { extraWhere, orderBy } = buildRootListOrderAndExtraWhere(redMetric, {
+    time: timeColumn(ctx),
+    status: statusColumn(ctx),
+    duration: durationColumn(ctx),
+  })
+
+  const matchByAnySpan =
+    spanScope(ctx) === 'all' && (redMetric === 'errors' || (ctx.query.filters.value?.length ?? 0) > 0)
+
+  let where: string
+  if (matchByAnySpan) {
+    const traceIds = await fetchMatchedTraceIds(ctx, tableName, redMetric, extraWhere, limit)
+    if (!traceIds) {
+      return empty
+    }
+    where = buildTracesContextWhere(ctx, {
+      rootOnly: true,
+      includeFilters: false,
+      extraWhere: [buildTraceIdInPredicate(traceIdColumn(ctx), traceIds)],
+    })
+  } else {
+    const baseWhere = buildTracesContextWhere(ctx, { rootOnly: true })
+    where = baseWhere && [baseWhere, ...extraWhere].join(' AND ')
+  }
+  if (!where) {
+    return empty
+  }
+
+  // Whole row: the list's Columns picker must be able to show every column of the table,
+  // not only the roles this view maps. Role aliases are added on top when the field map
+  // points a role at a different column, so the canonical keys stay readable.
+  const roleAliases = rootSpanSelectColumns(ctx).filter(({ alias, column }) => alias !== column)
+  const selectCols = [
+    '*',
+    ...roleAliases.map(({ alias, column }) => `${quoteIdent(column)} AS ${quoteIdent(alias)}`),
+  ].join(', ')
+  const sql = `SELECT ${selectCols}
+FROM ${quoteIdent(tableName)}
+WHERE ${where}
+ORDER BY ${orderBy}
+LIMIT ${limit}`
+
+  try {
+    const response = await editorApi.runSQL(sql, boundSignalDatabase(ctx, 'traces'))
+    const records = response?.output?.[0]?.records
+    return {
+      rows: recordsToObjects(records),
+      columns: columnsFromRecords(records),
+    }
+  } catch (error) {
+    console.error('Failed to fetch root span list:', error)
+    return empty
+  }
+}
+
+/** RED timeseries `[unixSec, value]` for Rate / Errors bar panels. */
+export async function fetchRedTimeseries(
+  ctx: DrilldownContext,
+  metric: RedMetric,
+  options?: { extraEquals?: Array<{ column: string; value: string }> }
+): Promise<Array<[number, number]>> {
+  const tableName = ctx.semantics.traces.table.value
+  if (!tableName) {
+    return []
+  }
+  const where = buildTracesContextWhere(ctx, { extraEquals: options?.extraEquals })
+  if (!where) {
+    return []
+  }
+  const intervalSeconds = volumeIntervalSecondsFromRange(ctx.query.time.value, ctx.query.rangeTime.value)
+  const sql = buildRedTimeseriesSql({
+    tableName,
+    where,
+    timeColumn: timeColumn(ctx),
+    statusColumn: statusColumn(ctx),
+    durationColumn: durationColumn(ctx),
+    metric,
+    intervalSeconds,
+  })
+  try {
+    const response = await editorApi.runSQL(sql, boundSignalDatabase(ctx, 'traces'))
+    const rows = response?.output?.[0]?.records?.rows
+    if (!Array.isArray(rows)) {
+      return []
+    }
+    return rows
+      .map((row): [number, number] | null => {
+        const unix = bucketToUnixSeconds(row?.[0])
+        if (unix == null) {
+          return null
+        }
+        const value = Number(row?.[1])
+        return [unix, Number.isFinite(value) ? value : 0]
+      })
+      .filter((point): point is [number, number] => point != null)
+  } catch (error) {
+    console.error(`Failed to fetch RED timeseries (${metric}):`, error)
+    return []
+  }
+}
+
+/** Duration distribution heatmap (time × duration bucket) for Grafana-aligned Duration panel. */
+export async function fetchDurationHeatmap(
+  ctx: DrilldownContext,
+  options?: { extraEquals?: Array<{ column: string; value: string }> }
+): Promise<HistogramHeatmapData | null> {
+  const tableName = ctx.semantics.traces.table.value
+  if (!tableName) {
+    return null
+  }
+  const where = buildTracesContextWhere(ctx, { extraEquals: options?.extraEquals })
+  if (!where) {
+    return null
+  }
+  const intervalSeconds = volumeIntervalSecondsFromRange(ctx.query.time.value, ctx.query.rangeTime.value)
+  const sql = buildDurationHeatmapSql({
+    tableName,
+    where,
+    timeColumn: timeColumn(ctx),
+    durationColumn: durationColumn(ctx),
+    intervalSeconds,
+  })
+  try {
+    const response = await editorApi.runSQL(sql, boundSignalDatabase(ctx, 'traces'))
+    const rows = response?.output?.[0]?.records?.rows
+    if (!Array.isArray(rows)) {
+      return null
+    }
+    const parsed = rows
+      .map((row) => {
+        const timeUnix = bucketToUnixSeconds(row?.[0])
+        const le = row?.[1] == null ? '' : String(row[1])
+        const count = Number(row?.[2])
+        if (timeUnix == null || !le || !Number.isFinite(count)) {
+          return null
+        }
+        return { timeUnix, le, count }
+      })
+      .filter((item): item is { timeUnix: number; le: string; count: number } => item != null)
+    const heatmap = aggregateDurationHeatmapRows(parsed)
+    if (!heatmap.cells.length) {
+      return null
+    }
+    return heatmap
+  } catch (error) {
+    console.error('Failed to fetch duration heatmap:', error)
+    return null
+  }
+}
+
+export interface BreakdownAttrValue {
+  /** Series map key. Raw value for one column; JSON of parts for several. */
+  value: string
+  /** One entry per group-by column, same order as the request. */
+  parts: string[]
+  metricValue: number
+}
+
+/** Reads one group tuple. SQL already folds NULL/empty into the BREAKDOWN_NONE group; this is a guard. */
+function readGroupParts(row: unknown[] | undefined, offset: number, count: number): string[] {
+  const parts: string[] = []
+  for (let index = 0; index < count; index += 1) {
+    const cell = row?.[offset + index]
+    const part = cell == null || cell === '' ? BREAKDOWN_NONE : String(cell)
+    parts.push(part)
+  }
+  return parts
+}
+
+/**
+ * Group-by SQL for a breakdown dimension.
+ *
+ * v1 tables carry attributes as physical columns, so the identifier is the answer. v2
+ * tables only have JSON2 containers, where the dimension is a chip key and must render as
+ * an expression. Returning `undefined` keeps the callers' identifier default.
+ */
+function traceGroupBySql(ctx: DrilldownContext, column: string): string | undefined {
+  const columns = ctx.semantics.traces.columns.value ?? []
+  if (columns.includes(column)) {
+    return quoteIdent(column)
+  }
+  const chip = parseJsonFieldChipKey(
+    column,
+    columns.filter((name) => isJsonAttributeContainerName(name))
+  )
+  return chip ? sqlJsonGetStringExpr(chip.column, chip.path) : undefined
+}
+
+/** Bounded row sample used to learn JSON2 attribute keys (v2 tables only). */
+const TRACE_ATTRIBUTE_SAMPLE_LIMIT = 1000
+
+/**
+ * Attribute dimensions for the bound trace table.
+ *
+ * v1 tables have no JSON2 containers, so this returns immediately and discovery keeps
+ * reading physical columns. v2 tables have no per-key columns, so the keys are sampled
+ * from the newest rows of the table (cached per database + table + span scope).
+ */
+export async function fetchTraceAttributeKeys(
+  ctx: DrilldownContext,
+  knownColumns?: readonly string[]
+): Promise<TraceBreakdownAttribute[]> {
+  const tableName = ctx.semantics.traces.table.value
+  if (!tableName) {
+    return []
+  }
+  // Callers that just loaded the table schema pass it in: the bind-populated semantics
+  // columns can lag behind the first suggest refresh, which would silently skip sampling.
+  const columns = knownColumns?.length ? knownColumns : ctx.semantics.traces.columns.value ?? []
+  const containers = attributeContainersOf(columns)
+  if (!containers.length) {
+    return []
+  }
+
+  const attributes = await fetchTableAttributeKeys({
+    database: boundSignalDatabase(ctx, 'traces'),
+    table: tableName,
+    columns,
+    parentColumn: parentColumn(ctx),
+    timeColumn: timeColumn(ctx),
+    limit: TRACE_ATTRIBUTE_SAMPLE_LIMIT,
+    // All-spans views must also offer attributes that only child spans carry.
+    scope: spanScope(ctx),
+  })
+  if (!attributes.length) {
+    console.warn('Sampled trace attribute keys is empty', { tableName, containers })
+  }
+  return attributes
+}
+
+export interface BreakdownSeriesResult {
+  series: Record<string, Array<[number, number]>>
+  yAxis: { yMin: number; yMax: number }
+}
+
+/** One grouped timeseries for the listed breakdown cards. Cards do not query themselves. */
+export async function fetchBreakdownSeries(
+  ctx: DrilldownContext,
+  metric: RedMetric,
+  groupByColumns: string[],
+  groups: Array<Pick<BreakdownAttrValue, 'value' | 'parts'>>
+): Promise<BreakdownSeriesResult> {
+  const empty: BreakdownSeriesResult = { series: {}, yAxis: { yMin: 0, yMax: 1 } }
+  const tableName = ctx.semantics.traces.table.value
+  const listed = groups.filter((group) => group.parts.length === groupByColumns.length)
+  if (!tableName || !groupByColumns.length || !listed.length) {
+    return empty
+  }
+  const where = buildTracesContextWhere(ctx)
+  const unixRange = ctx.query.unixTimeRange()
+  if (!where || unixRange.length !== 2) {
+    return empty
+  }
+  const intervalSeconds = breakdownSeriesIntervalSeconds(unixRange)
+  const sql = buildBreakdownSeriesSql({
+    tableName,
+    where,
+    timeColumn: timeColumn(ctx),
+    groupByColumns,
+    groupByColumnSql: groupByColumns.map((column) => traceGroupBySql(ctx, column)),
+    statusColumn: statusColumn(ctx),
+    durationColumn: durationColumn(ctx),
+    metric,
+    intervalSeconds,
+    values: listed.map((group) => group.parts),
+  })
+  try {
+    const response = await editorApi.runSQL(sql, boundSignalDatabase(ctx, 'traces'))
+    const rows = response?.output?.[0]?.records?.rows
+    if (!Array.isArray(rows)) {
+      return empty
+    }
+    const series: Record<string, Array<[number, number]>> = {}
+    rows.forEach((row) => {
+      const unix = bucketToUnixSeconds(row?.[0])
+      const parts = readGroupParts(row, 1, groupByColumns.length)
+      const value = Number(row?.[1 + groupByColumns.length])
+      if (unix == null || !Number.isFinite(value)) {
+        return
+      }
+      const key = breakdownGroupKey(parts)
+      const points = series[key] ?? []
+      points.push([unix, value])
+      series[key] = points
+    })
+    return { series, yAxis: sharedBreakdownYAxis(Object.values(series)) }
+  } catch (error) {
+    console.error('Failed to fetch traces breakdown series:', error)
+    return empty
+  }
+}
+
+export interface BreakdownAttrValuesResult {
+  /** At most {@link BREAKDOWN_CARD_LIMIT} groups, ranked by the current RED aggregate. */
+  values: BreakdownAttrValue[]
+  /** True when more groups exist than are returned; the UI shows a hint instead of the rest. */
+  truncated: boolean
+}
+
+/** Top attribute groups ranked by current RED aggregate (Phase B). Fetches one extra row to detect truncation. */
+export async function fetchBreakdownAttrValues(
+  ctx: DrilldownContext,
+  metric: RedMetric,
+  groupByColumns: string[]
+): Promise<BreakdownAttrValuesResult> {
+  const empty: BreakdownAttrValuesResult = { values: [], truncated: false }
+  const tableName = ctx.semantics.traces.table.value
+  if (!tableName || !groupByColumns.length) {
+    return empty
+  }
+  const where = buildTracesContextWhere(ctx)
+  if (!where) {
+    return empty
+  }
+  const sql = buildBreakdownValuesSql({
+    tableName,
+    where,
+    groupByColumns,
+    groupByColumnSql: groupByColumns.map((column) => traceGroupBySql(ctx, column)),
+    statusColumn: statusColumn(ctx),
+    durationColumn: durationColumn(ctx),
+    metric,
+    limit: BREAKDOWN_CARD_LIMIT + 1,
+  })
+  try {
+    const response = await editorApi.runSQL(sql, boundSignalDatabase(ctx, 'traces'))
+    const rows = response?.output?.[0]?.records?.rows
+    if (!Array.isArray(rows)) {
+      return empty
+    }
+    const values = rows.map((row): BreakdownAttrValue => {
+      const parts = readGroupParts(row, 0, groupByColumns.length)
+      const metricValue = Number(row?.[groupByColumns.length])
+      return {
+        value: breakdownGroupKey(parts),
+        parts,
+        metricValue: Number.isFinite(metricValue) ? metricValue : 0,
+      }
+    })
+    return {
+      values: values.slice(0, BREAKDOWN_CARD_LIMIT),
+      truncated: values.length > BREAKDOWN_CARD_LIMIT,
+    }
+  } catch (error) {
+    console.error('Failed to fetch traces breakdown values:', error)
+    return empty
+  }
+}
+
+/** All spans for one trace (Gantt). Prefer ±12h around focusTraceAt; else UI time window. */
+export async function fetchTraceSpans(ctx: DrilldownContext, traceId: string): Promise<Span[]> {
+  const tableName = ctx.semantics.traces.table.value
+  if (!tableName || !traceId.trim()) {
+    return []
+  }
+
+  const idCol = traceIdColumn(ctx)
+  const tsCol = timeColumn(ctx)
+  const fromAnchor = buildTraceDetailUnixRange(ctx.ui.focusTraceAt.value)
+  const unixRange = fromAnchor ?? ctx.query.unixTimeRange()
+  const whereParts = [`${quoteIdent(idCol)} = '${escapeSqlString(traceId.trim())}'`]
+  if (unixRange.length === 2) {
+    whereParts.push(`${quoteIdent(tsCol)} >= FROM_UNIXTIME(${unixRange[0]})`)
+    whereParts.push(`${quoteIdent(tsCol)} <= FROM_UNIXTIME(${unixRange[1]})`)
+  }
+  const sql = `SELECT *
+FROM ${quoteIdent(tableName)}
+WHERE ${whereParts.join(' AND ')}
+ORDER BY ${quoteIdent(tsCol)} ASC`
+
+  try {
+    const response = await editorApi.runSQL(sql, boundSignalDatabase(ctx, 'traces'))
+    const records = response?.output?.[0]?.records
+    if (!records) {
+      return []
+    }
+    return processSpanData(
+      records as {
+        schema: { column_schemas: Array<{ name: string; data_type: string }> }
+        rows: unknown[][]
+      }
+    )
+  } catch (error) {
+    console.error('Failed to fetch trace spans:', error)
+    return []
+  }
+}
+
+/**
+ * The service universe is cached in `ctx.session.traceLogs.traceServices`, keyed by
+ * database, table, column, time window and limit: resolveServiceTargets re-runs on every
+ * table load and the settings modal re-runs it on open — without the cache each pass
+ * would repeat the DISTINCT scan. Leaving Explore drops the map; a failed fetch evicts its key.
+ */
+const TRACE_SERVICES_CACHE_LIMIT = 50
+
+/**
+ * Every service seen in the current time window — the routing key universe for
+ * trace → logs auto-association, wider than one page of root spans. Results are
+ * cached for the session per (database, table, window).
+ */
+export async function fetchTraceServices(ctx: DrilldownContext, options?: { limit?: number }): Promise<string[]> {
+  const tableName = ctx.semantics.traces.table.value
+  if (!tableName) {
+    return []
+  }
+
+  const serviceCol = fieldMap(ctx).service || 'service_name'
+  const tsCol = timeColumn(ctx)
+  const unixRange = ctx.query.unixTimeRange()
+  const windowKey = unixRange.length === 2 ? `${unixRange[0]}-${unixRange[1]}` : 'all'
+  const limit = options?.limit ?? 200
+  const cacheKey = `${boundSignalDatabase(ctx, 'traces')}\0${tableName}\0${serviceCol}\0${windowKey}\0${limit}`
+  const traceServicesCache = ctx.session.traceLogs.traceServices
+  const cached = traceServicesCache.get(cacheKey)
+  if (cached) {
+    return cached
+  }
+  if (traceServicesCache.size > TRACE_SERVICES_CACHE_LIMIT) {
+    traceServicesCache.clear()
+  }
+
+  const where =
+    unixRange.length === 2
+      ? `WHERE ${quoteIdent(tsCol)} >= FROM_UNIXTIME(${unixRange[0]}) AND ${quoteIdent(tsCol)} <= FROM_UNIXTIME(${
+          unixRange[1]
+        })`
+      : ''
+  const sql = `SELECT DISTINCT ${quoteIdent(serviceCol)}
+FROM ${quoteIdent(tableName)}
+${where}
+ORDER BY 1
+LIMIT ${limit}`
+
+  const request = editorApi
+    .runSQL(sql, boundSignalDatabase(ctx, 'traces'))
+    .then((response) => {
+      const rows = response?.output?.[0]?.records?.rows ?? []
+      return rows.map((row) => String(row?.[0] ?? '').trim()).filter(Boolean)
+    })
+    .catch((error) => {
+      console.error('Failed to fetch trace services:', error)
+      traceServicesCache.delete(cacheKey)
+      return []
+    })
+  traceServicesCache.set(cacheKey, request)
+  return request
+}

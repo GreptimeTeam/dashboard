@@ -1,4 +1,4 @@
-import { dateTypes, numberTypes } from '@/views/dashboard/config'
+import { dateTypes, numberTypes } from '@/constants/column-types'
 import type { SchemaType, RecordsType } from '@/store/modules/code-run/types'
 import type { ColumnType } from '@/types/query'
 

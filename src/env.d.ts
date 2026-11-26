@@ -6,6 +6,18 @@ declare module '*.vue' {
   const component: DefineComponent<{}, {}, any>
   export default component
 }
+
+declare module '*.svg' {
+  import type { DefineComponent } from 'vue'
+
+  const component: DefineComponent
+  export default component
+}
+
+declare module '*.svg?url' {
+  const url: string
+  export default url
+}
 interface ImportMetaEnv {
   readonly VITE_API_BASE_URL: string
   readonly VITE_CLOUD_URL: string

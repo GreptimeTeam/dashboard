@@ -11,8 +11,8 @@ a-date-picker(
   template(#cell="{ date }")
     .arco-picker-date
       .arco-picker-date-value {{ formatCellDate(date) }}
-  template(#suffix-icon)
-    span.timezone-label {{ timezoneLabel }}
+  template(v-if="showTimezoneLabel" #suffix-icon)
+    span.timezone-label(:title="timezoneFullLabel") {{ timezoneLabel }}
 </template>
 
 <script lang="ts" setup name="TimezoneInstantPicker">
@@ -41,7 +41,8 @@ a-date-picker(
     return rest
   })
 
-  const { toBrowserTimezoneTimestamp, toDashboardDate, timezoneLabel } = useDashboardTimezone()
+  const { toBrowserTimezoneTimestamp, toDashboardDate, timezoneLabel, timezoneFullLabel, showTimezoneLabel } =
+    useDashboardTimezone()
 
   const pickerModelValue = computed<Date | undefined>(() => {
     if (props.modelValue === null || props.modelValue === undefined || props.modelValue === '') return undefined

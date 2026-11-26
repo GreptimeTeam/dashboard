@@ -1,0 +1,92 @@
+import { h, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { Tooltip } from '@arco-design/web-vue'
+import { useDashboardTimezone, useDateTimeFormat } from '@/hooks'
+import type { ColumnType, TSColumn } from '@/types/query'
+import getCellString from '../utils/cell-text'
+
+/**
+ * Timestamp display state: formatted (timezone-aware) vs raw value.
+ * The toggle lives in the column header pill and applies to every time column.
+ */
+export default function useTimeFormat() {
+  const { t } = useI18n()
+  const { formatDateTimeWithMs } = useDateTimeFormat()
+  const { timezoneLabel, timezoneFullLabel, showTimezoneLabel } = useDashboardTimezone()
+
+  /** true = formatted timestamp, false = raw value (legacy `tsViewStr`). */
+  const tsViewStr = ref(true)
+
+  /**
+   * Time cell text. `formatted` follows the header toggle: raw value when off,
+   * timezone-aware string when on (legacy `renderTs` + `changeTsView`).
+   */
+  function formatTsDisplay(
+    value: unknown,
+    column: ColumnType | TSColumn | null | undefined,
+    formatted = tsViewStr.value
+  ): string {
+    if (value == null || value === '') {
+      return ''
+    }
+    const raw = getCellString(value)
+    if (!formatted || !column || !('data_type' in column) || !column.data_type) {
+      return raw
+    }
+    // API / JSON may yield string nanoseconds — coerce before converting units.
+    const numeric = typeof value === 'number' ? value : Number(value)
+    if (!Number.isFinite(numeric)) {
+      return raw
+    }
+    return formatDateTimeWithMs(numeric, column.data_type) || raw
+  }
+
+  function changeTsView() {
+    tsViewStr.value = !tsViewStr.value
+  }
+
+  /**
+   * Header pill for time columns.
+   * `toggle: false` keeps the semantic timestamp look without click/tooltip.
+   */
+  function renderTsHeader(title: string, options?: { toggle?: boolean }) {
+    const toggle = options?.toggle !== false
+    const pill = h(
+      'span',
+      {
+        class: ['gpt-semantic-th', 'timestamp', 'dg-ts-th', toggle ? null : 'dg-ts-th--static'].filter(Boolean),
+        onClick: toggle
+          ? (event: MouseEvent) => {
+              event.stopPropagation()
+              changeTsView()
+            }
+          : undefined,
+      },
+      [
+        h('svg', { class: 'icon-12' }, [h('use', { href: '#time-index' })]),
+        h('span', { class: 'gpt-semantic-th-text' }, title),
+        toggle && tsViewStr.value && showTimezoneLabel.value
+          ? h('span', { class: 'gpt-semantic-th-tz' }, timezoneLabel.value)
+          : null,
+      ]
+    )
+
+    if (!toggle) {
+      return pill
+    }
+
+    return h(
+      Tooltip,
+      { placement: 'top' },
+      {
+        content: () =>
+          tsViewStr.value
+            ? `${timezoneFullLabel.value} · ${t('dashboard.showTimestamp')}`
+            : t('dashboard.formatTimestamp'),
+        default: () => pill,
+      }
+    )
+  }
+
+  return { tsViewStr, formatTsDisplay, changeTsView, renderTsHeader }
+}

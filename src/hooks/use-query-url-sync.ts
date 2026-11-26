@@ -1,8 +1,12 @@
+import { nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 const useQueryUrlSync = ({ builderFormState, textEditorState, timeRange, editorType, urlParams = {} as any }) => {
   const route = useRoute()
   const router = useRouter()
+  /** True while `updateQueryParams` is writing; pages should ignore the echoed route watch. */
+  let applyingLocalUrlUpdate = false
+
   function initializeFromQuery() {
     const {
       [urlParams.editorType || 'editorType']: queryEditorType,
@@ -70,12 +74,23 @@ const useQueryUrlSync = ({ builderFormState, textEditorState, timeRange, editorT
     } else {
       delete query[urlParams.builderForm || 'builderForm']
     }
-    router.replace({ query })
+    applyingLocalUrlUpdate = true
+    Promise.resolve(router.replace({ query })).finally(() => {
+      nextTick(() => {
+        applyingLocalUrlUpdate = false
+      })
+    })
+  }
+
+  /** Skip route watches that only echo our own `updateQueryParams` write. */
+  function isApplyingLocalUrlUpdate() {
+    return applyingLocalUrlUpdate
   }
 
   return {
     initializeFromQuery,
     updateQueryParams,
+    isApplyingLocalUrlUpdate,
   }
 }
 

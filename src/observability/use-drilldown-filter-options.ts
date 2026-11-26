@@ -1,0 +1,316 @@
+import { computed, ref, watch } from 'vue'
+import {
+  canSuggestFilterValues,
+  fetchFilterKeyOptions,
+  fetchFilterValueOptions,
+  fetchLogsContainsKeyOptions,
+  fetchLogsFilterKeyOptions,
+  fetchSqlFieldKeys,
+  fetchSqlLabelKeys,
+} from './adapters/filter-options'
+import type { DrilldownContext } from './context'
+import { attributeTypeOf, splitAttributeChip } from './traces/attribute-keys'
+import { canSuggestValues, resolveSuggestFieldType, suggestionScopeKey } from './value-suggestions'
+import { loadDrilldownSettings } from './drilldown-settings'
+import { filterAppliesToSignal } from './filters'
+import { parseJsonFieldChipKey } from './logs/json-field-keys'
+import { isLogsContainsFilterKey } from './logs/field-map'
+import { isDirectLogsDetail, ownedLogsDetailFilterRole, ownedLogsFilterOptions } from './logs/filter-semantics'
+import resolveLogsRoles from './logs/resolved-roles'
+
+export type FilterSuggestMode = 'default' | 'fields'
+
+export default function useDrilldownFilterOptions(
+  ctx: DrilldownContext,
+  options?: { suggestMode?: FilterSuggestMode }
+) {
+  const suggestMode = options?.suggestMode ?? 'default'
+  const keysLoading = ref(false)
+  const valuesLoading = ref(false)
+  const keyOptions = ref<string[]>([])
+  /** Cached suggest keys for the active SQL signal. Empty on metrics. */
+  const labelKeys = ref<string[]>([])
+  const containsKeys = ref<string[]>([])
+  const valueOptionsByKey = ref<Record<string, string[]>>({})
+
+  const clearSuggestCache = () => {
+    keyOptions.value = []
+    labelKeys.value = []
+    containsKeys.value = []
+    valueOptionsByKey.value = {}
+  }
+
+  const loadSuggestKeys = async (search = '') => {
+    if (suggestMode === 'fields') {
+      const keys = await fetchSqlFieldKeys(ctx, search)
+      // Level filter owns severity — keep it out of the field combobox.
+      const severityCol = resolveLogsRoles(ctx).severity
+      return keys.filter((key) => key !== 'severity' && key !== severityCol)
+    }
+    return fetchFilterKeyOptions(ctx, search)
+  }
+
+  const refreshLabelKeys = async () => {
+    const signal = ctx.connection.signal.value
+    if (suggestMode === 'fields') {
+      labelKeys.value = signal === 'logs' ? await loadSuggestKeys('') : []
+      containsKeys.value = signal === 'logs' ? await fetchLogsContainsKeyOptions(ctx) : []
+      return
+    }
+    if (signal === 'metrics') {
+      labelKeys.value = []
+      containsKeys.value = []
+      return
+    }
+    if (signal === 'logs') {
+      labelKeys.value = await fetchLogsFilterKeyOptions(ctx, '')
+      containsKeys.value = await fetchLogsContainsKeyOptions(ctx)
+      return
+    }
+    containsKeys.value = []
+    labelKeys.value = await fetchSqlLabelKeys(ctx, 'traces', '')
+  }
+
+  const loadKeys = async (search = '') => {
+    keysLoading.value = true
+    try {
+      keyOptions.value = await loadSuggestKeys(search)
+    } finally {
+      keysLoading.value = false
+    }
+  }
+
+  const fieldMapForActiveSql = () => {
+    return ctx.connection.signal.value === 'traces'
+      ? ctx.semantics.traces.fieldMap.value
+      : ctx.semantics.logs.fieldMap.value
+  }
+
+  /** True when combobox can offer value DISTINCT. */
+  const isSqlFieldKey = (fieldKey: string): boolean => {
+    const trimmed = fieldKey.trim()
+    if (!trimmed) {
+      return false
+    }
+    const signal = ctx.connection.signal.value
+    if (signal === 'metrics') {
+      return false
+    }
+    const resolvable = canSuggestFilterValues(trimmed, fieldMapForActiveSql(), labelKeys.value, containsKeys.value)
+    if (!resolvable) {
+      return false
+    }
+    // One policy for every SQL surface (this filter and the Traces SQL builder): only
+    // label-like fields get a DISTINCT dropdown. Types come from the schema for columns and
+    // from the attribute sample for JSON2 chips.
+    // Trace chips use the v2 containers; logs use `log_attributes`, so fall back to the
+    // generic `*_attributes` chip parser.
+    const chip = splitAttributeChip(trimmed) ?? parseJsonFieldChipKey(trimmed)
+    const semantics = signal === 'logs' ? ctx.semantics.logs : ctx.semantics.traces
+    const database = semantics.database.value || ctx.connection.databaseFor(signal)
+    const table = semantics.table.value
+    return canSuggestValues({
+      name: trimmed,
+      // Resolve through fieldMap aliases (`duration` → `duration_nano`) before typing.
+      dataType: resolveSuggestFieldType(trimmed, {
+        fieldMap: fieldMapForActiveSql(),
+        columnTypes: semantics.columnTypes.value,
+        attributeType: chip ? attributeTypeOf(database, table, trimmed) : undefined,
+      }),
+    })
+  }
+
+  const loadValues = async (fieldKey: string, _search = '') => {
+    const trimmedKey = fieldKey.trim()
+    if (!trimmedKey || !isSqlFieldKey(trimmedKey)) {
+      return
+    }
+    // One fetch per key per scope: the scope watcher clears this map on a window/filter
+    // change, and the combobox filters the cached list locally while typing.
+    if (valueOptionsByKey.value[trimmedKey] !== undefined) {
+      return
+    }
+
+    valuesLoading.value = true
+    try {
+      const { values } = await fetchFilterValueOptions(ctx, trimmedKey, {
+        search: '',
+        labelKeys: labelKeys.value,
+      })
+      valueOptionsByKey.value = { ...valueOptionsByKey.value, [trimmedKey]: values }
+    } finally {
+      valuesLoading.value = false
+    }
+  }
+
+  const getValueOptions = (fieldKey: string): string[] => {
+    return valueOptionsByKey.value[fieldKey.trim()] ?? []
+  }
+
+  /**
+   * Whether a committed chip belongs in this combobox.
+   * Direct Logs detail: hide body / severity / service — the detail toolbar owns them.
+   * Logs overview: show them in the top bar (those controls only exist on detail).
+   */
+  const isVisibleFilterKey = (key: string): boolean => {
+    const trimmed = key.trim()
+    if (!trimmed) {
+      return false
+    }
+
+    if (ctx.connection.signal.value === 'logs') {
+      const fieldMap = ctx.semantics.logs.fieldMap.value
+      const roles = resolveLogsRoles(ctx)
+      if (isDirectLogsDetail(ctx) && ownedLogsDetailFilterRole(trimmed, ownedLogsFilterOptions(ctx))) {
+        return false
+      }
+
+      // Overview suggestion vocabulary is labels-only; still show committed / URL chips
+      // (including field keys) so they are not silently filtering without a pill.
+      if (
+        ctx.ui.logsView.value === 'overview' &&
+        (ctx.query.filters?.value || []).some((filter) => filter.key.trim() === trimmed)
+      ) {
+        return true
+      }
+
+      // Overview top bar is the only place these shared chips appear (detail owns them).
+      const severityCol = roles.severity
+      const serviceCol = roles.service
+      const isSeverityKey = trimmed === 'severity' || (Boolean(severityCol) && trimmed === severityCol)
+      const isBodyKey = Boolean(roles.body) && (trimmed === 'body' || trimmed === roles.body)
+      const isServiceKey =
+        Boolean(serviceCol) &&
+        (trimmed === serviceCol ||
+          trimmed === ctx.semantics.logs.entityFilterKeys.value?.service ||
+          trimmed === 'service')
+      if (isSeverityKey || isBodyKey || isServiceKey) {
+        return true
+      }
+      // Homepage Labels default to primaryGroupBy; keep that column visible even before
+      // suggest keys finish loading (no dedicated toolbar control owns it).
+      if (fieldMap.primaryGroupBy && trimmed === fieldMap.primaryGroupBy) {
+        return true
+      }
+      // JSON attribute chips (e.g. `resource_attributes.service.name`) are valid filters
+      // even though they are not physical columns — keep them visible.
+      if (parseJsonFieldChipKey(trimmed)) {
+        return true
+      }
+
+      if (suggestMode === 'fields') {
+        // Only field-discovered keys; wait until suggest keys are loaded.
+        return labelKeys.value.includes(trimmed)
+      }
+
+      // Topbar: suggested keys, plus the keys that own a dedicated entry point (service
+      // aliases, body role). Those are no longer offered as suggestions, but a filter carried
+      // in a URL must stay visible instead of silently filtering without any pill.
+      if (trimmed === 'service' || trimmed === 'primaryGroupBy' || trimmed === roles.body) {
+        return true
+      }
+      if (labelKeys.value.includes(trimmed)) {
+        return true
+      }
+      const mapped = fieldMap[trimmed]
+      return Boolean(mapped && labelKeys.value.includes(mapped))
+    }
+
+    if (parseJsonFieldChipKey(trimmed)) {
+      return true
+    }
+    if (suggestMode !== 'fields') {
+      return true
+    }
+    return labelKeys.value.includes(trimmed)
+  }
+
+  /**
+   * Value lists are fetched for one window + set of `=` filters. Drop them when that scope
+   * changes; the key vocabulary itself does not depend on it.
+   */
+  const suggestionScope = computed(() => {
+    const range = ctx.query.unixTimeRange?.() ?? []
+    const filters = ctx.query.filters?.value ?? []
+    return suggestionScopeKey(filters, range)
+  })
+
+  watch(suggestionScope, () => {
+    valueOptionsByKey.value = {}
+  })
+
+  watch(
+    () => ctx.connection.signal.value,
+    async () => {
+      clearSuggestCache()
+      await refreshLabelKeys()
+      await loadKeys()
+    }
+  )
+
+  /**
+   * Whether a committed filter applies to the current signal's bound table. Filters are
+   * shared, so one carried over from metrics may name a column this table lacks; it is then
+   * hidden from this signal's bar (and its queries) but stays in the shared state, so
+   * switching back to a signal that supports it brings it back.
+   */
+  const isFilterApplicable = (key: string): boolean => {
+    const signal = ctx.connection.signal.value
+    const columns = signal === 'logs' || signal === 'traces' ? ctx.semantics[signal].columns.value : undefined
+    return filterAppliesToSignal({ key, op: '=', value: '' }, signal, {
+      fieldMap: fieldMapForActiveSql(),
+      columns,
+    })
+  }
+
+  watch(
+    () => {
+      // Single settings read per evaluation — this source re-runs on every signal /
+      // revision change. Settings are not reactive: updates propagate via the binder's
+      // revision bump (bindTable persist:true).
+      const logsDatabase = ctx.semantics.logs.database?.value || ctx.connection.logsDatabase?.value
+      const settings = loadDrilldownSettings(logsDatabase).logs
+      return [
+        ctx.connection.signal.value,
+        ctx.ui.logsView.value,
+        ctx.semantics.logs.revision.value,
+        ctx.semantics.traces.revision.value,
+        settings.labelInclude?.join('\0'),
+        settings.labelExclude?.join('\0'),
+        settings.fieldInclude?.join('\0'),
+        settings.fieldExclude?.join('\0'),
+      ] as const
+    },
+    async () => {
+      if (suggestMode !== 'fields' && ctx.connection.signal.value === 'metrics') {
+        return
+      }
+      await refreshLabelKeys()
+      valueOptionsByKey.value = {}
+      if (ctx.connection.signal.value === 'logs') {
+        await loadKeys()
+      }
+    },
+    { immediate: true }
+  )
+
+  return {
+    keysLoading,
+    valuesLoading,
+    keyOptions,
+    labelKeys,
+    containsKeys,
+    isContainsFilterKey: (fieldKey: string) =>
+      isLogsContainsFilterKey(fieldKey, fieldMapForActiveSql(), containsKeys.value),
+    /** @deprecated alias — prefer checking labelKeys / isSqlFieldKey */
+    sqlFieldKeys: labelKeys,
+    isSqlFieldKey,
+    isVisibleFilterKey,
+    isFilterApplicable,
+    loadKeys,
+    loadValues,
+    getValueOptions,
+    refreshLabelKeys,
+    refreshSqlFieldKeys: refreshLabelKeys,
+  }
+}

@@ -4,6 +4,8 @@ import JSONbigint from 'json-bigint'
 import type { AxiosRequestConfig, AxiosResponse } from 'axios'
 import { Message } from '@arco-design/web-vue'
 import { RecordsType } from '@/store/modules/code-run/types'
+import { getEffectiveTimezone } from '@/utils/timezone'
+import i18n from '@/locale'
 
 export interface OutputType {
   affectedrows: number
@@ -145,10 +147,8 @@ axios.interceptors.request.use(
     }
 
     if (isV1) {
-      // Use userTimezone directly (or empty string, which GreptimeDB will interpret appropriately)
-      if (appStore.userTimezone) {
-        config.headers['x-greptime-timezone'] = appStore.userTimezone
-      }
+      // Empty setting means browser timezone; send it so SQL literals match what the UI shows.
+      config.headers['x-greptime-timezone'] = getEffectiveTimezone(appStore.userTimezone)
       config.transformResponse = [(data) => data]
       return {
         ...config,
@@ -178,7 +178,7 @@ axios.interceptors.response.use(
     }
 
     if (!response) {
-      const message = error?.message || 'Request Error'
+      const message = error?.message || i18n.global.t('common.requestError')
       if (shouldNotifyError(config)) showErrorMessage(message)
       return Promise.reject(buildErrorPayload(message, config?.traceTimeStart))
     }
@@ -188,7 +188,7 @@ axios.interceptors.response.use(
     }
 
     const data = response.data || {}
-    const message = data.error || error.message || 'Request Error'
+    const message = data.error || error.message || i18n.global.t('common.requestError')
 
     if (shouldNotifyError(config)) {
       showErrorMessage(message)

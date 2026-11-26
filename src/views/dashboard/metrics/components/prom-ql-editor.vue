@@ -1,7 +1,6 @@
 <template lang="pug">
 .promql-editor-container
-  CodeMirror(
-    style="height: 100%"
+  CodeMirror.promql-codemirror(
     :placeholder="placeholder"
     :modelValue="props.modelValue"
     :extensions="extensions"
@@ -14,11 +13,10 @@
     @ready="onEditorReady"
   )
   .query-button-container
-    a-tooltip(content="Ctrl + Enter" position="right")
-      a-button(
+    a-tooltip(position="right" :content="$t('metrics.enterHint')")
+      a-button.query-run-button(
         type="primary"
         size="large"
-        style="height: var(--gpt-control-height-md); border-radius: 0 var(--gpt-radius-sm) var(--gpt-radius-sm) 0"
         :loading="queryLoading"
         @click="handleQuery"
       )
@@ -33,9 +31,9 @@
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { basicSetup } from 'codemirror'
   import { PromQLExtension } from '@prometheus-io/codemirror-promql'
-  import { useAppStore } from '@/store'
+  import { useSignalDatabase } from '@/observability/signal-database'
   import axios from 'axios'
-  import { keymap, EditorView } from '@codemirror/view'
+  import { keymap, EditorView, tooltips } from '@codemirror/view'
   import { Prec } from '@codemirror/state'
   import { IconLoading, IconPlayArrow } from '@arco-design/web-vue/es/icon'
 
@@ -51,7 +49,7 @@
     (e: 'query'): void
   }>()
 
-  const appStore = useAppStore()
+  const metricsDatabase = useSignalDatabase('metrics')
   let editorView: any = null
 
   const prometheusBaseURL = '/v1/prometheus/api/v1'
@@ -138,7 +136,7 @@
         method,
         headers: toPlainHeaders(headers),
         params: {
-          db: appStore.database,
+          db: metricsDatabase.value,
         },
       }
 
@@ -209,15 +207,22 @@
       .asExtension()
   }
 
-  const singleLineKeymap = Prec.highest(
+  // Match Prometheus UI: Enter runs query, Shift-Enter inserts newline, long lines wrap.
+  const queryKeymap = Prec.highest(
     keymap.of([
       {
         key: 'Enter',
-        run: () => true,
+        run: () => {
+          handleQuery()
+          return true
+        },
       },
       {
         key: 'Shift-Enter',
-        run: () => true,
+        run: (view) => {
+          view.dispatch(view.state.replaceSelection('\n'))
+          return true
+        },
       },
       {
         key: 'Ctrl-Enter',
@@ -229,14 +234,19 @@
       {
         key: 'Cmd-Enter',
         run: () => {
+          handleQuery()
           return true
         },
       },
     ])
   )
 
+  // Mount completion/hover tooltips on body so they are not clipped by the
+  // editor's overflow:hidden or covered by the results pane stacking context.
+  const tooltipExt = tooltips({ parent: document.body })
+
   const extensions = computed(() => {
-    const exts = [basicSetup, singleLineKeymap]
+    const exts = [basicSetup, EditorView.lineWrapping, queryKeymap, tooltipExt]
 
     if (promqlExtension.value) {
       exts.push(promqlExtension.value)
@@ -246,8 +256,7 @@
   })
 
   const codeUpdate = (content: string) => {
-    const singleLineContent = content.replace(/[\r\n]+/g, ' ').trim()
-    emit('update:modelValue', singleLineContent)
+    emit('update:modelValue', content)
   }
 
   const onEditorReady = (payload: any) => {
@@ -271,19 +280,18 @@
   }
 
   const replaceEditorContent = (text: string) => {
-    const singleLineContent = text.replace(/[\r\n]+/g, ' ').trim()
     if (!editorView) {
-      emit('update:modelValue', singleLineContent)
+      emit('update:modelValue', text)
       return
     }
 
     const docLength = editorView.state.doc.length
     editorView.dispatch({
-      changes: { from: 0, to: docLength, insert: singleLineContent },
-      selection: { anchor: singleLineContent.length },
+      changes: { from: 0, to: docLength, insert: text },
+      selection: { anchor: text.length },
     })
     editorView.focus()
-    codeUpdate(singleLineContent)
+    codeUpdate(text)
   }
 
   const focus = () => {
@@ -302,12 +310,9 @@
     return editorView.state.doc.toString()
   }
 
-  watch(
-    () => appStore.database,
-    () => {
-      initializePromQLExtension()
-    }
-  )
+  watch(metricsDatabase, () => {
+    initializePromQLExtension()
+  })
 
   onMounted(() => {
     initializePromQLExtension()
@@ -326,13 +331,33 @@
     display: flex;
     align-items: stretch;
     gap: 0;
+    min-width: 0;
+    width: 100%;
     min-height: var(--gpt-control-height-md);
+  }
+
+  .promql-codemirror {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
   }
 
   .query-button-container {
     display: flex;
-    align-items: center;
+    align-items: stretch;
     flex-shrink: 0;
+
+    :deep(> span) {
+      display: flex;
+      align-items: stretch;
+      height: 100%;
+    }
+  }
+
+  .query-run-button {
+    height: 100%;
+    min-height: var(--gpt-control-height-md);
+    border-radius: 0 var(--gpt-radius-sm) var(--gpt-radius-sm) 0;
   }
 
   :deep(.arco-card.light-editor-card) {
@@ -346,25 +371,29 @@
   }
 
   :deep(.cm-editor) {
-    height: var(--gpt-control-height-md);
-    overflow: visible;
+    min-height: var(--gpt-control-height-md);
+    height: auto;
+    max-height: 160px;
+    overflow: hidden;
     width: 100%;
+    min-width: 0;
     background: var(--gpt-bg-panel);
     color: var(--gpt-text-primary);
     border: 1px solid var(--gpt-editor-border);
     border-radius: var(--gpt-radius-sm) 0 0 var(--gpt-radius-sm);
-    transition: all 0.2s ease-in-out;
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
   }
 
   :deep(.cm-editor .cm-content),
   :deep(.cm-editor .cm-line),
   :deep(.ͼ1.cm-editor .cm-content),
   :deep(.ͼ1.cm-editor .cm-line) {
-    line-height: var(--gpt-control-height-md);
+    line-height: 20px;
   }
 
   :deep(.cm-scroller) {
-    overflow: visible;
+    overflow-x: hidden;
+    overflow-y: auto;
     font-family: var(--vp-font-family-base);
     font-size: var(--gpt-font-lg);
     font-weight: 400;
@@ -372,8 +401,9 @@
   }
 
   :deep(.cm-content) {
-    padding: 0 var(--gpt-gap-md);
-    min-height: 32px;
+    padding: 6px var(--gpt-gap-md);
+    min-height: var(--gpt-control-height-md);
+    box-sizing: border-box;
     font-family: inherit;
     font-size: inherit;
     font-weight: inherit;
@@ -395,33 +425,34 @@
   :deep(.cm-lineNumbers) {
     display: none !important;
   }
+</style>
 
-  :deep(.cm-tooltip) {
-    z-index: 1000;
+<style lang="less">
+  /* Unscoped: tooltips mount on document.body, so scoped :deep will not match. */
+  .cm-tooltip {
+    z-index: 1100;
   }
 
-  :deep(.cm-tooltip.cm-completionInfo) {
-    z-index: 1001;
-  }
-  :deep(.cm-tooltip.cm-tooltip-autocomplete) {
+  .cm-tooltip.cm-tooltip-autocomplete {
     background-color: var(--gpt-bg-surface);
     border: 1px solid var(--gpt-border-default);
     border-radius: var(--gpt-radius-sm);
     box-shadow: 0 2px 8px var(--box-shadow-color);
 
     & > ul {
+      box-sizing: border-box;
+      max-width: min(700px, 95vw);
       max-height: 350px;
-      font-family: 'DejaVu Sans Mono', monospace;
-      max-width: unset;
       margin: 0;
       padding: 0;
+      overflow: hidden auto;
       list-style: none;
+      font-family: 'DejaVu Sans Mono', monospace;
     }
 
     & > ul > li {
-      padding: var(--gpt-gap-md) var(--gpt-gap-lg);
+      padding: var(--gpt-gap-sm) var(--gpt-gap-md);
       cursor: pointer;
-      border-bottom: 1px solid var(--gpt-border-subtle);
 
       &:hover {
         background-color: var(--gpt-bg-header);
@@ -431,46 +462,50 @@
         background-color: var(--gpt-nav-active-bg);
         color: unset;
       }
-
-      &:last-child {
-        border-bottom: none;
-      }
     }
-
-    min-width: 30%;
   }
 
-  :deep(.cm-tooltip.cm-completionInfo) {
-    background-color: var(--gpt-nav-active-bg);
+  /* Sibling of the list, positioned by CodeMirror — don't override top/left/max-width. */
+  .cm-tooltip.cm-completionInfo {
+    z-index: 1101;
+    box-sizing: border-box;
+    padding: var(--gpt-gap-md) var(--gpt-gap-lg);
+    font-family: var(--font-family-base);
+    color: var(--gpt-text-primary);
+    background-color: var(--gpt-bg-surface);
     border: 1px solid var(--gpt-border-default);
     border-radius: var(--gpt-radius-sm);
     box-shadow: 0 2px 8px var(--box-shadow-color);
-    margin-top: -11px;
-    padding: var(--gpt-gap-lg);
-    font-family: var(--font-family-base);
-    min-width: 250px;
-    max-width: min-content;
-    z-index: 1001;
   }
 
-  :deep(.cm-completionIcon) {
+  .cm-completionInfo.cm-completionInfo-right {
+    left: calc(100% + 6px);
+  }
+
+  .cm-completionInfo.cm-completionInfo-left {
+    right: calc(100% + 6px);
+  }
+
+  .cm-completionIcon {
     box-sizing: content-box;
+    margin-right: 10px;
     font-size: var(--gpt-font-xl);
     line-height: 1;
-    margin-right: 10px;
     vertical-align: top;
     color: var(--gpt-main-purple);
     opacity: 1;
   }
 
-  :deep(.cm-completionMatchedText) {
+  .cm-completionMatchedText {
     color: var(--gpt-brand-700);
-    text-decoration: none;
     font-weight: bold;
+    text-decoration: none;
   }
-  :deep(.cm-completionDetail) {
-    float: right;
+
+  .cm-completionDetail {
+    margin-left: 0.75em;
     color: var(--gpt-text-muted);
     font-size: var(--gpt-font-base);
+    font-style: italic;
   }
 </style>

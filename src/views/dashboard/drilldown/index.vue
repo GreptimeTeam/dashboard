@@ -1,0 +1,315 @@
+<template lang="pug">
+.query-layout.query-layout--stack.drilldown-page.query-container
+  .content-wrapper.query-layout-cards.drilldown-content-wrapper
+    a-card.drilldown-top-card(:bordered="false")
+      DrilldownTopBar
+
+    .traces-view-tabs(v-if="showTracesViews && !traceDetailOpen")
+      SignalTabNav(
+        mode="tabs"
+        :aria-label="t('drilldown.nav.tracesViews')"
+        :items="tracesViewItems"
+        :model-value="activeTracesView"
+        @update:model-value="onTracesViewSelect"
+      )
+
+    .drilldown-body.new-layout.new-layout--workspace(v-if="serviceMapActive")
+      ServiceMap
+
+    .drilldown-body.new-layout.new-layout--workspace(v-else-if="signal === 'metrics'")
+      keep-alive
+        MetricsOverview(v-if="!drawerVisible")
+      .drilldown-detail-shell(v-if="drawerVisible")
+      DrilldownDrawer(
+        popup-container=".drilldown-body"
+        :visible="drawerVisible"
+        :breadcrumbs="metricsCrumbs"
+        :subtitle="metricOriginalName || undefined"
+        @close="closeDrawer"
+      )
+        template(#actions)
+          MetricDetailActions(v-if="selectedMetric" :key="selectedMetric" :metric="selectedMetric")
+        MetricDetail(v-if="selectedMetric" :key="selectedMetric" :metric="selectedMetric")
+
+    .drilldown-body.new-layout.new-layout--workspace.drilldown-body--logs(v-else-if="signal === 'logs'")
+      keep-alive
+        LogsOverview(v-if="!logsDrawerVisible")
+      .drilldown-detail-shell(v-if="logsDrawerVisible")
+      DrilldownDrawer(
+        popup-container=".drilldown-body--logs"
+        variant="logs"
+        :visible="logsDrawerVisible"
+        :closable="false"
+        :breadcrumbs="logsDetailCrumbs"
+        @close="closeLogsDrawer"
+      )
+        template(#toolbar)
+          LogsDetailFilters
+        template(#tabs)
+          SignalTabNav(
+            mode="tabs"
+            aria-label="Logs detail"
+            :items="logsDetailTabs"
+            :model-value="logsTab"
+            @update:model-value="onLogsTabSelect"
+          )
+        LogsDetail(v-if="logsDrawerVisible")
+
+      DrilldownDrawer(
+        popup-container=".drilldown-body--logs"
+        variant="stacked"
+        subtitle="Trace Timeline"
+        :visible="tracesGanttVisible"
+        :breadcrumbs="logsGanttCrumbs"
+        @close="closeTracesGanttDrawer"
+      )
+        TracesGantt(v-if="tracesGanttVisible")
+
+      TraceLogsDrawer(
+        popup-container=".drilldown-body--logs"
+        source="explore"
+        :trace-id="logsTraceIdLabel"
+        :target="traceLogsTarget"
+        :binding="traceLogsBinding"
+        :trace-id-column="traceLogsIdColumn"
+        @close="closeLogsForTraceDrawer"
+      )
+
+    .drilldown-body.new-layout.new-layout--workspace.drilldown-body--traces(v-else-if="signal === 'traces'")
+      keep-alive
+        TracesHome(v-if="!tracesHomeHidden")
+      .drilldown-detail-shell(v-if="tracesHomeHidden")
+      DrilldownDrawer(
+        popup-container=".drilldown-body--traces"
+        variant="stacked"
+        subtitle="Trace Timeline"
+        :visible="tracesGanttVisible"
+        :breadcrumbs="tracesGanttCrumbs"
+        @close="closeTracesGanttDrawer"
+      )
+        TracesGantt(v-if="tracesGanttVisible")
+
+      TraceLogsDrawer(
+        popup-container=".drilldown-body--traces"
+        source="explore"
+        :trace-id="logsTraceIdLabel"
+        :target="traceLogsTarget"
+        :binding="traceLogsBinding"
+        :trace-id-column="traceLogsIdColumn"
+        @close="closeLogsForTraceDrawer"
+      )
+</template>
+
+<script setup lang="ts">
+  import { computed, ref, watch } from 'vue'
+  import { useI18n } from 'vue-i18n'
+  import { useRoute, useRouter } from 'vue-router'
+  import { useDrilldownContextProvider } from '@/observability/context'
+  import { isLogsDetailTab, LOGS_DETAIL_TABS } from '@/observability/types'
+  import { resolveMetricMeta } from '@/observability/semantics'
+  import useDrilldownUrlSync from '@/observability/use-drilldown-url-sync'
+  import useSignalBinding from '@/observability/signal-binding'
+  import TraceLogsDrawer from '@/views/dashboard/traces/components/TraceLogsDrawer.vue'
+  import DrilldownDrawer from './components/drilldown-drawer.vue'
+  import DrilldownTopBar from './components/top-bar.vue'
+  import SignalTabNav from './components/signal-tab-nav.vue'
+  import MetricsOverview from './metrics/metrics-overview.vue'
+  import MetricDetail from './metrics/metric-detail.vue'
+  import MetricDetailActions from './metrics/metric-detail-actions.vue'
+  import LogsOverview from './logs/logs-overview.vue'
+  import LogsDetail from './logs/logs-detail.vue'
+  import LogsDetailFilters from './logs/logs-detail-filters.vue'
+  import TracesHome from './traces/traces-home.vue'
+  import TracesGantt from './traces/traces-gantt.vue'
+  import useTraceLogsTarget from './traces/use-trace-logs-target'
+  import ServiceMap from './service-map/index.vue'
+
+  defineOptions({
+    name: 'Drilldown',
+  })
+
+  const { t } = useI18n()
+  const route = useRoute()
+  const router = useRouter()
+  const ctx = useDrilldownContextProvider()
+  // Register binder before URL hydrate so openLogsForTrace / bindTable are real implementations.
+  // Cold start still uses setTable until onMounted initialize (bindingStarted); URL table is
+  // stamped first so initialize prefers urlOrCurrent over settings.
+  useSignalBinding(ctx)
+  const urlSync = useDrilldownUrlSync(ctx, route, router)
+  urlSync.initializeFromQuery()
+
+  const { signal } = ctx.connection
+  const { setSignal } = ctx.actions
+  const serviceMapActive = computed(() => route.query.view === 'service-map')
+  // Trace detail replaces the list like Metrics / Logs detail does: the breadcrumb is the only
+  // navigation there, so the Overview / Service Map tabs would be a second, duplicate "Overview".
+  const showTracesViews = computed(() => serviceMapActive.value || signal.value === 'traces')
+  const activeTracesView = computed(() => (serviceMapActive.value ? 'service-map' : 'overview'))
+  const tracesViewItems = computed(() => [
+    { value: 'overview', label: t('drilldown.nav.overview') },
+    { value: 'service-map', label: t('drilldown.serviceMap.title') },
+  ])
+  const { logsTab } = ctx.ui
+  const { setLogsTab } = ctx.actions
+  const logsDetailTabs = computed(() =>
+    LOGS_DETAIL_TABS.map((value) => ({
+      value,
+      label: value === 'logs' ? 'Logs' : t('drilldown.logs.labelsTab'),
+    }))
+  )
+
+  const selectedMetric = computed(() => ctx.ui.metric.value)
+  const drawerVisible = computed(() => Boolean(selectedMetric.value))
+  const logsDrawerVisible = computed(() => ctx.ui.logsView.value === 'detail')
+  const logsFromTraceVisible = computed(() => Boolean(ctx.ui.logsTraceId.value))
+  const tracesGanttVisible = computed(() => Boolean(ctx.ui.focusTraceId.value))
+  const tracesHomeHidden = computed(() => tracesGanttVisible.value || logsFromTraceVisible.value)
+  // Service Map renders no detail drawer, so a stale trace id in the URL must not hide its tabs.
+  const traceDetailOpen = computed(() => tracesHomeHidden.value && !serviceMapActive.value)
+  const focusTraceIdLabel = computed(() => ctx.ui.focusTraceId.value || '')
+  const logsTraceIdLabel = computed(() => ctx.ui.logsTraceId.value || '')
+  const {
+    target: traceLogsTarget,
+    traceIdColumn: traceLogsIdColumn,
+    binding: traceLogsBinding,
+  } = useTraceLogsTarget(ctx)
+  const metricOriginalName = ref<string | null>(null)
+
+  watch(
+    selectedMetric,
+    async (name) => {
+      if (!name) {
+        metricOriginalName.value = null
+        return
+      }
+      const meta = await resolveMetricMeta(name, ctx.connection.metricsDatabase.value)
+      if (ctx.ui.metric.value === name) {
+        metricOriginalName.value = meta.originalName
+      }
+    },
+    { immediate: true }
+  )
+
+  const closeDrawer = () => {
+    ctx.ui.metric.value = undefined
+  }
+
+  const closeLogsDrawer = () => {
+    ctx.actions.closeLogsDetail()
+  }
+
+  const closeLogsForTraceDrawer = () => {
+    ctx.actions.closeLogsForTrace()
+  }
+
+  const closeTracesGanttDrawer = () => {
+    ctx.actions.closeTraceGantt()
+  }
+
+  const closeLogsToOverview = () => {
+    closeTracesGanttDrawer()
+    if (logsDrawerVisible.value) {
+      closeLogsDrawer()
+    }
+  }
+
+  const logsDetailLabel = computed(
+    () => ctx.ui.logsSelectedGroup.value || ctx.semantics.logs.table.value || t('drilldown.logs.logsSectionTitle')
+  )
+
+  const metricsCrumbs = computed(() => [
+    { label: t('drilldown.nav.overview'), onSelect: closeDrawer },
+    { label: selectedMetric.value || '', mono: true },
+  ])
+
+  const logsDetailCrumbs = computed(() => [
+    { label: t('drilldown.nav.overview'), onSelect: closeLogsDrawer },
+    { label: logsDetailLabel.value },
+  ])
+
+  const logsGanttCrumbs = computed(() => {
+    const overview = { label: t('drilldown.nav.overview'), onSelect: closeLogsToOverview }
+    const current = { label: focusTraceIdLabel.value, mono: true }
+    if (!logsDrawerVisible.value) {
+      return [overview, current]
+    }
+    return [overview, { label: logsDetailLabel.value, onSelect: closeTracesGanttDrawer }, current]
+  })
+
+  const tracesGanttCrumbs = computed(() => [
+    { label: t('drilldown.nav.overview'), onSelect: closeTracesGanttDrawer },
+    { label: focusTraceIdLabel.value, mono: true },
+  ])
+
+  const onLogsTabSelect = (value: string) => {
+    if (isLogsDetailTab(value)) {
+      setLogsTab(value)
+    }
+  }
+
+  const onTracesViewSelect = async (value: string) => {
+    if (value === 'overview') {
+      setSignal('traces')
+      await router.push({
+        query: {
+          ...route.query,
+          view: undefined,
+          signal: 'traces',
+          serviceMapSearch: undefined,
+          serviceMapScope: undefined,
+          serviceMapFilters: undefined,
+        },
+      })
+      return
+    }
+    if (value !== 'service-map') return
+    setSignal('traces')
+    await router.push({
+      query: {
+        ...route.query,
+        view: 'service-map',
+        signal: 'traces',
+      },
+    })
+  }
+</script>
+
+<style scoped lang="less">
+  .drilldown-page.query-container {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - var(--gpt-gap-3xl));
+    max-height: calc(100vh - var(--gpt-gap-3xl));
+    overflow: hidden;
+  }
+
+  .drilldown-content-wrapper {
+    display: flex;
+    flex: 1 1 0%;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .drilldown-top-card {
+    flex: 0 0 auto;
+  }
+
+  .traces-view-tabs {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: stretch;
+    background: var(--gpt-bg-panel);
+    border-bottom: 1px solid var(--gpt-border-default);
+  }
+
+  // Keeps popup-container sized when overview is unmounted for the detail virtual route.
+  .drilldown-detail-shell {
+    flex: 1 1 0%;
+    align-self: stretch;
+    min-width: 0;
+    min-height: 0;
+  }
+</style>

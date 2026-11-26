@@ -1,5 +1,5 @@
 <template lang="pug">
-.query-layout.query-layout--stack.trace-query-container.query-container
+.query-layout.query-layout--stack.trace-query-container.query-container.drilldown-body
   .page-header.gpt-page-header
     | {{ $t('menu.dashboard.traces') }}
   .content-wrapper.query-layout-cards
@@ -41,10 +41,11 @@
         SQLBuilder(
           v-if="editorType === 'builder'"
           ref="sqlBuilderRef"
-          storage-key="traces-query-table"
-          :table-filter="['trace_id', 'parent_span_id']"
+          remember-table
+          signal-database-kind="traces"
+          :storage-key="TRACES_QUERY_STORAGE_KEY"
+          :tables-provider="traceTablesProvider"
           :form-state="builderFormState"
-          :quick-field-names="['trace_id', 'service_name']"
           :default-form-state="defaultFormState"
         )
         SqlTextEditor(v-else v-model="textEditor.textEditorState.sql" @update:sql-info="handleSqlInfoUpdate")
@@ -71,20 +72,49 @@
       :loading="loading"
       :query-state="queryState"
       @filterConditionAdd="handleFilterConditionAdd"
+      @trace-click="openTrace"
+    )
+    TraceDetailDrawer(
+      popup-container=".trace-query-container"
+      logs-trace-enabled
+      :parent-label="$t('menu.dashboard.traces')"
+      :trace-id="traceDrawerId"
+      :target="traceDrawerTarget"
+      @close="closeTraceDrawer"
+      @view-logs="openLogs"
+    )
+    TraceLogsDrawer(
+      popup-container=".trace-query-container"
+      :trace-id="logsDrawerId"
+      :target="logsDrawerTarget"
+      @close="closeLogsDrawer"
     )
 </template>
 
 <script setup lang="ts">
   import { ref, computed, watch, nextTick, onMounted } from 'vue'
-  import { useLocalStorage } from '@vueuse/core'
   import { IconCode, IconDown, IconRight, IconDownload } from '@arco-design/web-vue/es/icon'
   import SQLBuilder from '@/components/sql-builder/index.vue'
   import SqlTextEditor from '@/components/sql-text-editor/index.vue'
+  import { isQueryGuideEnabled } from '@/utils/query-guide-enabled'
+  import { getSignalDatabase } from '@/observability/signal-database'
+  import { listSignalTables } from '@/observability/semantics'
+  import { TRACES_QUERY_STORAGE_KEY, writeQueryTable } from '@/observability/query-table-pref'
+  import useUiPref from '@/composables/use-ui-pref'
+  import { useI18n } from 'vue-i18n'
+  import { buildTraceDetailTarget } from '@/observability/traces/trace-detail-target'
+  import resolveTraceLogsDrawerTarget from '@/observability/traces/open-logs-from-trace'
+  import useTraceDrawerUrlSync from '@/observability/traces/use-trace-drawer-url-sync'
+  import { createRootSpanCondition } from '@/observability/traces/root-span-condition'
   import TraceTable from './components/TraceTable.vue'
+  import TraceDetailDrawer from './components/TraceDetailDrawer.vue'
+  import TraceLogsDrawer from './components/TraceLogsDrawer.vue'
 
   defineOptions({
     name: 'TraceQuery',
   })
+
+  const { t } = useI18n()
 
   // 1. Time range state
   const timeRange = useTimeRange()
@@ -92,13 +122,22 @@
 
   // 2. Builder form state
   const builder = useSqlBuilderHook({
-    storageKey: 'traces-query-table',
     timeRangeValues,
     defaultFormState: {
-      conditions: [{ field: 'parent_span_id', operator: 'Not Exist', value: '', relation: 'AND' }],
+      // Text mode has no DB selector; keep it on the per-signal DB.
+      database: getSignalDatabase('traces'),
+      // Root spans by default; the chip is an ordinary condition the user can remove.
+      conditions: [createRootSpanCondition()],
     },
   })
   const { builderFormState, addFilterCondition, generateSql, defaultFormState } = builder
+
+  /**
+   * Trace table suggest must stay trace-capable (semantic trace declaration or a
+   * physical `trace_id`). SQLBuilder filters this list locally, so it never falls back
+   * to the name-only prefix/`>=` search that also offered non-trace tables.
+   */
+  const traceTablesProvider = () => listSignalTables('traces', { database: getSignalDatabase('traces') })
 
   // 3. Text editor state
   const textEditor = useTextEditorState()
@@ -114,13 +153,17 @@
     timeRange,
     editorType,
   })
-  const { initializeFromQuery, updateQueryParams } = urlSync
+  const { initializeFromQuery, updateQueryParams, isApplyingLocalUrlUpdate } = urlSync
 
-  const allResults = ref([])
-  const chartExpanded = useLocalStorage('trace-chart-expanded', true)
+  const chartExpanded = useUiPref('traceChartExpanded', true)
   const countChartRef = ref()
   const sqlBuilderRef = ref()
   const timeRangeSelectRef = ref()
+  const route = useRoute()
+  const isTraceQueryRoute = () => route.name === 'trace-query'
+  // Guide browsing must not execute a default query; `tourApply` marks the explicit Run.
+  const shouldAutoExecuteInitialQuery = () => !isQueryGuideEnabled() || Boolean(route.query.tourApply)
+  const allResults = ref([])
 
   function handleSqlInfoUpdate(sqlInfo) {
     Object.assign(textEditor.textEditorState, sqlInfo)
@@ -130,13 +173,35 @@
     exportToCSV()
   }
 
+  /**
+   * Publish the table this page just queried, so the Logs Query page reads the same traces
+   * table from its Logs → trace link. Code mode has no SQLBuilder, so this is the only writer
+   * in that mode. Any defaulting (first table in the list) stays inside the page, never in the
+   * link: the link only follows what the page published.
+   */
+  function publishQueryTable() {
+    if (!queryState.table || !queryState.database) return
+    writeQueryTable(TRACES_QUERY_STORAGE_KEY, queryState.database, queryState.table)
+  }
+
   async function handleQuery() {
+    // Keep-alive keeps this component's watchers alive after it is deactivated. Do not
+    // let a cached Trace page consume query params or run while another route is active.
+    if (!isTraceQueryRoute()) return
+
     executeQuery().then((results) => {
+      if (!isTraceQueryRoute()) return
       allResults.value = results || []
       updateQueryParams()
+      publishQueryTable()
     })
-    if (chartExpanded.value && countChartRef.value && queryState.sql) {
-      countChartRef.value.executeCountQuery()
+    // CountChart mounts only after queryState.sql is set — wait a tick for the ref.
+    if (chartExpanded.value) {
+      nextTick(() => {
+        if (queryState.sql) {
+          countChartRef.value?.executeCountQuery()
+        }
+      })
     }
   }
 
@@ -155,6 +220,44 @@
     }
   }
 
+  // Trace detail opens as a drawer over this page: the page stays mounted and the drawer state
+  // lives in the URL query, so a refresh reopens it next to the list.
+  const {
+    traceId: traceDrawerId,
+    target: traceDrawerTarget,
+    open: openTraceDrawer,
+    close: closeTraceDrawer,
+  } = useTraceDrawerUrlSync('trace-query')
+
+  function openTrace(payload: { traceId: string; timestamp?: unknown }) {
+    const traceId = String(payload?.traceId || '').trim()
+    if (!traceId) return
+    openTraceDrawer(
+      traceId,
+      buildTraceDetailTarget({
+        table: queryState.table || 'spans',
+        database: queryState.database,
+        timestamp: payload.timestamp,
+      })
+    )
+  }
+
+  // Logs of the open trace stack on top of the trace drawer, also kept in the URL.
+  const {
+    traceId: logsDrawerId,
+    target: logsDrawerTarget,
+    open: openLogsDrawer,
+    close: closeLogsDrawer,
+  } = useTraceDrawerUrlSync('trace-query', 'logs')
+
+  function openLogs(span: Record<string, any>) {
+    const traceId = String(span?.trace_id || traceDrawerId.value || '').trim()
+    if (!traceId) return
+    // No logs table chosen yet is the panel's business, not a reason to refuse the click:
+    // open the drawer and let it say why there is nothing to show (same as Explore).
+    openLogsDrawer(traceId, resolveTraceLogsDrawerTarget(span?.timestamp))
+  }
+
   function handleFilterConditionAdd({ columnName, operator, value }) {
     if (sqlBuilderRef.value && sqlBuilderRef.value.addFilterCondition) {
       sqlBuilderRef.value.addFilterCondition(columnName, operator, value)
@@ -164,14 +267,29 @@
   }
 
   watch(canExecuteInitialQuery, (canExecute) => {
-    if (canExecute) {
-      handleQuery()
-    }
+    if (!canExecute || !shouldAutoExecuteInitialQuery()) return
+    handleQuery()
   })
 
   onMounted(() => {
     initializeFromQuery()
   })
+
+  // Same-route tutorial click: re-apply form and run (initial-query watch won't re-fire).
+  watch(
+    () => [route.query.builderForm, route.query.tourApply] as const,
+    (next, prev) => {
+      if (!isTraceQueryRoute()) return
+      if (isApplyingLocalUrlUpdate()) return
+      if (!prev) return
+      if (next[0] === prev[0] && next[1] === prev[1]) return
+      if (!next[0] && !next[1]) return
+      initializeFromQuery()
+      nextTick(() => {
+        handleQuery()
+      })
+    }
+  )
 </script>
 
 <style lang="less">

@@ -24,6 +24,10 @@ a-form.sql-builder-form(
       :allow-search="true"
       :trigger-props="{ autoFitPopupMinWidth: true }"
       :options="tables"
+      :virtual-list-props="{ height: 260, fixedSize: true, estimatedSize: 36 }"
+      :filter-option="!remoteTableSearch"
+      :loading="tableSearching"
+      @search="handleTableSearch"
       @change="handleTableChange"
     )
 
@@ -51,7 +55,9 @@ a-form.second-row-form(
               style="width: 140px"
               :placeholder="t('sqlBuilder.field')"
               :trigger-props="{ autoFitPopupMinWidth: true }"
+              :loading="attributesLoading"
               :options="fieldsOptions"
+              @popup-visible-change="onFieldPopupVisibleChange"
               @change="() => handleFieldChange(condition)"
             )
             a-select.operator(
@@ -69,11 +75,15 @@ a-form.second-row-form(
                 :placeholder="t('sqlBuilder.value')"
                 :options="['true', 'false']"
               )
-              a-input.value.filter-value-input(
+              a-auto-complete.value.filter-value-input(
                 v-else
                 v-model="condition.value"
                 style="width: 100%"
+                :data="valueSuggestions(condition)"
+                :loading="Boolean(valueLoading[condition.field])"
                 :placeholder="condition.operator === 'IN' || condition.operator === 'NOT IN' ? t('sqlBuilder.commaValuesHint') : t('sqlBuilder.value')"
+                @focus="loadValueSuggestions(condition)"
+                @search="onValueSearch(condition, $event)"
               )
           a-button.gpt-btn-outline-control(type="outline" size="small" @click="() => removeCondition(index)")
             template(#icon)
@@ -100,7 +110,7 @@ a-form.third-row-form(
         allow-search
         :placeholder="t('sqlBuilder.selectField')"
         :trigger-props="{ autoFitPopupMinWidth: true }"
-        :options="fieldsOptions"
+        :options="columnOptions"
       )
       a-select(
         v-model="form.orderBy"
@@ -179,12 +189,23 @@ a-modal(
 <script setup name="SQLBuilder" lang="ts">
   import { ref, watch, onMounted, computed, reactive, nextTick } from 'vue'
   import { useI18n } from 'vue-i18n'
-  import { useLocalStorage } from '@vueuse/core'
+  import { useDebounceFn } from '@vueuse/core'
+  import { Message } from '@arco-design/web-vue'
   import { storeToRefs } from 'pinia'
   import editorAPI from '@/api/editor'
   import { useAppStore } from '@/store'
+  import { listBySignal } from '@/observability/semantics'
+  import { getSignalDatabase, setSignalDatabase } from '@/observability/signal-database'
+  import { readQueryTable, writeQueryTable } from '@/observability/query-table-pref'
   import type { Condition, BuilderFormState as Form } from '@/types/query'
   import { TsTypeMapping } from '@/utils/date-time'
+  import { hostMatches, readRaw, writeJSON } from '@/utils/storage'
+  import { isJsonDataType } from '@/utils/json-display'
+  import { splitAttributeChip } from '@/observability/traces/attribute-keys'
+  import { fetchSampledAttributes } from '@/observability/traces/attribute-sampling'
+  import { hasRootSpanCondition } from '@/observability/traces/root-span-condition'
+  import { canSuggestValues as canSuggestFieldValues, fetchDistinctValues } from '@/observability/value-suggestions'
+  import type { TraceBreakdownAttribute } from '@/observability/traces/field-map'
 
   const { t } = useI18n()
 
@@ -205,19 +226,47 @@ a-modal(
     createdAt: number
   }
 
+  /** Single storage slot per builder page; the stamp decides whether it belongs here. */
+  interface QuickFilterStore {
+    v: 1
+    host: string
+    database: string
+    filters: QuickFilter[]
+  }
+
   const emit = defineEmits(['update:sql', 'update:formState'])
 
   // Props for form state and configuration
   const props = defineProps<{
     formState: Form | null
     tableFilter?: string | string[] // Optional column(s) tables must have (e.g. 'trace_id' or ['trace_id', 'parent_span_id'])
+    /** Optional async table list; when set, overrides signalDatabaseKind / tableFilter discovery. */
+    tablesProvider?: () => Promise<string[]>
     storageKey?: string // Optional storage key for localStorage (e.g., 'logs-query-table', 'traces-query-table')
-    quickFieldNames?: string[] // Array of field names for quick condition buttons
+    /**
+     * When set, form.database reads/writes the shared signal-db preference, and the table
+     * dropdown uses Drilldown `listSignalTables` (unless `tablesProvider` is provided).
+     */
+    signalDatabaseKind?: 'logs' | 'traces'
+    /**
+     * Remember the chosen table per database under `storageKey`, and restore it when the
+     * table is not already set (reload, database switch). Every write also records the
+     * (database, table) as the page's latest query, which the Logs ⇄ Trace links read back
+     * with `readLastQueryTable`.
+     */
+    rememberTable?: boolean
     defaultFormState?: Form
   }>()
 
+  const TABLE_WINDOW = 500
   const tables = ref<string[]>([])
   const tableMap = ref<{ [key: string]: TableField[] }>({})
+  /** Bounded initial options; remote search replaces `tables` while typing. */
+  const initialTables = ref<string[]>([])
+  const tableSearching = ref(false)
+  let tableSearchSeq = 0
+  /** Logs/Traces builders search table names on the server instead of loading all. */
+  const remoteTableSearch = computed(() => !!props.signalDatabaseKind && !props.tablesProvider)
 
   // Get current database from app store
   const { database, tableCatalog, tableSchema, databaseList } = storeToRefs(useAppStore())
@@ -228,12 +277,20 @@ a-modal(
     return databaseList.value.filter((db) => db !== 'greptime_private' && db !== 'information_schema')
   })
 
-  // Use localStorage to remember the last selected table
-  const storageKey = props.storageKey || 'sql-builder-last-table'
-  const lastSelectedTable = useLocalStorage(storageKey, '')
+  // Stable key for per-builder preferences (quick filters, remembered table). The table is
+  // only remembered when `rememberTable` is set, and per database, so a database switch
+  // never leaves the picker pointing at a name from the previous database.
+  const storageKey = props.storageKey || 'sql-builder'
 
   // Initialize form state as reactive object
   const form = reactive<Form>(props.formState)
+
+  /** Persist the table currently shown, once it is known to exist in this database. */
+  function rememberSelectedTable() {
+    if (!props.rememberTable || !form.database || !form.table) return
+    if (!tables.value.includes(form.table)) return
+    writeQueryTable(storageKey, form.database, form.table)
+  }
 
   // Computed tableCatalog and tableSchema based on form.database
   const currentTableCatalog = computed(() => {
@@ -256,21 +313,113 @@ a-modal(
 
   const fields = computed(() => {
     if (!form.table || !tableMap.value[form.table]) return []
-    return tableMap.value[form.table].filter((field) => field.data_type.toLowerCase() !== 'json')
+    return tableMap.value[form.table].filter((field) => !isJsonDataType(field.data_type))
   })
 
-  const fieldsOptions = computed(() => {
-    return fields.value.map((column) => ({
+  /**
+   * JSON2 attribute dimensions, sampled on demand when the filter field picker opens.
+   * v1 tables expose attributes as physical columns, so this stays empty there.
+   */
+  const sampledAttributes = ref<Record<string, TraceBreakdownAttribute>>({})
+  const attributeValues = ref<Record<string, string[]>>({})
+  const valueLoading = ref<Record<string, boolean>>({})
+  /** `${database}\0${table}` last sampled (or in flight); empty means not loaded for current table. */
+  const attributesSampleKey = ref('')
+  const attributesLoading = ref(false)
+  let attributesLoadPromise: Promise<void> | null = null
+
+  /**
+   * Traces: attribute suggestions follow the root-span condition. With it, sample root spans
+   * (the rows the query can match); without it, sample every span so child-only keys show up.
+   */
+  function attributeScope(): 'root' | 'all' {
+    return props.signalDatabaseKind === 'traces' && !hasRootSpanCondition(form.conditions) ? 'all' : 'root'
+  }
+
+  function currentAttributesKey() {
+    return form.table ? `${form.database ?? ''}\0${form.table}\0${attributeScope()}` : ''
+  }
+
+  function clearSampledAttributes() {
+    sampledAttributes.value = {}
+    attributeValues.value = {}
+    attributesSampleKey.value = ''
+    attributesLoading.value = false
+    attributesLoadPromise = null
+  }
+
+  async function loadSampledAttributes() {
+    if (!form.table) {
+      clearSampledAttributes()
+      return
+    }
+    const tableFields = tableMap.value[form.table] || []
+    const columns = tableFields.map((column) => column.name)
+    if (!columns.length) {
+      sampledAttributes.value = {}
+      return
+    }
+    const loadKey = currentAttributesKey()
+    const tsField =
+      tableFields.find((column) => column.semantic_type === 'TIMESTAMP') ??
+      tableFields.find((column) => column.data_type.toLowerCase().includes('timestamp'))
+    const attributes = await fetchSampledAttributes({
+      database: form.database,
+      table: form.table,
+      columns,
+      // Logs have no parent span.
+      parentColumn: props.signalDatabaseKind === 'traces' ? 'parent_span_id' : undefined,
+      scope: attributeScope(),
+      timeColumn: tsField?.name,
+    })
+    // Drop stale results if the user switched tables while the sample was in flight.
+    if (currentAttributesKey() !== loadKey) return
+    // Dotted attribute names share the field namespace with real columns; real columns win.
+    const fieldsByName = new Set(columns)
+    sampledAttributes.value = Object.fromEntries(
+      attributes
+        .filter((attribute) => !fieldsByName.has(attribute.column))
+        .map((attribute) => [attribute.column, attribute])
+    )
+    attributesSampleKey.value = loadKey
+  }
+
+  /** JSON2 attribute metadata for a condition field, if the field is one. */
+  function attributeOf(field: string): { column: string; path: string } | undefined {
+    return sampledAttributes.value[field] ? splitAttributeChip(field) : undefined
+  }
+
+  const attributeOptions = computed(() =>
+    Object.keys(sampledAttributes.value)
+      .sort((left, right) => left.localeCompare(right))
+      .map((key) => ({ label: key, value: key }))
+  )
+
+  /** Physical columns only: ORDER BY renders an identifier, so chips cannot be used. */
+  const columnOptions = computed(() =>
+    fields.value.map((column) => ({
       label: column.name,
       value: column.name,
     }))
-  })
+  )
+
+  const fieldsOptions = computed(() => [...columnOptions.value, ...attributeOptions.value])
 
   // Quick Filters logic (after form and fields are defined)
-  const quickFiltersStorageKey = computed(() => `${storageKey}-quick-filters`)
-  const clearedFiltersKey = computed(() => `${storageKey}-filters-cleared`)
-  let savedQuickFilters = useLocalStorage(quickFiltersStorageKey.value, [] as QuickFilter[])
-  const userClearedFilters = useLocalStorage(clearedFiltersKey.value, false)
+  //
+  // One slot per builder page. The value carries the host + database it was saved on;
+  // when the page is on another database the chips are hidden, and saving again replaces
+  // the slot (last write wins) instead of leaking filters into an unrelated database.
+  const quickFiltersStorageKey = `${storageKey}-quick-filters`
+  const quickFilterStore = ref<QuickFilterStore | null>(null)
+
+  const savedQuickFilters = computed<QuickFilter[]>(() => {
+    const store = quickFilterStore.value
+    if (!store) return []
+    if (!hostMatches(store.host, appStore.host || '')) return []
+    if (store.database !== form.database) return []
+    return store.filters
+  })
 
   const showSaveQuickFilter = ref(false)
   const saveQuickFilterFormRef = ref()
@@ -295,53 +444,70 @@ a-modal(
     ],
   }
 
-  function createDefaultQuickFilters(): QuickFilter[] {
-    if (!props.quickFieldNames || !form.table || !fields.value.length) return []
-    return props.quickFieldNames
-      .filter((fieldName) => fields.value.some((field) => field.name === fieldName))
-      .map((fieldName) => {
-        const field = fields.value.find((f) => f.name === fieldName)
-        const isTimeCol = field?.data_type.toLowerCase().includes('timestamp') || false
-        const defaultOperator = '='
-        return {
-          name: fieldName,
-          table: form.table,
-          database: form.database,
-          conditions: [
-            {
-              field: fieldName,
-              operator: defaultOperator,
-              value: '',
-              isTimeColumn: isTimeCol,
-              relation: 'AND',
-            },
-          ],
-          orderByField: form.orderByField,
-          orderBy: form.orderBy,
-          limit: form.limit,
-          createdAt: Date.now(),
-        }
-      })
+  function asQuickFilters(value: unknown): QuickFilter[] {
+    if (!Array.isArray(value)) return []
+    return value.filter(
+      (item): item is QuickFilter => !!item && typeof item === 'object' && typeof item.name === 'string'
+    )
   }
 
-  function initializeQuickFilters() {
-    // Only initialize default filters if user hasn't manually cleared them
-    if (savedQuickFilters.value.length === 0 && !userClearedFilters.value && props.quickFieldNames) {
-      const defaults = createDefaultQuickFilters()
-      if (defaults.length > 0) {
-        savedQuickFilters.value = defaults
-      }
+  /** Load and upgrade the stored slot. The deep watcher persists the migrated shape. */
+  function readQuickFilters() {
+    if (!form.database) return
+    const raw = readRaw(quickFiltersStorageKey)
+    if (!raw) {
+      quickFilterStore.value = null
+      return
     }
+    try {
+      const parsed = JSON.parse(raw)
+      // Legacy shape: a bare array shared by every database. Keep only entries that
+      // explicitly belong to the current DB (or have no DB recorded).
+      if (Array.isArray(parsed)) {
+        const filters = asQuickFilters(parsed).filter((filter) => !filter.database || filter.database === form.database)
+        quickFilterStore.value = {
+          v: 1,
+          host: appStore.host || '',
+          database: form.database,
+          filters,
+        }
+        return
+      }
+      if (parsed && typeof parsed === 'object' && Array.isArray(parsed.filters)) {
+        quickFilterStore.value = {
+          v: 1,
+          host: typeof parsed.host === 'string' ? parsed.host : '',
+          database: typeof parsed.database === 'string' ? parsed.database : '',
+          filters: asQuickFilters(parsed.filters),
+        }
+        return
+      }
+    } catch {
+      // Malformed value: start clean below.
+    }
+    quickFilterStore.value = null
+  }
+
+  /** The store must belong to the current host+DB before it can be mutated. */
+  function ensureCurrentStore(): QuickFilterStore {
+    const host = appStore.host || ''
+    const current = quickFilterStore.value
+    if (current && current.database === form.database && hostMatches(current.host, host)) {
+      return current
+    }
+    const next: QuickFilterStore = { v: 1, host, database: form.database, filters: [] }
+    quickFilterStore.value = next
+    return next
   }
 
   watch(
-    () => [fields.value, form.table],
-    () => {
-      savedQuickFilters = useLocalStorage(quickFiltersStorageKey.value, [] as QuickFilter[])
-      nextTick(() => {
-        initializeQuickFilters()
-      })
-    }
+    quickFilterStore,
+    (store) => {
+      if (store) {
+        writeJSON(quickFiltersStorageKey, store)
+      }
+    },
+    { deep: true }
   )
 
   const timeColumns = computed(() => {
@@ -382,26 +548,48 @@ a-modal(
     { immediate: true }
   )
 
-  const orderOptions = computed(() => [
-    { label: t('sqlBuilder.asc'), value: 'ASC' },
-    { label: t('sqlBuilder.desc'), value: 'DESC' },
-  ])
+  const orderOptions = [
+    { label: 'ASC', value: 'ASC' },
+    { label: 'DESC', value: 'DESC' },
+  ]
 
-  const relationOptions = computed(() => [
-    { label: t('sqlBuilder.and'), value: 'AND' },
-    { label: t('sqlBuilder.or'), value: 'OR' },
-  ])
+  const relationOptions = [
+    { label: 'AND', value: 'AND' },
+    { label: 'OR', value: 'OR' },
+  ]
 
   // Operator mapping based on field data type (similar to log query)
   const operatorMap = {
-    String: ['=', '!=', 'LIKE', 'NOT LIKE', 'Not Exist', 'Exist', 'IN', 'NOT IN'],
+    String: ['=', '!=', 'MATCH', 'NOT MATCH', 'LIKE', 'NOT LIKE', 'Not Exist', 'Exist', 'IN', 'NOT IN'],
     Number: ['=', '!=', '>', '>=', '<', '<=', 'Not Exist', 'Exist', 'IN', 'NOT IN'],
     Time: ['>', '>=', '<', '<=', 'Not Exist', 'Exist', 'IN', 'NOT IN'],
     Boolean: ['=', '!=', 'Not Exist', 'Exist'],
-    Default: ['=', '!=', '>', '<', '>=', '<=', 'LIKE', 'NOT LIKE', 'Not Exist', 'Exist', 'IN', 'NOT IN'],
+    Default: [
+      '=',
+      '!=',
+      '>',
+      '<',
+      '>=',
+      '<=',
+      'MATCH',
+      'NOT MATCH',
+      'LIKE',
+      'NOT LIKE',
+      'Not Exist',
+      'Exist',
+      'IN',
+      'NOT IN',
+    ],
   }
 
   function getFieldType(fieldName: string): string {
+    const attribute = sampledAttributes.value[fieldName]
+    if (attribute) {
+      // Sampled JSON2 type: numbers offer comparison operators, booleans only equality.
+      if (attribute.dataType === 'BIGINT' || attribute.dataType === 'DOUBLE') return 'Number'
+      if (attribute.dataType === 'BOOLEAN') return 'Boolean'
+      return 'String'
+    }
     const field = fields.value.find((f) => f.name === fieldName)
     if (!field) return 'String'
 
@@ -427,7 +615,11 @@ a-modal(
 
   function getOperators(field: string) {
     const fieldType = getFieldType(field)
-    const operators = operatorMap[fieldType] || operatorMap.Default
+    const isAttribute = Boolean(sampledAttributes.value[field])
+    // MATCH needs a text column; a JSON path expression cannot back the fulltext index.
+    const operators = (operatorMap[fieldType] || operatorMap.Default).filter(
+      (op) => !isAttribute || (op !== 'MATCH' && op !== 'NOT MATCH')
+    )
 
     return operators.map((op) => ({
       label: op,
@@ -435,32 +627,130 @@ a-modal(
     }))
   }
 
+  /**
+   * Value suggestions follow the same policy as the Explore top filter
+   * (`observability/value-suggestions`): label-like strings only, IN/NOT IN excluded.
+   */
+  function canSuggestValues(condition: Condition): boolean {
+    const attribute = sampledAttributes.value[condition.field]
+    const column = attribute ? undefined : fields.value.find((item) => item.name === condition.field)
+    if (!attribute && !column) {
+      return false
+    }
+    return canSuggestFieldValues(
+      { name: condition.field, dataType: attribute?.dataType ?? column?.data_type },
+      condition.operator
+    )
+  }
+
+  function valueSuggestions(condition: Condition): string[] {
+    return canSuggestValues(condition) ? attributeValues.value[condition.field] || [] : []
+  }
+
+  async function loadValueSuggestions(condition: Condition) {
+    const { field } = condition
+    if (!canSuggestValues(condition) || attributeValues.value[field] || valueLoading.value[field]) {
+      return
+    }
+    const chip = attributeOf(field)
+    valueLoading.value = { ...valueLoading.value, [field]: true }
+    try {
+      const values = await fetchDistinctValues({
+        database: form.database,
+        table: form.table,
+        source: chip ? { kind: 'attribute', column: chip.column, path: chip.path } : { kind: 'column', column: field },
+      })
+      attributeValues.value = { ...attributeValues.value, [field]: values }
+    } finally {
+      valueLoading.value = { ...valueLoading.value, [field]: false }
+    }
+  }
+
+  /** Local filtering only — suggestions are fetched once per field. */
+  function onValueSearch(condition: Condition, _search: string) {
+    loadValueSuggestions(condition)
+  }
+
+  async function fetchTableNames(limit: number, filter = '', db = form.database): Promise<string[]> {
+    const res: any = await editorAPI.getTables(limit, 0, db, filter)
+    return ((res?.output?.[0]?.records?.rows || []) as string[][]).map((row) => row[0]).filter(Boolean)
+  }
+
   async function fetchTables() {
     try {
-      const columns = [props.tableFilter ?? []].flat().filter(Boolean)
-      let sql = `SELECT DISTINCT table_name FROM information_schema.columns WHERE table_catalog = '${currentTableCatalog.value}' AND table_schema = '${currentTableSchema.value}'`
-      if (columns.length) {
-        sql += ` AND column_name IN (${columns
-          .map((c) => `'${c}'`)
-          .join(', ')}) GROUP BY table_name HAVING COUNT(DISTINCT column_name) = ${columns.length}`
-      }
-      sql += ` ORDER BY table_name`
+      if (props.tablesProvider) {
+        tables.value = await props.tablesProvider()
+      } else if (props.signalDatabaseKind) {
+        // Bounded initial list: declared signal tables first, then the first page of
+        // all tables. Typing searches the rest on the server, so a 1M-table database
+        // never materialises its full name list in the browser.
+        const targetDb = form.database || getSignalDatabase(props.signalDatabaseKind)
+        const signal = props.signalDatabaseKind === 'logs' ? 'log' : 'trace'
+        tableSearchSeq += 1
+        tableSearching.value = false
+        const [semanticRows, pageNames] = await Promise.all([
+          listBySignal(signal, targetDb),
+          fetchTableNames(TABLE_WINDOW, '', targetDb),
+        ])
+        const semanticNames = semanticRows.map((row) => row.tableName).filter(Boolean)
+        initialTables.value = Array.from(new Set([...semanticNames, ...pageNames]))
+        tables.value = initialTables.value
+      } else {
+        const columns = [props.tableFilter ?? []].flat().filter(Boolean)
+        let sql = `SELECT DISTINCT table_name FROM information_schema.columns WHERE table_catalog = '${currentTableCatalog.value}' AND table_schema = '${currentTableSchema.value}'`
+        if (columns.length) {
+          sql += ` AND column_name IN (${columns
+            .map((c) => `'${c}'`)
+            .join(', ')}) GROUP BY table_name HAVING COUNT(DISTINCT column_name) = ${columns.length}`
+        }
+        sql += ` ORDER BY table_name`
 
-      const result = await editorAPI.runSQL(sql, form.database)
-      tables.value = result.output[0].records.rows.map((row: string[]) => row[0])
-
-      // Validate and set table from localStorage or default
-      if (lastSelectedTable.value && tables.value.includes(lastSelectedTable.value)) {
-        // Use the remembered table if it still exists
-        form.table = lastSelectedTable.value
-      } else if (tables.value.length > 0) {
-        // Use first available table if remembered table doesn't exist
-        form.table = tables.value[0]
+        const result = await editorAPI.runSQL(sql, form.database)
+        tables.value = result.output[0].records.rows.map((row: string[]) => row[0])
       }
+
+      // Keep a table already chosen for this database (e.g. restored from the URL);
+      // otherwise the one remembered for this database, else the first in the list.
+      if (!form.table || !tables.value.includes(form.table)) {
+        const remembered = props.rememberTable ? readQueryTable(storageKey, form.database) : undefined
+        form.table = remembered && tables.value.includes(remembered) ? remembered : tables.value[0] ?? ''
+      }
+      rememberSelectedTable()
     } catch (error) {
       console.error('Failed to fetch tables:', error)
     }
   }
+
+  /** Names already loaded for this builder page, matched with substring semantics. */
+  const localTableMatches = (keyword: string) => {
+    const needle = keyword.toLowerCase()
+    return initialTables.value.filter((name) => name.toLowerCase().includes(needle))
+  }
+
+  const handleTableSearch = useDebounceFn(async (keyword: string) => {
+    if (!remoteTableSearch.value) return
+    const trimmed = (keyword || '').trim()
+    tableSearchSeq += 1
+    const seq = tableSearchSeq
+    if (!trimmed) {
+      tableSearching.value = false
+      tables.value = initialTables.value
+      return
+    }
+    tableSearching.value = true
+    // Server-side contains search (`LIKE '%kw%'`) plus the names already loaded for
+    // this page, so a substring like "lo" still surfaces `_gt_logs` immediately.
+    const localMatches = localTableMatches(trimmed)
+    try {
+      const names = await fetchTableNames(TABLE_WINDOW, trimmed, form.database)
+      if (seq !== tableSearchSeq) return
+      tables.value = [...new Set([...localMatches, ...names])]
+    } catch (error) {
+      console.error('Failed to search tables:', error)
+    } finally {
+      if (seq === tableSearchSeq) tableSearching.value = false
+    }
+  }, 300)
 
   async function fetchTableFields(tableName: string) {
     if (!tableName) return
@@ -472,14 +762,49 @@ a-modal(
     }
   }
 
+  /** Lazy sample: only when the filter field dropdown opens (not on table select / page load). */
+  function ensureSampledAttributes() {
+    const key = currentAttributesKey()
+    if (!key || attributesSampleKey.value === key) return attributesLoadPromise ?? Promise.resolve()
+    if (attributesLoadPromise) return attributesLoadPromise
+
+    attributesLoading.value = true
+    attributesLoadPromise = (async () => {
+      try {
+        // Schema must be present so we know which JSON containers to SELECT.
+        if (form.table && !(tableMap.value[form.table] || []).length) {
+          await fetchTableFields(form.table)
+        }
+        await loadSampledAttributes()
+      } finally {
+        if (currentAttributesKey() === key) {
+          attributesLoading.value = false
+          attributesLoadPromise = null
+        }
+      }
+    })()
+    return attributesLoadPromise
+  }
+
+  function onFieldPopupVisibleChange(visible: boolean) {
+    if (visible) {
+      ensureSampledAttributes()
+    }
+  }
+
   // Unified form reset function: default values + provided values
   function resetForm(valuesToSet: Partial<Form> = {}) {
     const defaultState = JSON.parse(JSON.stringify(props.defaultFormState || {}))
-    // Reset form with default state and provided values
-    Object.assign(form, defaultState, valuesToSet)
+    // Keep the current DB unless the caller explicitly switches it (database change
+    // or quick filter). Otherwise selecting a table would restore the page's default
+    // DB and silently undo the user's database switch.
+    Object.assign(form, defaultState, { database: form.database }, valuesToSet)
   }
 
   function handleDatabaseChange() {
+    if (props.signalDatabaseKind && form.database) {
+      setSignalDatabase(props.signalDatabaseKind, form.database)
+    }
     // Reset form state when database changes, preserve current database
     resetForm({ database: form.database })
     tables.value = []
@@ -488,9 +813,6 @@ a-modal(
   }
 
   function handleTableChange() {
-    // Save the selected table to localStorage
-    lastSelectedTable.value = form.table
-
     // Reset form state for new table, preserve current table
     resetForm({ table: form.table })
   }
@@ -518,6 +840,9 @@ a-modal(
 
   function handleFieldChange(condition: Condition) {
     condition.fieldType = getFieldType(condition.field)
+    // Chip keys have no column: the hook renders them as JSON path expressions.
+    condition.jsonAttribute = attributeOf(condition.field)
+    loadValueSuggestions(condition)
   }
 
   function removeCondition(index: number) {
@@ -530,10 +855,20 @@ a-modal(
     if (databaseList.value.length === 0) {
       await appStore.refreshDatabaseList()
     }
+    // Keep a valid DB already carried by the form (URL deep link, tour step, restored
+    // page state). The shared signal preference is a fallback, not an override: blindly
+    // applying it here would replace the DB the parent just restored from the URL.
+    if (props.signalDatabaseKind && (!form.database || !filteredDatabaseList.value.includes(form.database))) {
+      form.database = getSignalDatabase(props.signalDatabaseKind)
+    }
     // Initialize form.database if not set or not in filtered list
     if (!form.database || !filteredDatabaseList.value.includes(form.database)) {
       form.database = filteredDatabaseList.value[0] || database.value
     }
+    if (props.signalDatabaseKind && form.database) {
+      setSignalDatabase(props.signalDatabaseKind, form.database)
+    }
+    readQuickFilters()
   })
 
   // Watch form.database changes to fetch tables
@@ -541,6 +876,9 @@ a-modal(
     () => form.database,
     (newDatabase, oldDatabase) => {
       if (newDatabase) {
+        if (props.signalDatabaseKind) {
+          setSignalDatabase(props.signalDatabaseKind, newDatabase)
+        }
         // Only fetch tables if database actually changed (not during initial setup)
         if (oldDatabase && oldDatabase !== newDatabase) {
           // Reset form when database changes, preserve current database
@@ -556,13 +894,11 @@ a-modal(
 
   watch(
     () => form.table,
-    (newTable) => {
-      if (newTable) {
-        // Save to localStorage whenever table changes
-        lastSelectedTable.value = newTable
-      }
+    () => {
+      rememberSelectedTable()
+      clearSampledAttributes()
       fetchTableFields(form.table)
-      // Table value is now extracted from form state in parent component
+      // Attribute keys are sampled later, when the filter field picker opens.
     },
     { immediate: true }
   )
@@ -570,9 +906,9 @@ a-modal(
   // Function to add a filter condition from external components
   function addFilterCondition(columnName: string, operator: string, value: string) {
     const column = fields.value.find((col) => col.name === columnName)
-    if (!column) return
+    if (!column && !sampledAttributes.value[columnName]) return
 
-    const isTimeCol = column.data_type.toLowerCase().includes('timestamp')
+    const isTimeCol = Boolean(column?.data_type.toLowerCase().includes('timestamp'))
 
     const newCondition: Condition = {
       field: columnName,
@@ -581,6 +917,7 @@ a-modal(
       isTimeColumn: isTimeCol,
       relation: 'AND',
       fieldType: getFieldType(columnName),
+      jsonAttribute: attributeOf(columnName),
     }
 
     form.conditions.push(newCondition)
@@ -601,10 +938,11 @@ a-modal(
         limit: form.limit,
         createdAt: Date.now(),
       }
-      savedQuickFilters.value.push(newQuickFilter)
-
-      // Reset the cleared flag since user is actively using filters
-      userClearedFilters.value = false
+      const store = ensureCurrentStore()
+      quickFilterStore.value = {
+        ...store,
+        filters: [...store.filters, newQuickFilter],
+      }
 
       saveQuickFilterForm.name = ''
       showSaveQuickFilter.value = false
@@ -617,11 +955,14 @@ a-modal(
     // Determine values to set based on quick filter
     const valuesToSet: Partial<Form> = {}
 
-    // Switch to the saved database if different and valid
+    // Switch to the saved database if different and valid. If it disappeared (host
+    // switch / dropped DB), refuse instead of applying its table to the current DB.
     if (quickFilter.database && quickFilter.database !== form.database) {
-      if (filteredDatabaseList.value.includes(quickFilter.database)) {
-        valuesToSet.database = quickFilter.database
+      if (!filteredDatabaseList.value.includes(quickFilter.database)) {
+        Message.warning(t('quickFilters.databaseUnavailable', { database: quickFilter.database }))
+        return
       }
+      valuesToSet.database = quickFilter.database
     } else if (form.database) {
       valuesToSet.database = form.database
     }
@@ -648,14 +989,11 @@ a-modal(
   }
 
   function removeQuickFilter(filterId: string) {
-    const idx = savedQuickFilters.value.findIndex((filter) => filter.name === filterId)
-    if (idx !== -1) {
-      savedQuickFilters.value.splice(idx, 1)
-      // Mark that user has manually cleared filters
-      if (savedQuickFilters.value.length === 0) {
-        userClearedFilters.value = true
-      }
-    }
+    const store = quickFilterStore.value
+    if (!store) return
+    const filters = store.filters.filter((filter) => filter.name !== filterId)
+    if (filters.length === store.filters.length) return
+    quickFilterStore.value = { ...store, filters }
   }
 
   // Expose methods for external use

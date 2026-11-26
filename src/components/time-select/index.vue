@@ -3,7 +3,7 @@ a-trigger#time-select(
   v-model:popup-visible="visible"
   trigger="click"
   :position="flexDirection === 'row' ? 'br' : 'bl'"
-  :update-at-scroll="true"
+  :update-at-scroll="updateAtScroll"
   :popup-offset="4"
   :click-outside-to-close="true"
 )
@@ -11,12 +11,12 @@ a-trigger#time-select(
     template(#icon)
       svg.icon-16
         use(href="#time")
-    div(style="display: flex; align-items: center; gap: 4px")
+    div(style="display: flex; align-items: center; gap: 4px" :title="timezoneFullLabel")
       div(v-if="isRelative") {{ relativeTimeMap[timeLength] || props.emptyStr }}
 
       div(v-else)
         | {{ absoluteTimeLabel }}
-      .timezone {{ timezoneLabel }}
+      .timezone(v-if="showTimezoneLabel") {{ timezoneLabel }}
   template(#content)
     a-space.hide
     a-space(
@@ -34,7 +34,7 @@ a-trigger#time-select(
         position="bl"
         :model-value="rangePickerModelValue"
         :show-time="true"
-        :trigger-props="{ 'update-at-scroll': true }"
+        :trigger-props="{ 'update-at-scroll': updateAtScroll }"
         :placeholder="[$t('dashboard.startTime'), $t('dashboard.endTime')]"
         @ok="selectTimeRange($event)"
       )
@@ -101,20 +101,30 @@ a-trigger#time-select(
       type: String,
       default: '',
     },
+    /**
+     * Reposition popup on scroll. Keep false near nested scroll surfaces
+     * (e.g. logs virtual table) — scroll can otherwise disturb the picker.
+     */
+    updateAtScroll: {
+      type: Boolean,
+      default: false,
+    },
   })
   const emit = defineEmits(['update:timeLength', 'update:timeRange', 'change'])
 
   const rangePickerVisible = ref(false)
   const visible = ref(false)
 
-  const { browserOffset, offsetDiff, timezoneLabel, toBrowserTimezoneTimestamp } = useDashboardTimezone()
+  const { offsetDiffAt, timezoneLabel, timezoneFullLabel, showTimezoneLabel, toBrowserTimezoneTimestamp } =
+    useDashboardTimezone()
 
   const toTimezoneTime = (value: string | number) => {
     const base = dayjs.unix(Number(value))
-    return offsetDiff.value === 0 ? base : base.add(offsetDiff.value, 'minute')
+    const diff = offsetDiffAt(base.valueOf())
+    return diff === 0 ? base : base.add(diff, 'minute')
   }
 
-  const isRelative = computed(() => props.timeLength !== 0 || props.timeRange.length === 0)
+  const isRelative = computed(() => props.timeLength > 0 && props.timeRange.length !== 2)
 
   const rangePickerModelValue = computed(() => {
     // Case 1: absolute range provided → convert unix seconds to dashboard-timezone Date

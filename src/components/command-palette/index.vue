@@ -35,7 +35,7 @@ teleport(to="body")
                   span.cp-item-hint(v-else-if="item.kind === 'ui' || item.kind === 'group'") {{ item.hint }}
                 span.cp-item-arrow(v-if="item.kind === 'group'") →
           .cp-empty(v-else)
-            | No results found.
+            | {{ $t('common.noResults') }}
 </template>
 
 <script lang="ts" setup>

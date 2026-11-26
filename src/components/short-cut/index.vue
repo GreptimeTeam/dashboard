@@ -1,11 +1,11 @@
 <template lang="pug">
-a-tooltip(position="right" :content="codeInfo.code")
+a-tooltip(position="right" :content="getCodeInfo().code")
   a-button.short-cut-btn(
     type="text"
     size="small"
     :class="{ 'arco-btn-only-icon': label === '' }"
     :loading="isLoading"
-    @click="clickShortCut(codeInfo.code, codeInfo.cursorPosition)"
+    @click="clickShortCut"
     @mouseenter="hoverQuickSelect(node)"
   ) {{ label }}
     template(v-if="icon" #icon)
@@ -16,6 +16,7 @@ a-tooltip(position="right" :content="codeInfo.code")
 <script lang="ts" setup name="ShortCut">
   import useSiderTabs from '@/hooks/sider-tabs'
   import type { TableTreeParent, TreeChild } from '@/store/modules/database/types'
+  import { getTableRefForSql } from '@/utils/sql'
 
   const props = defineProps<{
     label: string
@@ -30,10 +31,6 @@ a-tooltip(position="right" :content="codeInfo.code")
   const { loadMoreColumns } = useSiderTabs()
 
   const isLoading = ref(false)
-
-  const clickShortCut = (info: string, cursorPosition: number) => {
-    inputFromNewLineToQueryCode(info, cursorPosition)
-  }
 
   const formatter = (code: string) => {
     // No format for now.
@@ -53,43 +50,43 @@ a-tooltip(position="right" :content="codeInfo.code")
   }
 
   const getCodeAndCursorPos = (type: string, node: TreeChild, parent: TableTreeParent) => {
-    const orderBy = parent.timeIndexName !== `%TIMESTAMP%` ? ` ORDER BY "${parent.timeIndexName}" ` : ` `
+    const timeIndexName = parent.timeIndexName && parent.timeIndexName !== '%TIMESTAMP%' ? parent.timeIndexName : ''
+    const orderBy = timeIndexName ? ` ORDER BY "${timeIndexName}" ` : ' '
+    const from = getTableRefForSql({ table: parent.title, database: props.database })
     switch (type) {
       case 'select*100':
         return {
-          code: formatter(`SELECT * FROM ${props.database}."${parent.title}"${orderBy}DESC LIMIT 100;`),
+          code: formatter(`SELECT * FROM ${from}${orderBy}DESC LIMIT 100;`),
           cursorPosition: 0,
         }
       case 'count':
         return {
-          code: formatter(`SELECT count(*) FROM ${props.database}."${parent.title}" GROUP BY "${node.title}";`),
+          code: formatter(`SELECT count(*) FROM ${from} GROUP BY "${node.title}";`),
           cursorPosition: 0,
         }
       case 'where=':
         return {
-          code: formatter(`SELECT * FROM ${props.database}."${parent.title}" WHERE "${node.title}" = ${orderBy}DESC;`),
+          code: formatter(`SELECT * FROM ${from} WHERE "${node.title}" = ${orderBy}DESC;`),
           cursorPosition: `${orderBy}DESC;`.length,
         }
       case 'select100':
         return {
-          code: formatter(`SELECT "${node.title}" FROM ${props.database}."${parent.title}"${orderBy}DESC LIMIT 100;`),
+          code: formatter(`SELECT "${node.title}" FROM ${from}${orderBy}DESC LIMIT 100;`),
           cursorPosition: 0,
         }
       case 'max':
         return {
-          code: formatter(`SELECT max("${node.title}") FROM ${props.database}."${parent.title}";`),
+          code: formatter(`SELECT max("${node.title}") FROM ${from};`),
           cursorPosition: 0,
         }
       case 'min':
         return {
-          code: formatter(`SELECT min("${node.title}") FROM ${props.database}."${parent.title}";`),
+          code: formatter(`SELECT min("${node.title}") FROM ${from};`),
           cursorPosition: 0,
         }
       case 'where<':
         return {
-          code: formatter(
-            `SELECT * FROM ${props.database}."${parent.title}" WHERE "${parent.timeIndexName}" < ${orderBy}DESC LIMIT 100;`
-          ),
+          code: formatter(`SELECT * FROM ${from} WHERE "${timeIndexName || node.title}" < ${orderBy}DESC LIMIT 100;`),
           cursorPosition: `${orderBy}DESC LIMIT 100;`.length,
         }
       default:
@@ -100,9 +97,31 @@ a-tooltip(position="right" :content="codeInfo.code")
     }
   }
 
-  const codeInfo = computed(() => {
-    return getCodeAndCursorPos(props.type, props.node, props.parent)
-  })
+  /**
+   * Build the SQL at click time and make sure the table's time index is known.
+   * Tree nodes are stored in a shallowRef (no per-node reactivity), so a
+   * computed that captured `timeIndexName` before columns were loaded would
+   * stay stale and produce `ORDER BY ""`.
+   */
+  // Build lazily: tree nodes live in a shallowRef, so a computed would cache
+  // `timeIndexName` captured before columns were loaded.
+  const getCodeInfo = () => getCodeAndCursorPos(props.type, props.node, props.parent)
+
+  const clickShortCut = async () => {
+    if (!props.parent) return
+    if (!props.parent.timeIndexName && !props.parent.columns?.length) {
+      isLoading.value = true
+      try {
+        await loadMoreColumns(props.parent, true, props.database)
+      } catch {
+        // fall back to no ORDER BY
+      } finally {
+        isLoading.value = false
+      }
+    }
+    const info = getCodeInfo()
+    inputFromNewLineToQueryCode(info.code, info.cursorPosition)
+  }
 </script>
 
 <style lang="less" scoped>

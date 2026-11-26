@@ -1,7 +1,7 @@
 <template lang="pug">
 a-modal(
   v-model:visible="localVisible"
-  title="Metrics Explorer"
+  :title="$t('metrics.explorerTitle')"
   :width="800"
   :footer="false"
   :mask-closable="false"
@@ -10,16 +10,16 @@ a-modal(
     .search-section
       a-input(
         v-model="searchQuery"
-        placeholder="Search metrics with fuzzy matching..."
         size="large"
         allow-clear
+        :placeholder="$t('metrics.searchFuzzy')"
         @input="handleSearch"
         @clear="handleClear"
       )
         template(#prefix)
           icon-search
         template(#suffix)
-          span.search-info {{ filteredMetrics.length }} metrics
+          span.search-info {{ $t('metrics.explorerCount', { count: filteredMetrics.length }) }}
 
     .metrics-list(v-if="filteredMetrics.length > 0")
       .metric-item(v-for="metric in filteredMetrics" :key="metric.name" @click="selectMetric(metric.name)")
@@ -27,7 +27,7 @@ a-modal(
         .metric-description(v-if="metric.description") {{ metric.description }}
 
     .empty-state(v-else-if="searchQuery && !loading")
-      a-empty(description="No metrics found")
+      a-empty(:description="$t('metrics.noneFound')")
         template(#image)
           icon-search
 
@@ -42,6 +42,9 @@ a-modal(
   import { useDebounce } from '@vueuse/core'
   import { IconSearch, IconLoading } from '@arco-design/web-vue/es/icon'
   import { searchMetricNames, getMetricNames } from '@/api/metrics'
+  import { useSignalDatabase } from '@/observability/signal-database'
+
+  const metricsDatabase = useSignalDatabase('metrics')
 
   const props = defineProps<{
     visible: boolean
@@ -78,10 +81,10 @@ a-modal(
       let response
       if (query && query.trim()) {
         // Search for specific metrics
-        response = await searchMetricNames(query.trim())
+        response = await searchMetricNames(query.trim(), metricsDatabase.value)
       } else {
         // Fetch all available metrics
-        response = await getMetricNames()
+        response = await getMetricNames({ database: metricsDatabase.value })
       }
 
       if (response && response.data) {

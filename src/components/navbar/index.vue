@@ -10,10 +10,12 @@ a-layout.navbar(:class="{ 'navbar--collapsed': navbarCollapsed }")
           span.logo-text-suffix {{ editionLabel }}
       svg.logo(v-else)
         use(href="#logo")
-    a-tooltip(position="right" :disabled="!greptimeCommit")
+    a-tooltip(position="right" :disabled="!greptimeCommit && !greptimeVersion")
       span.version-badge(v-if="!navbarCollapsed && greptimeVersion") {{ greptimeVersion }}
       template(#content)
-        .version-tooltip Commit: {{ greptimeCommit }}
+        .version-tooltip
+          div {{ $t('navbar.version') }}{{ greptimeVersion }}
+          div {{ $t('navbar.commit') }}{{ greptimeCommit }}
   a-layout-content.menu-content
     a-menu.navbar-menu(
       mode="vertical"
@@ -31,7 +33,8 @@ a-layout.navbar(:class="{ 'navbar--collapsed': navbarCollapsed }")
       )
         span {{ $t(item.meta.locale) }}
         template(#icon)
-          svg.icon-18(:id="`menu-${item.name}`")
+          component.icon-18(v-if="isComponentIcon(item.meta.icon)" :is="item.meta.icon" :id="`menu-${item.name}`")
+          svg.icon-18(v-else :id="`menu-${item.name}`")
             use(:href="`#${item.meta.icon}`")
     .support-divider(v-if="showSupportSection")
     .support-section(v-if="showSupportSection")
@@ -46,6 +49,26 @@ a-layout.navbar(:class="{ 'navbar--collapsed': navbarCollapsed }")
               | {{ label }}
           a-doption.news(@click="showNews")
             | {{ $t('menu.news') }}
+      a-tooltip(
+        v-if="queryGuideEnabled"
+        position="right"
+        :content="$t('menu.feedback')"
+        :disabled="!navbarCollapsed"
+      )
+        button.support-trigger(type="button" @click.stop="showContact")
+          svg.icon-18
+            use(href="#icon-user")
+          span.support-label {{ $t('menu.feedback') }}
+      a-tooltip(
+        v-if="queryGuideEnabled"
+        position="right"
+        :content="$t('menu.mcp')"
+        :disabled="!navbarCollapsed"
+      )
+        button.support-trigger.support-trigger--featured(type="button" @click.stop="showMcpConfig")
+          svg.icon-18
+            use(href="#code")
+          span.support-label {{ $t('menu.mcp') }}
       StarMarketingCard.star-marketing-card(v-if="!starCardClosed && !navbarCollapsed" @close="starCardClosed = true")
   a-layout-footer
     ul.footer(:class="{ 'footer--expanded': !navbarCollapsed }")
@@ -64,12 +87,9 @@ a-layout.navbar(:class="{ 'navbar--collapsed': navbarCollapsed }")
                   svg.icon-16
                     use(href="#Language")
             template(#content)
-              a-doption(value="en-US")
-                span English
-                span.locale-current(v-if="currentLocale === 'en-US'") ✓
-              a-doption(value="zh-CN")
-                span 中文
-                span.locale-current(v-if="currentLocale === 'zh-CN'") ✓
+              a-doption(v-for="opt in LOCALE_OPTIONS" :key="opt.value" :value="opt.value")
+                span {{ opt.label }}
+                span.locale-current(v-if="currentLocale === opt.value") ✓
         .footer-end
           a-tooltip(:content="navbarCollapsed ? $t('dashboard.showSidebar') : $t('dashboard.hideSidebar')")
             a-button.footer-collapse-btn(type="text" @click="toggleMenuCollapse")
@@ -77,20 +97,35 @@ a-layout.navbar(:class="{ 'navbar--collapsed': navbarCollapsed }")
                 svg.icon-16(:class="{ 'rotate-180': navbarCollapsed }")
                   use(href="#shrink")
 NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
+ContactFormModal
+McpConfigModal
 CommandPalette(ref="commandPaletteRef")
 </template>
 
 <script lang="ts" setup name="NavBar">
   import { useEventListener, useStorage } from '@vueuse/core'
+  import { useI18n } from 'vue-i18n'
   import { useNavbarLayoutCollapsed } from '@/composables/use-query-focus-mode'
   import { listenerRouteChange } from '@/utils/route-listener'
   import { useNews } from '@/hooks/news'
   import useLocale from '@/hooks/locale'
+  import { LOCALE_OPTIONS } from '@/locale'
   import useGreptimeVersion from '@/composables/use-greptime-version'
+  import type { Component } from 'vue'
+  import { isQueryGuideEnabled } from '@/utils/query-guide-enabled'
   import useMenuTree from '../menu/use-menu-tree'
   import NewsModal from './news-modal.vue'
   import StarMarketingCard from './star-marketing-card.vue'
+  import ContactFormModal from '../contact-form/ContactFormModal.vue'
+  import useContactForm from '../contact-form/use-contact-form'
+  import McpConfigModal from '../mcp-config/McpConfigModal.vue'
+  import useMcpConfig from '../mcp-config/use-mcp-config'
+  import { useProductTour } from '../product-tour/use-product-tour'
   import CommandPalette from '../command-palette/index.vue'
+
+  const isComponentIcon = (icon: unknown): icon is Component => typeof icon !== 'string' && !!icon
+
+  const { t } = useI18n()
 
   const router = useRouter()
   const appStore = useAppStore()
@@ -102,7 +137,10 @@ CommandPalette(ref="commandPaletteRef")
   const { currentLocale, onChangeLocale } = useLocale()
   const { version: greptimeVersion, commit: greptimeCommit } = useGreptimeVersion()
 
-  const localeTooltip = computed(() => (currentLocale.value === 'zh-CN' ? 'Language / 中文' : 'Language / English'))
+  const localeTooltip = computed(() => {
+    const label = LOCALE_OPTIONS.find((o) => o.value === currentLocale.value)?.label
+    return label ? `${t('navbar.language')} / ${label}` : t('navbar.language')
+  })
 
   const onLocaleSelect = (value: string) => {
     if (value === currentLocale.value) return
@@ -111,21 +149,25 @@ CommandPalette(ref="commandPaletteRef")
   }
   const newsListMutable = computed(() => (newsList.value ? [...newsList.value] : []))
   const newsModal = ref()
+  const contactForm = useContactForm()
+  const mcpConfig = useMcpConfig()
+  const tour = useProductTour()
   const starCardClosed = useStorage('starMarketingCardClosed', false)
   const isEnterprise = import.meta.env.VITE_APP_NAME === 'enterprise'
-  const editionLabel = isEnterprise ? 'Enterprise' : 'OpenSource'
+  const editionLabel = computed(() => (isEnterprise ? t('navbar.editionEnterprise') : t('navbar.editionOpenSource')))
   const showSupportSection = !isEnterprise
+  const queryGuideEnabled = isQueryGuideEnabled()
 
   const menu = menuTree.value[0].children
 
-  const supportLinks = [
+  const supportLinks = computed(() => [
     {
       link: 'https://greptime.com/',
-      label: 'Home',
+      label: t('navbar.supportHome'),
     },
     {
       link: 'https://docs.greptime.com/',
-      label: 'Docs',
+      label: t('navbar.docs'),
     },
     {
       link: 'https://github.com/GreptimeTeam/dashboard',
@@ -135,7 +177,7 @@ CommandPalette(ref="commandPaletteRef")
       link: 'https://github.com/GreptimeTeam/greptimedb',
       label: 'GitHub | GreptimeDB',
     },
-  ]
+  ])
 
   const setVisible = () => {
     appStore.openGlobalSettings()
@@ -143,6 +185,14 @@ CommandPalette(ref="commandPaletteRef")
 
   const showNews = () => {
     newsModal.value.show()
+  }
+
+  const showContact = () => {
+    contactForm.show()
+  }
+
+  const showMcpConfig = () => {
+    tour.openMcpFromNav()
   }
 
   const toggleMenuCollapse = () => {
@@ -211,9 +261,9 @@ CommandPalette(ref="commandPaletteRef")
   )
 
   listenerRouteChange((newRoute) => {
-    appStore.applyUiConfig({
-      menuSelectedKey: newRoute.meta.activeMenu || (newRoute.matched[1].name as string),
-    })
+    // Runtime-only: the route already decides the highlight, so persisting this value
+    // only caused a first-paint flash and a write on every navigation.
+    menuSelectedKey.value = newRoute.meta.activeMenu || (newRoute.matched[1].name as string)
     if (newRoute.matched[1].name === 'ingest') {
       ingestTab.value = newRoute.matched[3].name as string
     }
@@ -422,7 +472,8 @@ CommandPalette(ref="commandPaletteRef")
     gap: 8px;
     padding: 8px;
 
-    .support-dropdown {
+    .support-dropdown,
+    :deep(> .arco-trigger) {
       width: 100%;
     }
 
@@ -430,17 +481,28 @@ CommandPalette(ref="commandPaletteRef")
       display: flex;
       align-items: center;
       gap: 8px;
+      width: 100%;
       margin: 0 0 4px;
       padding: 8px 12px;
       color: @menu-light-color-item_default;
+      font: inherit;
       font-size: 12px;
       line-height: 20px;
+      text-align: left;
+      background: transparent;
+      border: none;
       border-radius: var(--gpt-radius-sm);
       cursor: pointer;
 
       &:hover {
         color: @menu-light-color-item_hover;
         background: @menu-light-color-bg-item_hover;
+      }
+
+      /* Query guide: same icon as peers; emphasize with label weight only. */
+      &.support-trigger--featured {
+        color: var(--gpt-text-primary);
+        font-weight: var(--gpt-font-weight-control);
       }
     }
 

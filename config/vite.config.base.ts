@@ -46,6 +46,22 @@ const tsxTransformer = () => ({
 /** @perses-dev/logs-table-plugin@0.3.0 ships LogRow imports for ./ansiColors.css but omits the file. */
 const persesLogsAnsiColorsStub = resolve(__dirname, '../src/perses-dashboard/vendor/logs-table-ansiColors.css')
 
+/**
+ * GreptimeDB the **preview** server proxies `/v1` to.
+ *
+ * The e2e suite seeds and asserts through `E2E_DB_HTTP` (see tests/e2e/data/sql.ts, which also
+ * accepts the legacy `SMOKE_DB_*` names) and then serves the built app with `vite preview`.
+ * Honouring the same value here keeps "the database we seeded" and "the database the page talks
+ * to" from silently diverging.
+ *
+ * `server` (pnpm dev) keeps the fixed local target on purpose: a stray `E2E_DB_HTTP` in a shell
+ * must not make the dev server — with its write pages — talk to a shared instance.
+ */
+const apiProxyTarget = (process.env.E2E_DB_HTTP || process.env.SMOKE_DB_HOST || 'http://127.0.0.1:4000').replace(
+  /\/$/,
+  ''
+)
+
 function stubPersesLogsAnsiColors(): Plugin {
   return {
     name: 'stub-perses-logs-ansi-colors',
@@ -98,7 +114,7 @@ export default defineConfig({
     port: 5178,
     proxy: {
       '/v1': {
-        target: 'http://127.0.0.1:4000',
+        target: apiProxyTarget,
         changeOrigin: true,
       },
     },
@@ -175,6 +191,7 @@ export default defineConfig({
   },
   define: {
     'process.env': {},
+    '__VUE_PROD_HYDRATION_MISMATCH_DETAILS__': false,
   },
   optimizeDeps: {
     include: [

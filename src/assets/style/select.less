@@ -4,9 +4,24 @@
   }
 }
 
-.arco-select-view-single.arco-select-view-size-small:not(.arco-input-group .arco-select-view-single)
-  .arco-select-view-value {
+/*
+ * small：与 Button / Radio-group 统一 26px（--gpt-control-height-sm）。
+ * Arco 默认给 size-small 的 value/input 上下 1px padding；若再给 value
+ * min-height:26，总高度会变成 28。这里锁外层 26，并去掉那 2px padding。
+ */
+.arco-select-view-single.arco-select-view-size-small:not(.arco-input-group .arco-select-view-single) {
+  box-sizing: border-box;
+  height: var(--gpt-control-height-sm);
   min-height: var(--gpt-control-height-sm);
+
+  .arco-select-view-value,
+  .arco-select-view-input {
+    box-sizing: border-box;
+    min-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    line-height: calc(var(--gpt-control-height-sm) - 2px);
+  }
 }
 
 // Single select: horizontal padding only (idle/hover/focus 与 Input 共用 arco-theme 里 @input-color-*)

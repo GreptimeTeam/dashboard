@@ -91,11 +91,14 @@
 
 <script lang="ts" setup>
   import { Message } from '@arco-design/web-vue'
+  import { useI18n } from 'vue-i18n'
   import fileDownload from 'js-file-download'
   import type { ResultType } from '@/store/modules/code-run/types'
   import ExplainGrid from '@/views/dashboard/modules/explain/explain-grid.vue'
   import ExplainChart from '@/views/dashboard/modules/explain/explain-chart/index.vue'
   import TextCopyable from '@/components/text-copyable.vue'
+
+  const { t } = useI18n()
 
   const props = defineProps<{
     data: ResultType
@@ -167,7 +170,7 @@
     try {
       return JSON.stringify(reconstructExplainJson(props.data), null, 2)
     } catch (e) {
-      return 'Error formatting JSON data'
+      return t('explain.formatError')
     }
   })
 
@@ -175,9 +178,9 @@
     try {
       const jsonData = JSON.stringify(reconstructExplainJson(props.data), null, 2)
       fileDownload(jsonData, 'explain-analyze-greptimedb.json', 'application/json')
-      Message.success('JSON downloaded successfully')
+      Message.success(t('explain.downloaded'))
     } catch (e) {
-      Message.error(`Failed to export JSON: ${e instanceof Error ? e.message : String(e)}`)
+      Message.error(t('explain.exportFailed', { msg: e instanceof Error ? e.message : String(e) }))
     }
   }
 

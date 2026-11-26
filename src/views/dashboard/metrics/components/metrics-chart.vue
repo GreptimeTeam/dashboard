@@ -52,17 +52,19 @@ a-card.metrics-chart(:bordered="false")
       )
 
   .empty-state(v-else)
-    a-empty(description="No data to display")
+    a-empty(:description="$t('metrics.noDataToDisplay')")
       template(#image)
         svg.icon.empty-icon
           use(href="#chart-line")
-      | Execute a PromQL query to see chart visualization
+      | {{ $t('metrics.emptyChartHint') }}
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, watch, inject, nextTick } from 'vue'
+  import { ref, computed, inject, watch } from 'vue'
   import { useElementSize } from '@vueuse/core'
   import Chart from '@/components/raw-chart/index.vue'
+  import { legendSoloSelected } from '@/components/raw-chart/legend-solo'
+  import useChartLegendSolo from '@/components/raw-chart/use-chart-legend-solo'
   import TimeRangeSelect from '@/components/time-range-select/index.vue'
   import chartTheme from '@/components/chart/chartTheme.json'
   import { useDateTimeFormat } from '@/hooks'
@@ -202,17 +204,17 @@ a-card.metrics-chart(:bordered="false")
   })
 
   const showFullSeriesName = ref(false)
-  /** When set, only this series is shown (solo mode). Disables legend-hover dimming. */
-  const soloSeriesName = ref<string | null>(null)
 
   const chartKey = computed(() => {
     return `${query.value}-${step.value}-${showFullSeriesName.value}`
   })
 
-  // Reset solo mode whenever series names are recomputed (query/step/showFullSeriesName change),
-  // otherwise the stale soloSeriesName no longer matches any legend name and hides everything.
-  watch(chartKey, () => {
-    soloSeriesName.value = null
+  // Click a legend item to show only that series; click it again to show all.
+  // Selection stays in chartOption (`legend.selected`) so notMerge setOption does not wipe it.
+  const { soloSeriesName } = useChartLegendSolo({
+    getChart: () => chartRef.value,
+    enabled: () => hasData.value,
+    resetKey: () => chartKey.value,
   })
 
   const formatChartAxisTime = (value: number): string => {
@@ -247,42 +249,6 @@ a-card.metrics-chart(:bordered="false")
   /** Plot area fixed; legend height is additive below the grid. */
   const chartHeight = computed(() => GRAPH_HEIGHT + legendAreaHeight.value + LEGEND_TO_GRID_GAP)
 
-  // Attach legendselectchanged event to implement solo mode:
-  // clicking a legend item shows only that series and hides all others.
-  // The actual selection state is driven by `selected` map in chartOption (recomputed when soloSeriesName changes).
-  // While in solo mode, legend-hover dimming is disabled via emphasis.focus in chartOption.
-  // Attach legendselectchanged event to implement solo mode:
-  // clicking a legend item shows only that series and hides all others.
-  // The actual selection state is driven by `selected` map in chartOption (recomputed when soloSeriesName changes).
-  // While in solo mode, legend-hover dimming is disabled via emphasis.focus in chartOption.
-  // Watch chartKey so the handler is re-attached when the chart is recreated
-  // (e.g., when toggling showFullSeriesName, which changes :key on the Chart component).
-  watch(
-    [hasData, chartKey],
-    () => {
-      if (!hasData.value) return
-      nextTick(() => {
-        const chartComponent = chartRef.value
-        if (!chartComponent) return
-        const instance = chartComponent.getInstance()
-        if (!instance) return
-
-        const handler = (params: any) => {
-          const { name } = params
-          if (name === soloSeriesName.value) {
-            soloSeriesName.value = null
-          } else {
-            soloSeriesName.value = name
-          }
-        }
-
-        instance.off('legendselectchanged', handler)
-        instance.on('legendselectchanged', handler)
-      })
-    },
-    { immediate: true }
-  )
-
   const chartOption = computed<EChartsOption>(() => {
     if (!hasData.value) return {}
     // Option: control whether to display full series name or compact unique-label name
@@ -291,18 +257,26 @@ a-card.metrics-chart(:bordered="false")
     const labelMapsInOrder: Record<string, string>[] = []
     const fullNamesInOrder: string[] = []
 
-    // Collect metric names, label maps, and full names in order
+    // Collect metric names, label maps, and full names in order.
+    // Aggregations / binary ops often drop __name__; then use labels only (no "unknown").
+    const formatLabelStr = (labels: Record<string, string>) =>
+      Object.entries(labels)
+        .map(([k, v]) => `${k}="${v}"`)
+        .join(', ')
+
+    const formatFullName = (metricName: string, labels: Record<string, string>) => {
+      const labelStr = formatLabelStr(labels)
+      if (metricName) return labelStr ? `${metricName}{${labelStr}}` : metricName
+      return labelStr ? `{${labelStr}}` : 'series'
+    }
+
     seriesData.value.forEach((item) => {
-      const metricName = item.metric.__name__ || 'unknown'
+      const metricName = item.metric.__name__ || ''
       const labels = { ...item.metric }
       delete labels.__name__
       metricNamesInOrder.push(metricName)
       labelMapsInOrder.push(labels)
-
-      const labelStr = Object.entries(labels)
-        .map(([k, v]) => `${k}="${v}"`)
-        .join(', ')
-      fullNamesInOrder.push(labelStr ? `${metricName}{${labelStr}}` : metricName)
+      fullNamesInOrder.push(formatFullName(metricName, labels))
     })
 
     // Label keys whose values differ across series (shared labels are hidden in compact mode)
@@ -327,14 +301,18 @@ a-card.metrics-chart(:bordered="false")
       return diff
     })()
 
-    // Helper to build compact display name using only differing labels
+    // Compact: differing labels only. Without __name__, fall back to full label set.
     const buildDisplayName = (idx: number): string => {
-      const metricName = metricNamesInOrder[idx] || 'unknown'
+      const metricName = metricNamesInOrder[idx] || ''
       const lm = labelMapsInOrder[idx] || {}
       const pairs: string[] = []
       Object.keys(lm).forEach((k) => {
         if (differingKeys.has(k)) pairs.push(`${k}="${lm[k]}"`)
       })
+      if (!metricName) {
+        if (pairs.length > 0) return `{${pairs.join(', ')}}`
+        return fullNamesInOrder[idx]
+      }
       const diffStr = pairs.length > 0 ? `{${pairs.join(', ')}}` : ''
       return `${metricName}${diffStr}`
     }
@@ -410,9 +388,7 @@ a-card.metrics-chart(:bordered="false")
       itemHeight: LEGEND_ITEM_HEIGHT,
       itemGap: 6,
       textStyle: legendTextStyle,
-      selected: soloSeriesName.value
-        ? Object.fromEntries(legendNames.map((n) => [n, n === soloSeriesName.value]))
-        : undefined,
+      selected: legendSoloSelected(legendNames, soloSeriesName.value),
     }
 
     return {

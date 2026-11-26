@@ -10,6 +10,7 @@
   import { computed } from 'vue'
   import enUS from '@arco-design/web-vue/es/locale/lang/en-us'
   import zhCN from '@arco-design/web-vue/es/locale/lang/zh-cn'
+  import jaJP from '@arco-design/web-vue/es/locale/lang/ja-jp'
   import useLocale from '@/hooks/locale'
   import { useUserStore, useAppStore } from '@/store'
   import { invoke, isTauri } from '@tauri-apps/api/core'
@@ -22,6 +23,8 @@
         return enUS
       case 'zh-CN':
         return zhCN
+      case 'ja-JP':
+        return jaJP
       default:
         return enUS
     }

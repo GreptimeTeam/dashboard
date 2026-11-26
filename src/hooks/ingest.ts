@@ -1,4 +1,5 @@
 import { processLogs, writeInfluxDB } from '@/services/code-run'
+import i18n from '@/locale'
 
 export interface IngestConfig {
   type: string
@@ -37,10 +38,14 @@ hello greptime 2024-07-12T16:18:53.048`
   const getInfluxdbInputConfig = (precision: Ref<string>): IngestConfig => ({
     type: 'influxdb',
     tabKey: 'influxdb-input',
-    submitLabel: 'Write',
+    get submitLabel() {
+      return i18n.global.t('menu.dashboard.write')
+    },
     placeholder: 'cpu_usage,host=server1,region=us-west usage_user=80,usage_system=10 1621401600000000000',
     hasDoc: true,
-    successMessage: 'Data written successfully',
+    get successMessage() {
+      return i18n.global.t('ingest.writeSuccess')
+    },
     submitHandler: async (content: string) => {
       return writeInfluxDB(content, precision.value)
     },
@@ -52,9 +57,13 @@ hello greptime 2024-07-12T16:18:53.048`
   const getInfluxdbUploadConfig = (precision: Ref<string>): IngestConfig => ({
     type: 'influxdb',
     tabKey: 'influxdb-upload',
-    submitLabel: 'Write',
+    get submitLabel() {
+      return i18n.global.t('menu.dashboard.write')
+    },
     hasDoc: true,
-    successMessage: 'Data written successfully',
+    get successMessage() {
+      return i18n.global.t('ingest.writeSuccess')
+    },
     submitHandler: async (content: string) => {
       return writeInfluxDB(content, precision.value)
     },
@@ -70,12 +79,16 @@ hello greptime 2024-07-12T16:18:53.048`
   ): IngestConfig => ({
     type: 'log-ingestion',
     tabKey: 'log-ingestion-input',
-    submitLabel: 'Write',
+    get submitLabel() {
+      return i18n.global.t('menu.dashboard.write')
+    },
     get placeholder() {
       return getPlaceholderByContentType(contentType.value)
     },
     hasDoc: false,
-    successMessage: 'Data written successfully',
+    get successMessage() {
+      return i18n.global.t('ingest.writeSuccess')
+    },
     submitHandler: async (content: string) => {
       return processLogs(content, appStore.database, table.value, pipeline.value, contentType.value)
     },
@@ -91,12 +104,16 @@ hello greptime 2024-07-12T16:18:53.048`
   ): IngestConfig => ({
     type: 'log-ingestion',
     tabKey: 'log-ingestion-upload',
-    submitLabel: 'Write',
+    get submitLabel() {
+      return i18n.global.t('menu.dashboard.write')
+    },
     get placeholder() {
       return getPlaceholderByContentType(contentType.value)
     },
     hasDoc: false,
-    successMessage: 'Data written successfully',
+    get successMessage() {
+      return i18n.global.t('ingest.writeSuccess')
+    },
     submitHandler: async (content: string) => {
       return processLogs(content, appStore.database, table.value, pipeline.value, contentType.value)
     },

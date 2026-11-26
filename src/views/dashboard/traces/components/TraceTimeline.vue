@@ -22,13 +22,14 @@ a-spin.spin-block(:loading="loading")
       ref="treeRef"
       default-expand-all
       :data="spanTree"
+      :selected-keys="treeSelectedKeys"
       @select="handleSpanSelect"
     )
       template(#icon="{ node, expanded }")
         .expand-info(
           v-if="node.children && node.children.length > 0"
-          :class="{ expanded: expanded }"
-          :style="{ backgroundColor: getServiceColor(node.service_name) }"
+          :class="{ expanded: expanded, 'is-error': isErrorSpan(node) }"
+          :style="{ backgroundColor: getTreeIconColor(node) }"
           @click.stop="toggleExpand(node, expanded)"
         )
           .expand-icon
@@ -36,22 +37,18 @@ a-spin.spin-block(:loading="loading")
             icon-right(v-else)
           .child-count {{ getChildCount(node, expanded) }}
         .leaf-node(v-else)
-          .no-expand-icon(:style="{ backgroundColor: getServiceColor(node.service_name) }")
+          .no-expand-icon(
+            :class="{ 'is-error': isErrorSpan(node) }"
+            :style="{ backgroundColor: getTreeIconColor(node) }"
+          )
       template(#title="data")
         .span-item
           .span-info(:style="getSpanInfoStyle(data._level)")
             span.span-name {{ data.span_name }}
-            a-tag(size="small") {{ data.service_name }}
+            a-tag.service-tag(size="small") {{ data.service_name }}
           .span-timeline
             .time-bar-container
-              .time-bar(
-                :style=`{
-                  left: getRelativePosition(data, rootTimeStamp, rootEndTimeStamp) + '%',
-                  width: getDurationWidth(data, rootTimeStamp, rootEndTimeStamp) + '%',
-                  backgroundColor: data.status === 'error' ? 'var(--color-danger-light-1)' : getServiceColor(data.service_name)
-                }`
-                :class="{ error: data.status === 'error' }"
-              )
+              .time-bar(:style="getTimeBarStyle(data)")
                 .time-info
                   span.span-duration {{ formatDuration(data.duration_nano) }}
 </template>
@@ -61,6 +58,7 @@ a-spin.spin-block(:loading="loading")
   import type { PropType } from 'vue'
   import type { TreeNodeData } from '@arco-design/web-vue'
   import { IconDragDotVertical, IconDown, IconRight } from '@arco-design/web-vue/es/icon'
+  import isTraceErrorStatus from '@/observability/traces/status'
   import type { Span } from '../utils'
   import { formatDuration, getRelativePosition, getDurationWidth } from '../utils'
 
@@ -77,12 +75,19 @@ a-spin.spin-block(:loading="loading")
       type: Object as PropType<Span | null>,
       default: null,
     },
+    /** Controlled tree selection; undefined keeps the tree uncontrolled. */
+    selectedSpanId: {
+      type: String,
+      default: undefined,
+    },
   })
 
   const emit = defineEmits(['spanSelect'])
 
   const treeRef = ref()
   const spanInfoWidth = ref('400px')
+
+  const treeSelectedKeys = computed(() => (props.selectedSpanId ? [props.selectedSpanId] : undefined))
 
   const rootTimeStamp = computed(() => props.rootSpan?.timestamp || 0)
   const rootEndTimeStamp = computed(() => {
@@ -116,6 +121,30 @@ a-spin.spin-block(:loading="loading")
 
     const colorIndex = Math.abs(hash) % serviceColors.length
     return serviceColors[colorIndex]
+  }
+
+  function isErrorSpan(span: Span | TreeNodeData | null | undefined): boolean {
+    if (!span) {
+      return false
+    }
+    return isTraceErrorStatus(span.span_status_code ?? span.status)
+  }
+
+  /** Error wins over service palette so tree icons scan as status at a glance. */
+  function getTreeIconColor(span: Span | TreeNodeData | null | undefined): string {
+    if (isErrorSpan(span)) {
+      return 'var(--danger-color)'
+    }
+    return getServiceColor(span?.service_name || '')
+  }
+
+  function getTimeBarStyle(data: Span) {
+    return {
+      left: `${getRelativePosition(data, rootTimeStamp.value, rootEndTimeStamp.value)}%`,
+      width: `${getDurationWidth(data, rootTimeStamp.value, rootEndTimeStamp.value)}%`,
+      // Keep service color on the bar; error is signaled only by the tree icon.
+      backgroundColor: getServiceColor(data.service_name),
+    }
   }
 
   // Calculate direct children count
@@ -266,6 +295,17 @@ a-spin.spin-block(:loading="loading")
       opacity: 0.9;
     }
 
+    &.is-error {
+      color: var(--gpt-text-inverse);
+      border-color: var(--danger-color);
+
+      &:hover,
+      &.expanded {
+        border-color: var(--danger-color);
+        opacity: 0.9;
+      }
+    }
+
     .expand-icon {
       display: flex;
       align-items: center;
@@ -288,6 +328,10 @@ a-spin.spin-block(:loading="loading")
       width: 12px;
       height: 12px;
       border-radius: 50%;
+
+      &.is-error {
+        box-shadow: 0 0 0 2px var(--danger-bg-color);
+      }
     }
   }
   .child-count-icon {
@@ -344,6 +388,7 @@ a-spin.spin-block(:loading="loading")
         top: 50%;
         transform: translateY(-50%);
         transition: all 0.2s;
+        border-radius: 1px;
 
         .time-info {
           position: absolute;

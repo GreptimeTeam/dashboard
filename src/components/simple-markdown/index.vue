@@ -48,7 +48,7 @@
         })
       } catch (error) {
         console.error('Markdown render error:', error)
-        return h('div', { class: 'markdown-error' }, 'Error rendering content')
+        return h('div', { class: 'markdown-error' }, this.$t('markdown.renderError'))
       }
     },
   }

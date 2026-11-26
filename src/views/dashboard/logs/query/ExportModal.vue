@@ -8,11 +8,11 @@ a-modal(
 )
   template(#footer)
     a-space
-      a-button(@click="handleCancel") Cancel
+      a-button(@click="handleCancel") {{ $t('common.cancel') }}
       a-button(type="primary" :loading="loading" @click="handleConfirm")
-        | Export
+        | {{ $t('common.export') }}
   .export-modal-content
-    a-form(layout="vertical")
+    a-form(layout="vertical" :model="formModel")
       a-form-item
         template(#label)
           a-space(:size="4")
@@ -23,11 +23,11 @@ a-modal(
         pre.export-sql-display {{ formattedSql }}
       a-form-item(:label="$t('logsQuery.exportLimit')")
         a-space(style="width: 100%" fill)
-          a-input(
-            v-model.number="limit"
-            type="number"
+          a-input-number(
+            v-model="limit"
+            hide-button
             style="flex: 1"
-            placeholder="Enter limit"
+            :placeholder="$t('logsQuery.limitPlaceholder')"
             :min="1"
           )
           template(v-if="totalCount !== null")
@@ -41,7 +41,7 @@ a-modal(
 <script setup lang="ts">
   import { ref, computed, watch } from 'vue'
   import { sqlFormatter } from '@/utils/sql'
-  import { parseLimit, removeLimitFromSql } from './until'
+  import { parseLimit, parseTableRefForSql, removeLimitFromSql } from './until'
 
   interface Props {
     visible: boolean
@@ -56,7 +56,8 @@ a-modal(
     (event: 'cancel'): void
   }>()
 
-  const limit = ref(1000)
+  const limit = ref<number | undefined>(1000)
+  const formModel = computed(() => ({ limit: limit.value }))
   const loading = ref(false)
   const totalCount = ref<number | null>(null)
 
@@ -67,22 +68,17 @@ a-modal(
     }
 
     try {
-      // Extract table name from SQL (supports both "table" and "database"."table" formats)
-      const tableMatch = props.sql.match(/FROM\s+("?[\w-]+"?\s*\.\s*)?("?[\w-]+"?)/i)
-      if (!tableMatch) {
+      const tableName = parseTableRefForSql(props.sql)
+      if (!tableName) {
         totalCount.value = null
         return
       }
-      // tableMatch[1] is the database part (with dot), tableMatch[2] is the table name
-      // If tableMatch[1] exists, we have "database"."table" format
-      const tableName = tableMatch[1] ? `${tableMatch[1].trim()}${tableMatch[2]}` : tableMatch[2]
 
       // Extract WHERE clause from the SQL
       const whereMatch = props.sql.match(/WHERE\s+([\s\S]+?)(?:\s+ORDER\s+BY|\s+LIMIT\s+|\s*$)/i)
       const [, whereCondition] = whereMatch || []
       const whereClause = whereCondition ? `WHERE ${whereCondition}` : ''
 
-      // Build COUNT query (tableName already includes quotes if present in original SQL)
       const countSql = `SELECT COUNT(*) FROM ${tableName} ${whereClause}`
 
       const { default: editorAPI } = await import('@/api/editor')
