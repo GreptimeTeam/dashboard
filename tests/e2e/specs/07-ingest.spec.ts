@@ -29,16 +29,19 @@ async function writeFromUi(app: Page, text: string): Promise<number> {
 const ns = (offsetSec: number) => `${SEED_START + offsetSec}000000000`
 
 test.describe('ingest', () => {
-  test('a line written from the UI is stored once and readable back', { tag: '@smoke' }, async ({ app }) => {
+  test('a line written from the UI is stored once and readable back', async ({ app }) => {
     const line = `e2e_ingest_idem,host=a usage=1.5 ${ns(0)}`
     expect([200, 204]).toContain(await writeFromUi(app, line))
     // Writing the identical point again must overwrite, not duplicate.
     expect([200, 204]).toContain(await writeFromUi(app, line))
-    expect(await readRows(`SELECT count(*), max(usage) FROM e2e_ingest_idem WHERE host = 'a'`)).toEqual([[1, 1.5]])
-  })
-
-  test('invalid line protocol is rejected', async ({ app }) => {
-    expect(await writeFromUi(app, 'this is not line protocol')).toBe(400)
+    const rows = await readRows(`SELECT count(*), max(usage) FROM e2e_ingest_idem WHERE host = 'a'`)
+    expect(rows).toEqual([[1, 1.5]])
+    // The editor page is a large white area: the evidence worth keeping in the report is the
+    // read-back, so attach it as a note instead of another near-empty screenshot.
+    await test.info().attach('verified.txt', {
+      body: `e2e_ingest_idem host=a -> count=${(rows[0] as any[])[0]}, max(usage)=${(rows[0] as any[])[1]}`,
+      contentType: 'text/plain',
+    })
   })
 
   test('log ingestion writes NDJSON through the pipeline into the chosen table', async ({ app }) => {

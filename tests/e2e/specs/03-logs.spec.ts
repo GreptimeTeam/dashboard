@@ -1,24 +1,35 @@
 import { expect, test } from '../fixtures'
 import { EXPECT } from '../data/dataset'
-import { SEED_START, timeRangeQuery } from '../env'
-import { logsUrl, sqlRecords, visit, waitSql } from '../helpers'
+import { SEED_START, timeRangeQuery, utcTimestamp } from '../env'
+import { logsUrl, visit, waitSql } from '../helpers'
+import { dbTotal, expectPageShown, expectPageTotal } from '../oracle'
 
 const LOGS_SELECT = /^\s*SELECT \* FROM .*opentelemetry_logs/i
 
-async function loggedRows(app: Parameters<typeof waitSql>[0], url: string) {
+/**
+ * Navigates and waits for the page's own query.
+ *
+ * The response is a synchronisation point only: every expectation below is either what the page
+ * reports to the user, or what the database really holds. Restyling the generated SQL must not
+ * fail these tests; rendering the wrong rows must.
+ */
+async function openLogs(app: Parameters<typeof visit>[0], url: string) {
   const response = waitSql(app, LOGS_SELECT)
   await visit(app, url)
-  return (await sqlRecords(await response)).rows
+  await response
 }
 
 test.describe('logs query', () => {
   test('lists every row in the grid', { tag: '@smoke' }, async ({ app }) => {
-    expect(await loggedRows(app, logsUrl())).toHaveLength(EXPECT.logs.total)
+    await openLogs(app, logsUrl())
+    await expectPageTotal(app, await dbTotal())
     await expect(app.locator('.vxe-body--row').first()).toContainText('e2e-log-')
   })
 
   test('severity and service filters combine', async ({ app }) => {
-    const rows = await loggedRows(
+    const condition = `"severity_text" = 'WARN' AND "service_name" = 'svc-b'`
+    const expected = await dbTotal(condition)
+    await openLogs(
       app,
       logsUrl({
         conditions: [
@@ -28,20 +39,43 @@ test.describe('logs query', () => {
       })
     )
     // WARN is i % 5 == 3; svc-b is odd i. Odd i with i % 5 == 3: 3, 13, ..., 53 => 6 rows.
-    expect(rows).toHaveLength(6)
+    expect(expected).toBe(6)
+    await expectPageTotal(app, expected)
+    await expect(app.locator('.vxe-body--row')).toHaveCount(expected)
   })
 
   // The builder wraps LIKE values in %...% itself.
   test('LIKE filter on the message', async ({ app }) => {
-    const rows = await loggedRows(
-      app,
-      logsUrl({ conditions: [{ field: 'message', operator: 'LIKE', value: 'e2e-log-0' }] })
-    )
-    expect(rows).toHaveLength(10)
+    const expected = await dbTotal(`"message" LIKE '%e2e-log-0%'`)
+    await openLogs(app, logsUrl({ conditions: [{ field: 'message', operator: 'LIKE', value: 'e2e-log-0' }] }))
+    await expectPageTotal(app, expected)
+    await expect(app.locator('.vxe-body--row')).toHaveCount(expected)
   })
 
   test('absolute window keeps only the first half hour', async ({ app }) => {
-    const rows = await loggedRows(app, logsUrl({ timeQuery: timeRangeQuery(SEED_START, SEED_START + 1799) }))
-    expect(rows).toHaveLength(30)
+    const end = SEED_START + 1799
+    const expected = await dbTotal(
+      `"timestamp" >= '${utcTimestamp(SEED_START)}' AND "timestamp" <= '${utcTimestamp(end)}'`
+    )
+    await openLogs(app, logsUrl({ timeQuery: timeRangeQuery(SEED_START, end) }))
+    await expectPageTotal(app, expected)
+  })
+
+  test('empty window reports zero rows instead of spinning forever', async ({ app }) => {
+    await openLogs(app, logsUrl({ timeQuery: timeRangeQuery(1_600_000_000, 1_600_003_600) }))
+    await expectPageTotal(app, 0)
+    await expect(app.locator('.vxe-body--row')).toHaveCount(0)
+  })
+
+  test('the result header honours the query limit', async ({ app }) => {
+    await openLogs(app, logsUrl({ limit: 10 }))
+    await expectPageShown(app, 10)
+  })
+
+  test('renders quotes, angle brackets and emoji literally', async ({ app }) => {
+    await openLogs(app, logsUrl())
+    // Row 0 is the newest seed row (DESC by timestamp) and carries the tricky message: an
+    // unescaped render turns `<b>x</b>` into bold text (or drops the row) and fails here.
+    await expect(app.locator('.vxe-body--row').first()).toContainText(EXPECT.logs.tricky)
   })
 })

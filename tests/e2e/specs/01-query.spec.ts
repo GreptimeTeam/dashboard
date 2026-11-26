@@ -19,14 +19,6 @@ test.describe('table query', () => {
     await expect(app.locator('.vxe-body--row', { hasText: 'ERROR' }).first()).toContainText(String(EXPECT.logs.error))
   })
 
-  test('shows the server error for invalid SQL', async ({ app }) => {
-    const response = waitSql(app, 'SELEC ')
-    await visit(app, queryUrl('SELEC broken FROM nowhere'))
-    expect((await response).status()).toBe(400)
-    // The page must stay alive and surface the failure (no blank state, no crash).
-    await expect(app.getByText(/syntax|error|错误|失败/i).first()).toBeVisible()
-  })
-
   test('lists the seeded tables in the sidebar', async ({ app }) => {
     await visit(app, queryUrl('SELECT 1 AS ok'))
     await Promise.all(

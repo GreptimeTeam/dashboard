@@ -6,6 +6,8 @@ import { expect, test } from '../fixtures'
 import { EXPLORE_DB, SEED_QUERY, WINDOW_END, WINDOW_QUERY, WINDOW_START } from '../env'
 import { EXPECT } from '../data/dataset'
 import { promSeries, sqlRecords, visit, waitProm, waitSql } from '../helpers'
+import { expectPageTotal } from '../oracle'
+import { requireData } from '../facts'
 
 /** Statements are multi-line; treat every space of the source as `\s+`. */
 const sql = (source: string) => new RegExp(source.replace(/ /g, '\\s+'))
@@ -15,7 +17,7 @@ const logsUrl = (extra = '') => `/dashboard/explore?signal=logs&logsTable=opente
 const hash = (page: Parameters<typeof visit>[0]) => page.evaluate(() => window.location.hash)
 
 test.describe('explore metrics (seeded)', () => {
-  test('catalog lists the seeded metrics with their kinds and default queries', { tag: '@smoke' }, async ({ app }) => {
+  test('catalog lists the seeded metrics with their kinds and default queries', async ({ app }) => {
     const gauge = waitProm(app, 'avg(e2e_cpu_usage)')
     const counter = waitProm(app, 'sum(rate(e2e_http_requests_total')
     await visit(app, metricsUrl())
@@ -118,6 +120,8 @@ test.describe('explore logs (seeded)', () => {
       perLevel[String(row[level])] = (perLevel[String(row[level])] ?? 0) + Number(row[count])
     })
     expect(perLevel).toEqual({ INFO: EXPECT.logs.info, WARN: EXPECT.logs.warn, ERROR: EXPECT.logs.error })
+    // The detail view must report the same total to the user, not only fetch it.
+    await expectPageTotal(app, EXPECT.logs.total, '.logs-main-view')
   })
 
   test('level filter keeps only the chosen severity', async ({ app }) => {
@@ -134,13 +138,12 @@ test.describe('explore logs (seeded)', () => {
 })
 
 test.describe('explore logs (existing data, absolute 9.18–9.20 window)', () => {
-  test.skip(process.env.E2E_EXPLORE_READY !== '1', 'no logs in the explore window of EXPLORE_DB')
-
   const existingUrl = (extra = '') =>
     `/dashboard/explore?signal=logs&logsTable=opentelemetry_logs&${WINDOW_QUERY}${extra}`
   const inWindow = `FROM "opentelemetry_logs" WHERE [\\s\\S]*FROM_UNIXTIME\\(${WINDOW_START}\\)[\\s\\S]*FROM_UNIXTIME\\(${WINDOW_END}\\)`
 
   test('existing data: detail lists rows and carries the window', async ({ explore }) => {
+    if (process.env.E2E_EXPLORE_READY !== '1') requireData('no logs in the explore window of EXPLORE_DB')
     const detail = waitSql(explore, sql(`^\\s*SELECT [\\s\\S]*${inWindow}[\\s\\S]*LIMIT 1000`), 30_000)
     await visit(explore, existingUrl('&logsView=detail'))
     const { rows } = await sqlRecords(await detail)

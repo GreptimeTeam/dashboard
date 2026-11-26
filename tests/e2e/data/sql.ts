@@ -1,4 +1,5 @@
 /** HTTP client for GreptimeDB `/v1/sql` (global setup, seeding and read-back assertions). */
+import { assertLocalOrExplicit, assertReadOnly } from '../guard'
 
 export type SqlClientOptions = {
   baseUrl: string
@@ -12,7 +13,8 @@ export type SqlClientOptions = {
 const env = (name: string): string => process.env[`E2E_DB_${name}`] || process.env[`SMOKE_DB_${name}`] || ''
 
 export function dbHttpBase(): string {
-  return (env('HTTP') || 'http://127.0.0.1:4000').replace(/\/$/, '')
+  // Loopback unless the run explicitly opted into a remote instance (the suite seeds and drops data).
+  return assertLocalOrExplicit((env('HTTP') || 'http://127.0.0.1:4000').replace(/\/$/, ''))
 }
 
 function authHeaders(opts: SqlClientOptions): Record<string, string> {
@@ -58,8 +60,14 @@ export function authFromEnv(): Pick<SqlClientOptions, 'username' | 'password' | 
   }
 }
 
-/** Rows of the first statement's result set, or `[]` when it returned none. */
+/**
+ * Rows of the first statement's result set, or `[]` when it returned none.
+ *
+ * Used for read-backs against both databases, including the read-only `EXPLORE_DB` — hence the
+ * read-only guard: writes must go through `runSql` explicitly, never through this helper.
+ */
 export async function queryRows(sql: string, database: string): Promise<unknown[][]> {
+  assertReadOnly(sql)
   const result: any = await runSql(sql, { baseUrl: dbHttpBase(), database, ...authFromEnv() })
   return result?.output?.[0]?.records?.rows ?? []
 }

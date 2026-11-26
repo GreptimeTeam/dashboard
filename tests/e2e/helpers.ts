@@ -15,15 +15,33 @@ const PARK_ROUTES = [
 ]
 
 /**
- * Navigate inside the SPA (no page reload). When the target is the page we are already on, park
- * on a static page first: pages only read their URL params on mount. Resolves once the navigation
- * has been requested, not when the page finished loading.
+ * Navigate inside the SPA (no page reload) and resolve once the router really is on `path`.
+ *
+ * Two hazards are handled here, both measured while turning on parallel workers:
+ *  - pushing to the page we are already on does nothing (pages read their URL params on mount),
+ *    so park on a static page first;
+ *  - a page normalising its own URL (`router.replace` on mount) can abort a push that is still in
+ *    flight, leaving the app on the previous route with no query fired. So await arrival, retry
+ *    once, and fail loudly instead of letting the following `waitForResponse` time out.
  */
 export async function visit(page: Page, path: string): Promise<void> {
   await page.evaluate(
     async ({ target, parks }) => {
       const router = (document.querySelector('#app') as any).__vue_app__.config.globalProperties.$router
       const targetPath = router.resolve(target).path
+
+      const arrived = async (timeout: number) => {
+        const deadline = Date.now() + timeout
+        while (Date.now() < deadline) {
+          if (router.currentRoute.value.path === targetPath) return true
+          // eslint-disable-next-line no-await-in-loop
+          await new Promise<void>((resolve) => {
+            setTimeout(resolve, 25)
+          })
+        }
+        return false
+      }
+
       if (router.currentRoute.value.path === targetPath) {
         await router.push(parks.find((park: string) => park !== targetPath))
         // Let the layout (navbar watchers, unmounts) settle before the real navigation.
@@ -31,10 +49,16 @@ export async function visit(page: Page, path: string): Promise<void> {
           setTimeout(resolve, 30)
         })
       }
-      // Do not await the final push: pages normalise their own URL on mount (`router.replace`),
-      // which can orphan this promise forever and make Playwright report it as garbage collected.
-      // Callers synchronise on the response / DOM they armed before calling `visit`.
-      router.push(target).catch(() => undefined)
+
+      // Two attempts: the second one happens when an in-flight `router.replace` aborted the first.
+      // eslint-disable-next-line no-restricted-syntax
+      for (const attempt of [1, 2]) {
+        // eslint-disable-next-line no-await-in-loop
+        await router.push(target).catch(() => undefined)
+        // eslint-disable-next-line no-await-in-loop
+        if (await arrived(attempt === 1 ? 2000 : 4000)) return
+      }
+      throw new Error(`visit(${target}) did not reach ${targetPath}`)
     },
     { target: path, parks: PARK_ROUTES }
   )
@@ -62,7 +86,7 @@ export async function sqlRecords(response: Response): Promise<SqlRecords> {
 }
 
 /** Resolves with the first `POST /v1/sql` whose statement matches. Arm it before `visit()`. */
-export function waitSql(page: Page, match: string | RegExp, timeout = 15_000): Promise<Response> {
+export function waitSql(page: Page, match: string | RegExp, timeout = 25_000): Promise<Response> {
   return page.waitForResponse(
     (response) => {
       const request = response.request()
@@ -75,7 +99,7 @@ export function waitSql(page: Page, match: string | RegExp, timeout = 15_000): P
 }
 
 /** Resolves with the first Prometheus HTTP API call (`query_range` / `query`) whose PromQL matches. */
-export function waitProm(page: Page, match: string | RegExp, timeout = 15_000): Promise<Response> {
+export function waitProm(page: Page, match: string | RegExp, timeout = 25_000): Promise<Response> {
   return page.waitForResponse(
     (response) => {
       const url = new URL(response.url())

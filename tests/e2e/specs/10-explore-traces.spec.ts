@@ -8,6 +8,7 @@ import { expect, test } from '../fixtures'
 import { TRACES_LOGS_TABLE, TRACES_QUERY, TRACES_TABLE, TRACES_WINDOW_END, TRACES_WINDOW_START } from '../env'
 import { requireTraceFacts } from '../facts'
 import { sqlRecords, visit, waitSql } from '../helpers'
+import { expectChartDrawn } from '../oracle'
 
 /** GreptimeDB statements are multi-line; treat every space of the source as `\\s+`. */
 const sql = (source: string) => new RegExp(source.replace(/ /g, '\\s+'))
@@ -68,6 +69,8 @@ test.describe('explore traces (opentelemetry_traces_v2)', () => {
     await explore.locator('.span-scope-toggle').getByText('All spans').click()
     expect((await allRate).status()).toBe(200)
     await expect(explore.locator('.span-scope-toggle .arco-radio-checked')).toHaveText('All spans')
+    // The widened query must still be drawn: toggling the scope must not blank the charts.
+    await expectChartDrawn(explore, '.red-chart-panel')
     await expect.poll(() => explore.evaluate(() => window.location.hash)).toContain('spanScope=all')
   })
 

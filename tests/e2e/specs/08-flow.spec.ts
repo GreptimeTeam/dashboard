@@ -1,4 +1,4 @@
-import { expect, snap, test } from '../fixtures'
+import { expect, test } from '../fixtures'
 import { E2E_DB, E2E_FLOW } from '../env'
 import { queryRows, runSql, dbHttpBase, authFromEnv } from '../data/sql'
 import { visit, waitSql } from '../helpers'
@@ -14,7 +14,7 @@ test.describe('flow', () => {
 
   // The list is paginated and a shared database can hold many flows: locate ours through the
   // page's own search box instead of assuming it is on the first page.
-  test('seeded flow is listed with its sink table', { tag: '@smoke' }, async ({ app }) => {
+  test('seeded flow is listed with its sink table', async ({ app }) => {
     await visit(app, '/dashboard/flow')
     await app.locator('.flow-filter-search input').fill(E2E_FLOW)
     const row = app.locator('.vxe-body--row', { hasText: E2E_FLOW })
@@ -49,7 +49,6 @@ test.describe('flow', () => {
       await expect(drawer.getByText(UI_SINK).first()).toBeVisible()
       await drawer.locator('.cm-content').first().click()
       await app.keyboard.insertText('SELECT n, ts FROM e2e_flow_src')
-      await snap(app, '1-form-filled.png')
 
       const created = waitSql(app, /CREATE\s+FLOW/i)
       await drawer.getByRole('button', { name: 'Create Flow' }).click()

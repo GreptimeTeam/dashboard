@@ -13,10 +13,18 @@ const POINTS = 60
 /** Counter metric: hosts 0..REQUEST_HOSTS-1, value grows by (host + 1) * 5 per minute. */
 const REQUEST_HOSTS = 2
 
+/**
+ * The newest log row (rendered first) deliberately carries characters that break naive rendering:
+ * double quotes, `&`, angle brackets, an emoji and a percent sign. Still starts with `e2e-log-`
+ * and still does not match `e2e-log-0`, so the existing LIKE/window assertions are unaffected.
+ */
+export const TRICKY_MESSAGE = 'e2e-log-59 said "hi" & <b>x</b> 😀 100%'
+
 /** Exact numbers produced by the statements below. */
 export const EXPECT = {
-  logs: { total: LOG_COUNT, info: 36, warn: 12, error: 12, svcA: 30, svcB: 30 },
-  traces: { traces: TRACE_COUNT, spans: TRACE_COUNT * 3, roots: TRACE_COUNT },
+  logs: { total: LOG_COUNT, info: 36, warn: 12, error: 12, svcA: 30, svcB: 30, tricky: TRICKY_MESSAGE },
+  /** Root spans are 10ms..100ms; those slower than 50ms are traces 5..9. */
+  traces: { traces: TRACE_COUNT, spans: TRACE_COUNT * 3, roots: TRACE_COUNT, slowRoots: 5 },
   cpu: { series: HOSTS, pointsPerSeries: POINTS, rows: HOSTS * POINTS },
   requests: { series: REQUEST_HOSTS, pointsPerSeries: POINTS, rows: REQUEST_HOSTS * POINTS },
 } as const
@@ -28,7 +36,7 @@ function logRows(): string[] {
   return Array.from({ length: LOG_COUNT }, (_, i) => {
     const severity = SEVERITIES[i % SEVERITIES.length]
     const service = i % 2 === 0 ? 'svc-a' : 'svc-b'
-    const message = `e2e-log-${String(i).padStart(2, '0')}`
+    const message = i === LOG_COUNT - 1 ? TRICKY_MESSAGE : `e2e-log-${String(i).padStart(2, '0')}`
     return `(${str(ts(SEED_START + i * 60))}, ${str(message)}, ${str(service)}, ${str(severity)})`
   })
 }

@@ -54,10 +54,18 @@ const LOADING =
   '.arco-spin-loading, .arco-spin-mask, .arco-spin-icon, .arco-icon-loading, .vxe-loading.is--visible, .arco-skeleton, [class*="loading-tip"]'
 
 /**
+ * How long the page must stay quiet before a screenshot is taken (charts animate in during it) and
+ * how long we are willing to wait. Fixed on purpose: `pnpm e2e` needs no tuning, and the screenshot
+ * is the reason the report is worth looking at.
+ */
+const SETTLE_QUIET_MS = 200
+const SETTLE_CAP_MS = 5000
+
+/**
  * Resolves once the page looks finished: no request in flight and no visible loading indicator for a
  * quiet period (charts animate in during it). Capped, so a long-poll can never hang a test.
  */
-export async function settle(page: Page, cap = 8000): Promise<void> {
+export async function settle(page: Page, cap = SETTLE_CAP_MS): Promise<void> {
   const pending = inflight.get(page)
   const deadline = Date.now() + cap
   let quietSince = Date.now()
@@ -77,7 +85,7 @@ export async function settle(page: Page, cap = 8000): Promise<void> {
       )
       .catch(() => false)
     if (spinning || (pending && pending.size > 0)) quietSince = Date.now()
-    else if (Date.now() - quietSince >= 600) return
+    else if (Date.now() - quietSince >= SETTLE_QUIET_MS) return
     // eslint-disable-next-line no-await-in-loop
     await page.waitForTimeout(100)
   }
@@ -114,6 +122,33 @@ async function openApp(browser: Browser, database: string): Promise<Page> {
   return page
 }
 
+/** The spec file the shared page currently belongs to (worker-scoped page, file-scoped state). */
+const pageFile = new WeakMap<Page, string>()
+
+/**
+ * Resets the shared page when a new spec file starts on this worker.
+ *
+ * The page lives for the whole worker, so without this every file inherits the previous file's
+ * keep-alive pages, timers, charts and overlays. That is invisible with one worker and shows up as
+ * multi-second stalls (or lost navigations) as soon as files run in parallel. A reload costs ~1s
+ * per file and is the same reset a user gets from F5.
+ */
+async function resetForFile(page: Page, file: string): Promise<void> {
+  const previous = pageFile.get(page)
+  pageFile.set(page, file)
+  // Only needed once files run in parallel (see playwright.e2e.config.ts); with one worker the
+  // page is reused for the whole run on purpose, and a reload would cost ~1s per file.
+  if (previous === file || Number(process.env.E2E_WORKERS || 1) <= 1) return
+  await page.reload({ waitUntil: 'domcontentloaded' }).catch(() => undefined)
+  await page
+    .waitForFunction(
+      () => !!(document.querySelector('#app') as any)?.__vue_app__?.config?.globalProperties?.$router,
+      undefined,
+      { timeout: 20_000 }
+    )
+    .catch(() => undefined)
+}
+
 /** Hands the shared page to a test, then reports frontend crashes attributed to that test. */
 async function lend(page: Page, use: (shared: Page) => Promise<void>, testInfo: TestInfo): Promise<void> {
   const collector = collectors.get(page) as Collector
@@ -124,17 +159,34 @@ async function lend(page: Page, use: (shared: Page) => Promise<void>, testInfo: 
 
   // Every test ends with a screenshot of the page as the test left it (before cleanup below), so the
   // HTML report shows what each case verified — passed or failed.
-  // Let the page finish loading first, so the picture shows results rather than spinners.
-  await settle(page)
-  const body = await page.screenshot().catch(() => undefined)
-  if (body) {
-    const failed = testInfo.status !== testInfo.expectedStatus
-    await testInfo.attach(failed ? 'failure.png' : 'screenshot.png', { body, contentType: 'image/png' })
+  // The caption names the state it shows: a bare "screenshot.png" left readers guessing which page
+  // (and which step) they were looking at.
+  const failed = testInfo.status !== testInfo.expectedStatus
+  const skipped = testInfo.status === 'skipped'
+  if (!skipped) {
+    await settle(page)
+    const route = await page
+      .evaluate(() => (window.location.hash.split('?')[0] || '/').replace(/^#/, ''))
+      .catch(() => '')
+    const body = await page.screenshot().catch(() => undefined)
+    if (body) {
+      await testInfo.attach(`${failed ? 'failure' : 'final state'} — ${route || 'unknown route'}`, {
+        body,
+        contentType: 'image/png',
+      })
+    }
   }
 
   // The page outlives the test: dismiss any popover / drawer / modal the test left open, otherwise
-  // it would swallow the next test's clicks.
+  // it would swallow the next test's clicks. A drawer that ignores Escape is handled with a reload
+  // (same context, so the configured database survives) — cheaper than an hour of cascading flakes.
   await page.keyboard.press('Escape').catch(() => undefined)
+  if (await page.locator('.arco-modal:visible, .arco-drawer:visible').count()) {
+    await page.keyboard.press('Escape').catch(() => undefined)
+    if (await page.locator('.arco-modal:visible, .arco-drawer:visible').count()) {
+      await page.goto('/#/dashboard/query', { waitUntil: 'domcontentloaded' }).catch(() => undefined)
+    }
+  }
 
   if (collector.warn.length > 0) {
     await testInfo.attach('warnings.txt', { body: collector.warn.join('\n'), contentType: 'text/plain' })
@@ -159,8 +211,14 @@ export const test = base.extend<{ app: Page; explore: Page }, { sharedApp: Page;
     },
     { scope: 'worker' },
   ],
-  app: async ({ sharedApp }, use, testInfo) => lend(sharedApp, use, testInfo),
-  explore: async ({ sharedExplore }, use, testInfo) => lend(sharedExplore, use, testInfo),
+  app: async ({ sharedApp }, use, testInfo) => {
+    await resetForFile(sharedApp, testInfo.file)
+    await lend(sharedApp, use, testInfo)
+  },
+  explore: async ({ sharedExplore }, use, testInfo) => {
+    await resetForFile(sharedExplore, testInfo.file)
+    await lend(sharedExplore, use, testInfo)
+  },
 })
 
 export { expect }

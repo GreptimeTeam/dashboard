@@ -20,7 +20,7 @@ const MENU: [label: string, route: string][] = [
 ]
 
 test.describe('global', () => {
-  test('menu opens every page in navigation order', async ({ app }) => {
+  test('menu opens every page in navigation order', { tag: '@smoke' }, async ({ app }) => {
     await visit(app, '/dashboard/query')
     const menu = app.locator('.main-sider')
     // eslint-disable-next-line no-restricted-syntax

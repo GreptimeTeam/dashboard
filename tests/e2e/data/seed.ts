@@ -87,6 +87,9 @@ export default async function ensureSeed(options: { force?: boolean } = {}): Pro
 
   let seeded = false
   if (options.force || (await storedVersion()) !== version) {
+    // Say out loud what is about to be destroyed: a wrong E2E_DB must be obvious in the log, not
+    // only in the failure that follows.
+    console.log(`[e2e] rebuilding database "${E2E_DB}" (dataset ${version}${options.force ? ', forced' : ''})`)
     // Flow names are cluster-scoped and reference the tables; drop it before the database.
     await sql(`DROP FLOW IF EXISTS ${quote(E2E_FLOW)}`).catch(() => undefined)
     await sql(`DROP DATABASE IF EXISTS ${quote(E2E_DB)}`)

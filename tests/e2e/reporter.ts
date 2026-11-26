@@ -15,6 +15,8 @@ type Entry = {
   ok: boolean
   duration: number
   error: string
+  /** Why a test skipped — without it a "green" run hides untested behaviour. */
+  skip: string
   shots: Shot[]
   notes: string[]
 }
@@ -103,6 +105,11 @@ export default class SingleFileReporter implements Reporter {
       ok: !failed,
       duration: result.duration,
       error: stripAnsi(result.errors.map((error) => error.message || error.stack || '').join('\n\n')),
+      skip: result.annotations
+        .filter((annotation) => annotation.type === 'skip')
+        .map((annotation) => annotation.description || '')
+        .filter(Boolean)
+        .join('; '),
       shots,
       notes,
     })
@@ -114,6 +121,23 @@ export default class SingleFileReporter implements Reporter {
     const skipped = count('skipped')
     const failed = this.entries.length - passed - skipped
     const seconds = ((Date.now() - this.startedAt) / 1000).toFixed(1)
+
+    // Skips are a coverage signal, not a neutral status: a run where the trace fixtures were
+    // missing can look green while nine tests verified nothing.
+    const skipReasons = [
+      ...new Set(this.entries.filter((entry) => entry.status === 'skipped').map((entry) => entry.skip)),
+    ]
+      .filter(Boolean)
+      .join(' · ')
+    const skipNote = skipped
+      ? `<span class="meta">${skipped} skipped${skipReasons ? `: ${escapeHtml(skipReasons)}` : ''}</span>`
+      : ''
+    // eslint-disable-next-line no-console
+    console.log(
+      `\n  [e2e] ${this.entries.length} tests: ${passed} passed, ${failed} failed, ${skipped} skipped${
+        skipReasons ? ` — ${skipReasons}` : ''
+      }`
+    )
 
     const byFile = new Map<string, Entry[]>()
     this.entries.forEach((entry) => byFile.set(entry.file, [...(byFile.get(entry.file) || []), entry]))
@@ -127,14 +151,17 @@ export default class SingleFileReporter implements Reporter {
             const shots = entry.shots
               .map(
                 (shot) =>
-                  `<img class="shot" loading="lazy" alt="${escapeHtml(entry.title)}" src="${
+                  `<img class="shot" decoding="async" alt="${escapeHtml(entry.title)}" src="${
                     shot.src
                   }"/><div class="cap">${escapeHtml(shot.name)}</div>`
               )
               .join('')
             const error = entry.error ? `<pre>${escapeHtml(entry.error)}</pre>` : ''
+            const skip = entry.skip ? `<div class="cap">skipped: ${escapeHtml(entry.skip)}</div>` : ''
+            // Evidence notes are open by default: a card that only shows a mostly-empty screenshot
+            // should still tell the reader what the test verified.
             const notes = entry.notes.length
-              ? `<details><summary>${entry.notes.length} note(s)</summary><pre>${escapeHtml(
+              ? `<details open><summary>${entry.notes.length} note(s)</summary><pre>${escapeHtml(
                   entry.notes.join('\n\n')
                 )}</pre></details>`
               : ''
@@ -142,7 +169,7 @@ export default class SingleFileReporter implements Reporter {
               entry.status
             }">${LABEL[state]}</span><div class="title">${escapeHtml(entry.title)}<div class="sub">${escapeHtml(
               entry.file
-            )}:${entry.line} · ${entry.duration} ms</div></div></div>${error}${shots}${notes}</div>`
+            )}:${entry.line} · ${entry.duration} ms</div></div></div>${error}${skip}${shots}${notes}</div>`
           })
           .join('')
         return `<section><h2>${escapeHtml(file)} <span class="meta">(${
@@ -158,9 +185,16 @@ export default class SingleFileReporter implements Reporter {
 <button class="pill ok" data-f="passed">Passed ${passed}</button>
 <button class="pill bad" data-f="failed">Failed ${failed}</button>
 <button class="pill skip" data-f="skipped">Skipped ${skipped}</button></span>
+${skipNote}
 <span class="meta">click a screenshot to enlarge · Esc to close</span></header>
 <main>${sections}</main><div id="zoom"><img alt=""/></div><script>${JS}</script></body></html>`
 
+    if (this.entries.length === 0) {
+      // globalSetup failed before any test ran: keep the previous report instead of wiping it.
+      // eslint-disable-next-line no-console
+      console.log(`\n  Report not written (no tests ran); keeping ${this.outputFile}`)
+      return
+    }
     fs.mkdirSync(path.dirname(this.outputFile), { recursive: true })
     fs.writeFileSync(this.outputFile, html)
     // eslint-disable-next-line no-console

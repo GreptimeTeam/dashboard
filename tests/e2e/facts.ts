@@ -24,12 +24,17 @@ export function traceFacts(): TraceFacts | undefined {
   return raw ? (JSON.parse(raw) as TraceFacts) : undefined
 }
 
-/** For use inside a test body: skips the test when the window holds no spans. */
+/**
+ * Skips with a reason. The reporter prints every skip reason in the summary line and the report
+ * header, so "green" never silently means "nine tests verified nothing".
+ */
+export function requireData(reason: string): never {
+  test.skip(true, reason)
+  throw new Error(reason)
+}
+
+/** For use inside a test body: skips with a reason (printed by the reporter) when the window is empty. */
 export function requireTraceFacts(reason: string): TraceFacts {
   const facts = traceFacts()
-  if (!facts) {
-    test.skip(true, reason)
-    throw new Error(reason)
-  }
-  return facts
+  return facts ?? requireData(reason)
 }

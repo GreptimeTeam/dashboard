@@ -1,32 +1,32 @@
 import { expect, test } from '../fixtures'
 import { EXPECT } from '../data/dataset'
-import { sqlRecords, tracesUrl, visit, waitSql } from '../helpers'
+import { tracesUrl, visit, waitSql } from '../helpers'
 
 const SPANS_SELECT = /^\s*SELECT \* FROM .*web_trace_demo/i
 
-async function spanRows(app: Parameters<typeof waitSql>[0], url: string) {
+/** Navigates and waits for the page's query; the response itself is not asserted on. */
+async function openTraces(app: Parameters<typeof waitSql>[0], url: string) {
   const response = waitSql(app, SPANS_SELECT)
   await visit(app, url)
-  return (await sqlRecords(await response)).rows
+  await response
 }
 
 test.describe('traces query', () => {
   test('lists root spans by default', { tag: '@smoke' }, async ({ app }) => {
-    expect(await spanRows(app, tracesUrl())).toHaveLength(EXPECT.traces.roots)
-    await expect(app.locator('.vxe-body--row').first()).toBeVisible()
+    await openTraces(app, tracesUrl())
+    // The grid renders ~13 rows per screen; the seed has 10, so the count is exact here.
+    await expect(app.locator('.vxe-body--row')).toHaveCount(EXPECT.traces.roots)
+    await expect(app.locator('.vxe-body--row').first()).toContainText('e2e-trace-')
   })
 
   test('service filter', async ({ app }) => {
-    const rows = await spanRows(
-      app,
-      tracesUrl({ conditions: [{ field: 'service_name', operator: '=', value: 'e2e-db' }] })
-    )
-    expect(rows).toHaveLength(EXPECT.traces.traces)
+    await openTraces(app, tracesUrl({ conditions: [{ field: 'service_name', operator: '=', value: 'e2e-db' }] }))
+    await expect(app.locator('.vxe-body--row')).toHaveCount(EXPECT.traces.traces)
   })
 
   test('duration filter keeps only slow root spans', async ({ app }) => {
     // Root durations are 10ms..100ms in 10ms steps; > 50ms leaves 60..100ms.
-    const rows = await spanRows(
+    await openTraces(
       app,
       tracesUrl({
         conditions: [
@@ -35,6 +35,6 @@ test.describe('traces query', () => {
         ],
       })
     )
-    expect(rows).toHaveLength(5)
+    await expect(app.locator('.vxe-body--row')).toHaveCount(EXPECT.traces.slowRoots)
   })
 })

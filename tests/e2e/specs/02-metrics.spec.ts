@@ -2,6 +2,7 @@ import { expect, test } from '../fixtures'
 import { EXPECT } from '../data/dataset'
 import { SEED_START } from '../env'
 import { metricsUrl, promSeries, visit, waitProm } from '../helpers'
+import { expectChartDrawn } from '../oracle'
 
 test.describe('metrics query', () => {
   test('range query returns one series per host with the seeded values', { tag: '@smoke' }, async ({ app }) => {
@@ -27,6 +28,22 @@ test.describe('metrics query', () => {
     const series = await promSeries(await response)
     expect(series).toHaveLength(1)
     expect(series[0].metric.instance).toBe('e2e-host-1')
+    // The chart must actually draw the series — "a canvas exists" is not evidence.
+    await expectChartDrawn(app, '.metrics-result-content')
+  })
+
+  test('the chart draws the series and is absent without data', async ({ app }) => {
+    // Empty first: the test (and its report screenshot) ends on the chart that carries data.
+    const empty = waitProm(app, 'e2e_no_such_metric')
+    await visit(app, metricsUrl('e2e_no_such_metric'))
+    expect(await promSeries(await empty)).toHaveLength(0)
+    // No series => no chart canvas at all (previously "canvas visible" passed for empty results).
+    await expect(app.locator('.metrics-result-content canvas')).toHaveCount(0)
+
+    const withData = waitProm(app, 'e2e_cpu_usage')
+    await visit(app, metricsUrl('e2e_cpu_usage'))
+    expect(await promSeries(await withData)).toHaveLength(EXPECT.cpu.series)
+    await expectChartDrawn(app, '.metrics-result-content')
   })
 
   test('table tab runs an instant query at a fixed time', async ({ app }) => {

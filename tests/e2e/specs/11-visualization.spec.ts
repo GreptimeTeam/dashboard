@@ -5,7 +5,7 @@
  * `e2e-dashboard` is never touched. Server state is verified through the dashboards HTTP API, not
  * only through what the UI shows.
  */
-import { expect, snap, test } from '../fixtures'
+import { expect, test } from '../fixtures'
 import { E2E_DASHBOARD } from '../env'
 import { deleteDashboard, listDashboards, readDashboard } from '../data/http'
 import { visit, visitCreate } from '../helpers'
@@ -46,7 +46,6 @@ test.describe('visualization', () => {
         expect(stored.kind).toBe('Dashboard')
         expect(stored.spec.panels).toEqual({})
         await expect(editButton(app)).toBeVisible({ timeout: 20_000 })
-        await snap(app, '1-created.png')
       })
 
       await test.step('add a panel and save: the change reaches the server', async () => {
@@ -71,7 +70,6 @@ test.describe('visualization', () => {
         expect(panels.map((panel) => panel.spec.display.name)).toEqual([PANEL])
         // Back in view mode the panel title is rendered by the viewer.
         await expect(viewer.getByText(PANEL).first()).toBeVisible()
-        await snap(app, '2-panel-saved.png')
       })
 
       await test.step('delete it from the sidebar menu', async () => {
@@ -87,7 +85,13 @@ test.describe('visualization', () => {
         expect((await deleted).ok()).toBe(true)
 
         await expect(sidebarItem(app, CRUD)).toHaveCount(0)
-        expect(await names()).not.toContain(CRUD)
+        const remaining = await names()
+        expect(remaining).not.toContain(CRUD)
+        // The list after cleanup is thin evidence on its own; keep the server state in the report.
+        await test.info().attach('verified.txt', {
+          body: `dashboards after delete: ${remaining.join(', ') || '(none)'}`,
+          contentType: 'text/plain',
+        })
       })
     } finally {
       await deleteDashboard(CRUD)
