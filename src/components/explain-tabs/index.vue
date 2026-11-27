@@ -389,8 +389,10 @@
       z-index: 0;
 
       &.active {
-        visibility: visible;
-        pointer-events: auto;
+        // Follow the parent view pane: an explicit `visible` would override the hidden
+        // `.explain-view-pane` and keep the active chart painted under the table view.
+        visibility: inherit;
+        pointer-events: inherit;
         z-index: 1;
       }
     }
