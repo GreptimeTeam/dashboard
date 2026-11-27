@@ -125,7 +125,6 @@ export default {
   'explain.parseJsonFailed': '解析 JSON 失败:{msg}',
   'explain.unknownOperation': '未知操作',
   'explain.stage': '阶段',
-  'explain.rootPlan': '根计划',
   'explain.nodes': '节点',
   'explain.nodesAll': '全部节点',
   'explain.nodeN': '节点 {n}',

@@ -32,14 +32,12 @@
     defineProps<{
       data: any[] // This is an array of rows from getStages
       index: number
-      // Root operator to draw when the stage has several roots; empty draws all plans.
-      rootPlan?: string
       // Node ids to draw; empty draws all nodes.
       selectedNodes?: number[]
       selectedMetric?: string
       metricsExpanded?: boolean
     }>(),
-    { rootPlan: '', selectedNodes: () => [], selectedMetric: '', metricsExpanded: false }
+    { selectedNodes: () => [], selectedMetric: '', metricsExpanded: false }
   )
 
   const chartContainer = ref<HTMLDivElement | null>(null)
@@ -59,21 +57,11 @@
   // Computed property for treeContainer to pass to zoom controls
   const treeContainerRef = computed(() => treeView.value?.treeContainer || null)
 
-  // Draw only the selected root plan / nodes (parent owns the selection).
+  // Draw only the selected nodes; empty draws every node and every plan on it.
   const filteredData = computed(() => {
     if (!props.data || props.data.length === 0) return []
     const nodeFilter = props.selectedNodes.length ? new Set(props.selectedNodes) : null
-    return props.data.filter((row) => {
-      const [, nodeIndex, planStr] = row
-      if (nodeFilter && !nodeFilter.has(nodeIndex)) return false
-      if (!props.rootPlan) return true
-      if (!planStr || typeof planStr !== 'string' || !planStr.startsWith('{')) return false
-      try {
-        return JSON.parse(planStr)?.name === props.rootPlan
-      } catch {
-        return false
-      }
-    })
+    return props.data.filter((row) => !nodeFilter || nodeFilter.has(row[1]))
   })
 
   // Get all available nodes from the filtered data

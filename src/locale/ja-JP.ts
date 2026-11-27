@@ -124,7 +124,6 @@ export default {
   'explain.parseJsonFailed': 'JSON の解析に失敗しました:{msg}',
   'explain.unknownOperation': '不明な操作',
   'explain.stage': 'ステージ',
-  'explain.rootPlan': 'ルートプラン',
   'explain.nodes': 'ノード',
   'explain.nodesAll': 'すべてのノード',
   'explain.nodeN': 'ノード {n}',

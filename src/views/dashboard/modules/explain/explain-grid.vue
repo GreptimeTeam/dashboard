@@ -85,14 +85,12 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
       index: number
       // Node ids to show as columns; empty means all nodes.
       selectedNodes?: number[]
-      // Root operator to show when the stage has several roots; empty shows every plan.
-      rootPlan?: string
       // Metric shown in each node cell (falls back to output rows when empty).
       selectedMetric?: string
       // Show every metric of each node instead of just the selected one.
       metricsExpanded?: boolean
     }>(),
-    { selectedNodes: () => [], rootPlan: '', selectedMetric: '', metricsExpanded: false }
+    { selectedNodes: () => [], selectedMetric: '', metricsExpanded: false }
   )
 
   const expandedKeys = ref<string[]>([])
@@ -188,36 +186,34 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
     const { slots, nodeIds } = alignment.value
     const rows: any[] = []
 
-    slots
-      .filter((slot) => !props.rootPlan || slot.name === props.rootPlan)
-      .forEach((slot, slotPosition) => {
-        getSlotOperators(slot).forEach((operator) => {
-          const record: any = {
-            key: operator.key,
-            step: operator.step,
-            path: operator.path,
-            param: operator.param,
-            hasAdditionalDetails: Boolean(operator.param),
-            startsPlan: operator.depth === 0 && slotPosition > 0,
+    slots.forEach((slot, slotPosition) => {
+      getSlotOperators(slot).forEach((operator) => {
+        const record: any = {
+          key: operator.key,
+          step: operator.step,
+          path: operator.path,
+          param: operator.param,
+          hasAdditionalDetails: Boolean(operator.param),
+          startsPlan: operator.depth === 0 && slotPosition > 0,
+        }
+        if (operator.depth === 0) {
+          record.root = {
+            param: slot.label.param,
+            ordinal: slot.label.ordinal,
+            coverage: slot.byNode.size,
+            total: nodeIds.length,
           }
-          if (operator.depth === 0) {
-            record.root = {
-              param: slot.label.param,
-              ordinal: slot.label.ordinal,
-              coverage: slot.byNode.size,
-              total: nodeIds.length,
-            }
+        }
+        operator.byNode.forEach((cell, nodeIndex) => {
+          record[`node${nodeIndex}`] = {
+            ...cell.metrics,
+            output_rows: cell.output_rows,
+            elapsed_compute: cell.elapsed_compute,
           }
-          operator.byNode.forEach((cell, nodeIndex) => {
-            record[`node${nodeIndex}`] = {
-              ...cell.metrics,
-              output_rows: cell.output_rows,
-              elapsed_compute: cell.elapsed_compute,
-            }
-          })
-          rows.push(record)
         })
+        rows.push(record)
       })
+    })
 
     return rows
   })

@@ -4,10 +4,6 @@
     span.control-label {{ $t('explain.stage') }}
     a-radio-group(v-model="stage" type="button" size="small")
       a-radio(v-for="i in stageCount" :key="i - 1" :value="i - 1") {{ i - 1 }}
-  .control-item(v-if="view === 'chart' && rootPlans.length > 1")
-    span.control-label {{ $t('explain.rootPlan') }}
-    a-select.control-select(v-model="rootPlan" size="small")
-      a-option(v-for="name in rootPlans" :key="name" :value="name") {{ name }}
   .control-item
     span.control-label {{ $t('explain.nodes') }}
     a-select.control-select(
@@ -45,11 +41,9 @@
     stageCount: number
     nodes: number[]
     metrics: Array<{ label: string; value: string }>
-    rootPlans: string[]
   }>()
 
   const stage = defineModel<number>('stage', { required: true })
-  const rootPlan = defineModel<string>('rootPlan', { default: '' })
   const selectedNodes = defineModel<number[]>('selectedNodes', { default: () => [] })
   const selectedMetric = defineModel<string>('selectedMetric', { default: '' })
   const metricsExpanded = defineModel<boolean>('metricsExpanded', { default: false })

@@ -124,7 +124,6 @@ export default {
   'explain.parseJsonFailed': 'Failed to parse JSON: {msg}',
   'explain.unknownOperation': 'Unknown operation',
   'explain.stage': 'Stage',
-  'explain.rootPlan': 'Root Plan',
   'explain.nodes': 'Nodes',
   'explain.nodesAll': 'All nodes',
   'explain.nodeN': 'Node {n}',

@@ -64,12 +64,9 @@
     :stage-count="stages.length"
     :nodes="activeStageNodes"
     :metrics="metricOptions"
-    :root-plans="activeRootPlans"
-    :root-plan="rootPlanFor(activeStageIndex)"
     :selected-nodes="nodesFilterFor(activeStageIndex)"
     :selected-metric="effectiveMetric"
     @update:stage="onStageChange"
-    @update:root-plan="selectedRootPlan = $event"
     @update:selected-nodes="selectedNodes = $event"
     @update:selected-metric="selectedMetric = $event"
   )
@@ -85,7 +82,6 @@
           :key="activeStageIndex"
           :data="tableViewStages[activeStageIndex] || []"
           :index="activeStageIndex"
-          :root-plan="rootPlanFor(activeStageIndex)"
           :selected-nodes="nodesFilterFor(activeStageIndex)"
           :selected-metric="effectiveMetric"
           :metrics-expanded="metricsExpanded"
@@ -102,7 +98,6 @@
             ExplainChart(
               :data="chartStageData[index] || stage"
               :index="index"
-              :root-plan="rootPlanFor(index)"
               :selected-nodes="nodesFilterFor(index)"
               :selected-metric="effectiveMetric"
               :metrics-expanded="metricsExpanded"
@@ -120,12 +115,7 @@
   import ExplainGrid from '@/views/dashboard/modules/explain/explain-grid.vue'
   import ExplainChart from '@/views/dashboard/modules/explain/explain-chart/index.vue'
   import ExplainControls from '@/views/dashboard/modules/explain/explain-controls.vue'
-  import {
-    formatMetricName,
-    getStageMetricKeys,
-    getStageNodeIds,
-    getStageRootPlanNames,
-  } from '@/views/dashboard/modules/explain/utils'
+  import { formatMetricName, getStageMetricKeys, getStageNodeIds } from '@/views/dashboard/modules/explain/utils'
   import TextCopyable from '@/components/text-copyable.vue'
 
   const { t } = useI18n()
@@ -160,13 +150,11 @@
   const selectedNodes = ref<number[]>([])
   const selectedMetric = ref('')
   const metricsExpanded = ref(false)
-  const selectedRootPlan = ref('')
 
   const resetControls = () => {
     selectedNodes.value = []
     selectedMetric.value = ''
     metricsExpanded.value = false
-    selectedRootPlan.value = ''
   }
 
   const ensureChartStageMounted = (index: number) => {
@@ -207,8 +195,6 @@
   const activeStageRows = computed(() => stages.value[activeStageIndex.value] ?? [])
   const activeStageNodes = computed(() => getStageNodeIds(activeStageRows.value))
   const stageNodesByStage = computed(() => stages.value.map((rows) => getStageNodeIds(rows)))
-  const rootPlansByStage = computed(() => stages.value.map((rows) => getStageRootPlanNames(rows)))
-  const activeRootPlans = computed(() => rootPlansByStage.value[activeStageIndex.value] ?? [])
 
   const metricOptions = computed(() =>
     getStageMetricKeys(activeStageRows.value).map((key) => ({ value: key, label: formatMetricName(key) }))
@@ -222,13 +208,6 @@
   const nodesFilterFor = (stageIndex: number) => {
     const stageNodes = stageNodesByStage.value[stageIndex] ?? []
     return selectedNodes.value.filter((node) => stageNodes.includes(node))
-  }
-
-  // Only stages with several root plans need a root filter; default to the first one.
-  const rootPlanFor = (stageIndex: number) => {
-    const roots = rootPlansByStage.value[stageIndex] ?? []
-    if (roots.length <= 1) return ''
-    return roots.includes(selectedRootPlan.value) ? selectedRootPlan.value : roots[0]
   }
 
   // Live ticks must only refresh the visible view/stage. Components stay mounted

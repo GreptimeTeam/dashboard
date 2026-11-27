@@ -77,16 +77,6 @@ export function getStageNodeIds(rows: StageRow[]): number[] {
   return [...new Set(rows.map((row) => row[1]))].sort((a, b) => a - b)
 }
 
-// Distinct root operator names of the plans in this stage, ascending.
-export function getStageRootPlanNames(rows: StageRow[]): string[] {
-  const names = new Set<string>()
-  rows?.forEach((row) => {
-    const plan = parseStagePlan(row[2])
-    if (plan?.name) names.add(plan.name)
-  })
-  return [...names].sort()
-}
-
 // Rows and Duration are always drawn as progress bars, so they are not offered as extra metrics.
 export const FIXED_EXPLAIN_METRICS = ['output_rows', 'elapsed_compute']
 
