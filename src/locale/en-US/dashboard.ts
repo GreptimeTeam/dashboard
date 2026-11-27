@@ -88,6 +88,7 @@ export default {
   'dashboard.explainLiveRunning': 'Running',
   'dashboard.explainLiveWaiting': 'Waiting for analyze metrics…',
   'dashboard.explainLiveFailed': 'Explain analyze failed',
+  'dashboard.explainSingleStatement': 'Explain supports a single statement. Place the cursor in one statement.',
   'dashboard.download': 'Download',
   'dashboard.raw': 'Raw',
   'dashboard.importExplain': 'Import Result JSON',

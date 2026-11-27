@@ -127,11 +127,6 @@ export default function useQueryCode() {
     return res
   }
 
-  const explainQuery = async (code: string, type: string) => {
-    const result = await runCode(code, type, false, {} as PromForm, 'explain', 'explain')
-    return result
-  }
-
   const clearCode = () => {
     codes.value[queryType.value] = ''
   }
@@ -160,7 +155,6 @@ export default function useQueryCode() {
     runQuery,
     inputFromNewLineToQueryCode,
     replaceCode,
-    explainQuery,
     refreshResult,
     sqlView,
     promqlView,

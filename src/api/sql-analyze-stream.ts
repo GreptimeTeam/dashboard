@@ -14,7 +14,8 @@ export interface AnalyzeStreamStageMetric {
 
 export interface AnalyzeStreamPayload {
   seq: number
-  state: AnalyzeStreamEventName | string
+  state: AnalyzeStreamEventName
+  /** true for periodic compact snapshots; false for terminal events (final carries verbose details). */
   partial: boolean
   elapsed_ms: number
   metrics?: AnalyzeStreamStageMetric[]
@@ -80,7 +81,7 @@ const parseFrameLines = (part: string): { eventName: string; data: string } | nu
 }
 
 /**
- * POST-only SSE consumer for EXPLAIN ANALYZE VERBOSE live metrics.
+ * POST-only SSE consumer for EXPLAIN ANALYZE VERBOSE / TQL ANALYZE VERBOSE live metrics.
  * Browser EventSource is GET-only, so this uses fetch + ReadableStream.
  */
 export async function runSQLAnalyzeStream(
@@ -89,7 +90,9 @@ export async function runSQLAnalyzeStream(
   options?: { signal?: AbortSignal; snapshotIntervalMs?: number; database?: string }
 ): Promise<void> {
   const appStore = useAppStore()
-  const base = axios.defaults.baseURL || ''
+  // The dev host is stored with a trailing slash (e.g. `http://localhost:5177/`); strip it so the
+  // path does not become `//v1/...`, which the Vite `/v1` proxy does not match.
+  const base = (axios.defaults.baseURL || '').replace(/\/+$/, '')
   const params = new URLSearchParams({
     db: options?.database || appStore.database,
   })

@@ -212,8 +212,7 @@ a-modal(
 
   const tsRef = ref<InstanceType<typeof import('./time-assistance.vue').default> | null>(null)
 
-  const { codes, queryType, cursorAt, queryOptions, sqlView, promqlView, clearCode, runQuery, explainQuery } =
-    useQueryCode()
+  const { codes, queryType, cursorAt, queryOptions, sqlView, promqlView, clearCode, runQuery } = useQueryCode()
 
   // Get current active CodeMirror view based on query type
   const currentView = computed(() => {
@@ -430,8 +429,8 @@ a-modal(
     }
   }
 
-  const executeExplainViaStream = async (queryString: string) => {
-    const explainCommand = `EXPLAIN ANALYZE VERBOSE FORMAT JSON ${queryString}`
+  /** Run explain through `/v1/sql/analyze/stream` (EXPLAIN ANALYZE VERBOSE / TQL ANALYZE VERBOSE). */
+  const executeExplainViaStream = async (explainCommand: string) => {
     const abortController = new AbortController()
     registerAbortController('explain', abortController)
 
@@ -495,29 +494,16 @@ a-modal(
         session.updateExplainResult({ ...latest, streaming: false })
       }
     } catch (error: any) {
-      if (abortController.signal.aborted || error?.name === 'AbortError') {
-        session.updateExplainResult({ ...latest, streaming: false })
-        return
-      }
       session.updateExplainResult({ ...latest, streaming: false })
+      if (abortController.signal.aborted || error?.name === 'AbortError') return
       Message.error(error?.message || t('dashboard.explainLiveFailed'))
     } finally {
       clearAbortController('explain', abortController)
     }
   }
 
-  const executeExplain = async () => {
-    const queryString = (currentStatement.value || codes.value[queryType.value] || '').trim()
-    if (!queryString) return
-
-    // SQL explain uses SSE analyze/stream for progressive metrics.
-    // PromQL / tql eval stay on one-shot /v1/sql (stream API is EXPLAIN-only).
-    if (queryType.value === 'sql' && !isTqlEvalStatement(queryString)) {
-      await executeExplainViaStream(queryString)
-      return
-    }
-
-    let explainCommand = ''
+  /** `/v1/sql/analyze/stream` accepts only a single `... ANALYZE VERBOSE` statement. */
+  const buildExplainCommand = (queryString: string): string | null => {
     if (queryType.value === 'promql') {
       let start = promForm.range[0]
       let end = promForm.range[1]
@@ -527,21 +513,34 @@ a-modal(
         start = now.subtract(promForm.time, 'minute').unix().toString()
       }
       const rangePrefix = `(${start}, ${end}, '${promForm.step}')`
-      explainCommand = `tql analyze format json ${rangePrefix} ${queryString}`
-    } else if (isTqlEvalStatement(queryString)) {
-      const matches = queryString.match(/^tql\s+eval(?:uate)?\s+([\s\S]*)$/i)
-      if (matches && matches[1]) {
-        explainCommand = `tql analyze format json ${matches[1].trim()}`
-      }
+      return `TQL ANALYZE VERBOSE FORMAT JSON ${rangePrefix} ${queryString}`
     }
 
+    if (isTqlEvalStatement(queryString)) {
+      const matches = queryString.match(/^tql\s+eval(?:uate)?\s+([\s\S]*)$/i)
+      const rest = matches?.[1]?.trim()
+      if (!rest) return null
+      return `TQL ANALYZE VERBOSE FORMAT JSON ${rest}`
+    }
+
+    return `EXPLAIN ANALYZE VERBOSE FORMAT JSON ${queryString}`
+  }
+
+  const executeExplain = async () => {
+    const queryString = (currentStatement.value || codes.value[queryType.value] || '').trim()
+    if (!queryString) return
+
+    // The stream endpoint rejects multi-statement requests.
+    if (queryType.value === 'sql' && parseSqlStatements(queryString).length > 1) {
+      Message.warning(t('dashboard.explainSingleStatement'))
+      return
+    }
+
+    const explainCommand = buildExplainCommand(queryString)
     if (!explainCommand) return
 
-    const result: any = await explainQuery(explainCommand, 'sql')
-    if (result?.cancelled) return
-    if (result?.results?.[0]) {
-      session.appendExplainResult(result.results[0])
-    }
+    // SQL, tql eval and PromQL all use SSE analyze/stream for progressive metrics.
+    await executeExplainViaStream(explainCommand)
   }
 
   window.addEventListener('beforeunload', () => {

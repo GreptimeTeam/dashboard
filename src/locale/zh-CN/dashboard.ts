@@ -87,6 +87,7 @@ export default {
   'dashboard.explainLiveRunning': '执行中',
   'dashboard.explainLiveWaiting': '等待分析指标…',
   'dashboard.explainLiveFailed': '执行计划分析失败',
+  'dashboard.explainSingleStatement': '执行计划分析仅支持单条语句,请将光标置于某一条语句内',
   'dashboard.download': '下载',
   'dashboard.raw': '原始数据',
   'dashboard.importExplain': '导入结果 JSON',
