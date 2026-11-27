@@ -1,13 +1,15 @@
 <template lang="pug">
 .plan-card(:class="{ 'active-card': isActive }" :id="cardId")
   .plan-header
-    .plan-name {{ nodeName }}
-    .plan-param(v-if="nodeData.param") {{ nodeData.param }}
-  .metric-progress-container(v-if="showProgressBar")
-    .metric-label
-      span {{ progressLabel }} {{ formattedProgressValue }}
-    .metric-progress
-      .metric-progress-bar(:style="{ width: `${progressPercentage}%`, backgroundColor: progressColor }")
+    .plan-name
+      span {{ nodeName }}
+      span.plan-ordinal(v-if="nodeData.ordinal") {{ `#${nodeData.ordinal}` }}
+    .plan-param(v-if="nodeData.param" :title="nodeData.param") {{ nodeData.param }}
+  .key-metrics
+    .key-duration {{ keyMetrics.duration }}
+    .key-metrics-bar
+      .key-metrics-bar-fill(:style="{ width: `${keyMetrics.percentage}%`, backgroundColor: keyMetrics.color }")
+    .key-rows {{ keyMetrics.rows }} rows
   .plan-metrics(v-if="showMetrics")
     .metric-item(v-for="(value, key) in filteredMetrics" :key="key")
       span.metric-key {{ formatMetricName(key) }}:
@@ -17,16 +19,19 @@
 <script lang="ts" setup name="PlanCard">
   import { computed } from 'vue'
   import i18n from '@/locale'
-  import { formatMetricName, formatTimeValue, formatNumber, formatMetricValue } from '../utils'
+  import {
+    formatMetricName,
+    formatTimeValue,
+    formatNumber,
+    formatMetricValue,
+    FIXED_EXPLAIN_METRICS,
+    keyBarColor,
+  } from '../utils'
 
   const props = defineProps({
     nodeData: {
       type: Object,
       required: true,
-    },
-    highlightType: {
-      type: String,
-      default: 'DURATION',
     },
     maxRows: {
       type: Number,
@@ -52,86 +57,66 @@
       type: Number,
       required: true,
     },
+    // Unique position of this card in the chart (node + plan + operator path); keeps DOM ids distinct.
+    cardKey: {
+      type: String,
+      default: '',
+    },
   })
 
-  const cardId = computed(() => `plan-card-stage-${props.stageIndex}-node-${props.nodeData?.nodeIndex}`)
+  const cardId = computed(() => {
+    const key = props.cardKey || String(props.nodeData?.nodeIndex)
+    return `plan-card-stage-${props.stageIndex}-${key.replace(/[^A-Za-z0-9_-]/g, '_')}`
+  })
 
   // Node name
   const nodeName = computed(() => {
     return props.nodeData.name || i18n.global.t('explain.unknownOperation')
   })
 
-  // Progress bar visibility and data
-  const showProgressBar = computed(() => props.highlightType !== 'NONE')
+  const nodeValue = (key: string): number => {
+    return props.nodeData[key] || props.nodeData.metrics?.[key] || 0
+  }
 
-  const progressPercentage = computed(() => {
-    if (props.highlightType === 'ROWS' && props.maxRows > 0) {
-      const outputRows =
-        props.nodeData.output_rows || (props.nodeData.metrics && props.nodeData.metrics.output_rows) || 0
-      return Math.min(100, (outputRows / props.maxRows) * 100)
+  const percentOf = (value: number, max: number): number => {
+    return max > 0 ? Math.min(100, (value / max) * 100) : 0
+  }
+
+  // Same rule as the table: Duration leads with its bar (relative to the slowest operator in the stage); Rows is secondary.
+  const keyMetrics = computed(() => {
+    const rows = nodeValue('output_rows')
+    const duration = nodeValue('elapsed_compute')
+    const percentage = percentOf(duration, props.maxDuration)
+    return {
+      rows: formatNumber(rows),
+      duration: formatTimeValue(duration),
+      percentage,
+      color: keyBarColor(percentage),
     }
-    if (props.highlightType === 'DURATION' && props.maxDuration > 0) {
-      const elapsedCompute =
-        props.nodeData.elapsed_compute || (props.nodeData.metrics && props.nodeData.metrics.elapsed_compute) || 0
-      return Math.min(100, (elapsedCompute / props.maxDuration) * 100)
-    }
-    return 0
   })
 
-  const progressLabel = computed(() => {
-    if (props.highlightType === 'ROWS') {
-      return 'Rows:'
-    }
-    if (props.highlightType === 'DURATION') {
-      return 'Duration:'
-    }
-    return ''
-  })
-
-  const formattedProgressValue = computed(() => {
-    if (props.highlightType === 'ROWS') {
-      const outputRows =
-        props.nodeData.output_rows || (props.nodeData.metrics && props.nodeData.metrics.output_rows) || 0
-      return formatNumber(outputRows)
-    }
-    if (props.highlightType === 'DURATION') {
-      const elapsedCompute =
-        props.nodeData.elapsed_compute || (props.nodeData.metrics && props.nodeData.metrics.elapsed_compute) || 0
-      return formatTimeValue(elapsedCompute)
-    }
-    return ''
-  })
-
-  const progressColor = computed(() => {
-    const percentage = progressPercentage.value
-    // Color gradient from green to yellow to red
-    if (percentage < 30) return 'var(--success-color)'
-    if (percentage < 70) return 'var(--warning-color)'
-    return 'var(--danger-color)'
+  // Selected metric as a separate line. Rows / Duration are already shown above, so they never repeat here.
+  const extraMetric = computed(() => {
+    if (!props.selectedMetric || FIXED_EXPLAIN_METRICS.includes(props.selectedMetric)) return ''
+    return props.nodeData.metrics?.[props.selectedMetric] !== undefined ? props.selectedMetric : ''
   })
 
   // Metrics display
-  const showMetrics = computed(() => {
-    return (
-      props.metricsExpanded ||
-      (props.selectedMetric && props.nodeData.metrics && props.nodeData.metrics[props.selectedMetric] !== undefined)
-    )
-  })
+  const showMetrics = computed(() => props.metricsExpanded || extraMetric.value !== '')
 
   const filteredMetrics = computed(() => {
     if (!props.nodeData.metrics) return {}
 
     if (props.metricsExpanded) {
-      // Return all metrics except the ones that are already shown in the progress bar
+      // Return all metrics except the ones that are already shown as bars
       return Object.fromEntries(
         Object.entries(props.nodeData.metrics).filter(
           ([key]) => !['output_rows', 'elapsed_compute', 'outputRows', 'elapsedCompute'].includes(key)
         )
       )
     }
-    if (props.selectedMetric && props.nodeData.metrics[props.selectedMetric] !== undefined) {
-      // Just return the selected metric
-      return { [props.selectedMetric]: props.nodeData.metrics[props.selectedMetric] }
+    if (extraMetric.value) {
+      return { [extraMetric.value]: props.nodeData.metrics[extraMetric.value] }
     }
 
     return {}

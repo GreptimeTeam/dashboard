@@ -1,70 +1,50 @@
 <template lang="pug">
 .explain-chart(:id="`explain-chart-stage-${index}`")
-  .header
-    div(style="display: flex; align-items: center; justify-content: space-between; flex-direction: row")
-      .stage-navigation
-        a-radio-group(
-          v-model="localStageIndex"
-          type="button"
-          size="small"
-          @change="onStageChange"
+  .chart-main
+    .chart-scroll-container
+      .chart-empty(v-if="!filteredData.length")
+        a-empty(:description="$t('explain.noPlans')")
+      .chart-container.grab-bing(ref="chartContainer")
+        TreeView(
+          ref="treeView"
+          :data="filteredData"
+          :scale-data="data"
+          :active-node-index="activeNodeIndex"
+          :selected-metric="selectedMetric"
+          :metrics-expanded="metricsExpanded"
+          :stage-index="index"
+          @update:active-node-index="updateActiveNode"
+          @svgCreated="handleSvgCreated"
         )
-          a-radio(v-for="i in totalStages" :key="i - 1" :value="i - 1") Stage {{ i - 1 }}
-      .root-plan-selector(v-if="availableRootPlans.length > 1")
-        a-select(v-model="selectedRootPlan" size="small" style="width: 200px; margin-left: 8px")
-          a-option(v-for="root in availableRootPlans" :key="root" :value="root") {{ root }}
-    ChartControls(
-      v-model:highlight-type="highlightType"
-      v-model:selected-metric="selectedMetric"
-      v-model:metrics-expanded="metricsExpanded"
-      :available-nodes="availableNodes"
-      :active-node-index="activeNodeIndex"
-      :available-metrics="availableMetrics"
-      :stage-index="index"
-    )
-  .chart-scroll-container
-    .chart-container.grab-bing(ref="chartContainer")
-      TreeView(
-        ref="treeView"
-        :data="filteredData"
-        :active-node-index="activeNodeIndex"
-        :highlight-type="highlightType"
-        :selected-metric="selectedMetric"
-        :metrics-expanded="metricsExpanded"
-        :stage-index="index"
-        @update:active-node-index="updateActiveNode"
-        @nodes-data-updated="updateNodesData"
-        @svgCreated="handleSvgCreated"
-      )
-    .controls-wrapper
-      ZoomControls(ref="zoomControls" :tree-container="treeContainerRef")
-      NavigationArrows(
-        v-if="availableNodes.length > 1"
-        :available-nodes="availableNodes"
-        :active-node-index="activeNodeIndex"
-        @prev="navigateToPrevNode"
-        @next="navigateToNextNode"
-      )
+      .controls-wrapper
+        ZoomControls(ref="zoomControls" :tree-container="treeContainerRef")
+        NavigationArrows(
+          v-if="availableNodes.length > 1"
+          :available-nodes="availableNodes"
+          :active-node-index="activeNodeIndex"
+          @prev="navigateToPrevNode"
+          @next="navigateToNextNode"
+        )
 </template>
 
 <script lang="ts" setup name="ExplainChart">
   import * as d3 from 'd3'
-  import { formatMetricName } from '../utils'
+  import { parseStagePlan } from '../utils'
 
-  const props = defineProps<{
-    data: any[] // This is an array of rows from getStages
-    index: number
-    totalStages: number // Add this prop to know total number of stages
-  }>()
-
-  const emit = defineEmits(['changeStage'])
+  const props = withDefaults(
+    defineProps<{
+      data: any[] // This is an array of rows from getStages
+      index: number
+      // Node ids to draw; empty draws all nodes.
+      selectedNodes?: number[]
+      selectedMetric?: string
+      metricsExpanded?: boolean
+    }>(),
+    { selectedNodes: () => [], selectedMetric: '', metricsExpanded: false }
+  )
 
   const chartContainer = ref<HTMLDivElement | null>(null)
-  const metricsExpanded = ref(false)
-  const selectedMetric = ref<string>('')
   const activeNodeIndex = ref<number>(0)
-  const highlightType = ref<string>('DURATION') // Highlight type: NONE, ROWS, DURATION
-  const nodesData = ref([])
   const treeView = ref<{
     treeContainer: HTMLDivElement | null
     getNodeTreeRect: (nodeIndex: number) => { minX: number; maxX: number; width: number } | null
@@ -76,85 +56,16 @@
     scrollToTransform: (transform: d3.ZoomTransform) => void
   } | null>(null)
   const componentId = computed(() => `explain-chart-stage-${props.index}`)
-  const selectedRootPlan = ref<string>('')
 
   // Computed property for treeContainer to pass to zoom controls
   const treeContainerRef = computed(() => treeView.value?.treeContainer || null)
 
-  // Extract available root plan names from props.data
-  const availableRootPlans = computed(() => {
-    if (!props.data || props.data.length === 0) return []
-    const rootNames = new Set<string>()
-    props.data.forEach((row) => {
-      const [, , planStr] = row
-      if (!planStr || typeof planStr !== 'string' || !planStr.startsWith('{')) {
-        return
-      }
-      try {
-        const plan = JSON.parse(planStr)
-        if (plan?.name) {
-          rootNames.add(plan.name)
-        }
-      } catch {
-        // Ignore invalid JSON
-      }
-    })
-    return Array.from(rootNames).sort()
-  })
-
-  // Filter data based on selected root plan
+  // Draw only the selected nodes (empty draws every node and every plan on it), and only rows that are
+  // valid plans.
   const filteredData = computed(() => {
     if (!props.data || props.data.length === 0) return []
-    if (availableRootPlans.value.length <= 1) {
-      // If only one root plan, return all data
-      return props.data
-    }
-    // Filter by selected root plan (watcher ensures selectedRootPlan is always set)
-    return props.data.filter((row) => {
-      const [, , planStr] = row
-      if (!planStr || typeof planStr !== 'string' || !planStr.startsWith('{')) {
-        return false
-      }
-      try {
-        const plan = JSON.parse(planStr)
-        return plan?.name === selectedRootPlan.value
-      } catch {
-        return false
-      }
-    })
-  })
-
-  const availableMetrics = computed(() => {
-    const metricKeys = new Set<string>()
-
-    // Process all nodes from all plans to collect unique metric keys
-    nodesData.value.forEach(({ plan }) => {
-      function traverseNode(node) {
-        // Add metrics from this node
-        if (node.metrics) {
-          Object.keys(node.metrics).forEach((key) => {
-            // Skip the metrics we already show in progress bars
-            if (!['output_rows', 'elapsed_compute', 'outputRows', 'elapsedCompute'].includes(key)) {
-              metricKeys.add(key)
-            }
-          })
-        }
-
-        // Process children
-        if (node.children) {
-          node.children.forEach(traverseNode)
-        }
-      }
-
-      traverseNode(plan)
-    })
-
-    return Array.from(metricKeys)
-      .sort()
-      .map((key) => ({
-        value: key,
-        label: formatMetricName(key.toString()),
-      }))
+    const nodeFilter = props.selectedNodes.length ? new Set(props.selectedNodes) : null
+    return props.data.filter((row) => (!nodeFilter || nodeFilter.has(row[1])) && parseStagePlan(row[2]) !== null)
   })
 
   // Get all available nodes from the filtered data
@@ -200,23 +111,21 @@
   }
 
   function scrollToNode(nodeIdx) {
+    const root = `#${componentId.value}`
     const previousNodeId = activeNodeIndex.value
     activeNodeIndex.value = nodeIdx
 
-    // Only update what's necessary in the DOM directly
-    if (previousNodeId !== null) {
-      // Remove highlight from previous node - scoped to this component
-      d3.selectAll(`#${componentId.value} .tree-group.node-${previousNodeId} .plan-card`).classed('active-card', false)
-      d3.selectAll(`#${componentId.value} .tree-group.node-${previousNodeId}`).classed('active-tree', false)
-      d3.selectAll(`#${componentId.value} .tree-group.node-${previousNodeId} .node-index-rect`).classed('active', false)
+    // foreignObject card HTML is static until re-render — toggle active classes in DOM.
+    if (previousNodeId !== null && previousNodeId !== nodeIdx) {
+      d3.selectAll(`${root} .node.node-${previousNodeId} .plan-card`).classed('active-card', false)
+      d3.selectAll(`${root} .node-label-group.node-${previousNodeId} .node-label-rect`).classed('active', false)
+      d3.selectAll(`${root} .node-label-group.node-${previousNodeId}`).classed('active-node-label', false)
     }
 
-    // Add highlight to new node - scoped to this component
-    d3.selectAll(`#${componentId.value} .tree-group.node-${nodeIdx} .plan-card`).classed('active-card', true)
-    d3.selectAll(`#${componentId.value} .tree-group.node-${nodeIdx}`).classed('active-tree', true)
-    d3.selectAll(`#${componentId.value} .tree-group.node-${nodeIdx} .node-index-rect`).classed('active', true)
+    d3.selectAll(`${root} .node.node-${nodeIdx} .plan-card`).classed('active-card', true)
+    d3.selectAll(`${root} .node-label-group.node-${nodeIdx} .node-label-rect`).classed('active', true)
+    d3.selectAll(`${root} .node-label-group.node-${nodeIdx}`).classed('active-node-label', true)
 
-    // Handle scrolling to the node
     scrollToNodeTree(nodeIdx)
   }
 
@@ -238,71 +147,51 @@
     }
   }
 
-  const areDataArraysEqual = (newData, oldData) => {
+  const getPlanNameTree = (planStr: string) => {
+    try {
+      const walk = (node: any): { name?: string; children: any[] } => ({
+        name: node?.name,
+        children: Array.isArray(node?.children) ? node.children.map(walk) : [],
+      })
+      return JSON.stringify(walk(JSON.parse(planStr)))
+    } catch {
+      return typeof planStr === 'string' ? planStr : ''
+    }
+  }
+
+  // Same stage/node/operator topology (ignore live metric value changes).
+  const isSamePlanStructure = (newData: any[], oldData: any[]) => {
     if (!newData || !oldData) return newData === oldData
     if (newData.length !== oldData.length) return false
-
     return newData.every((newRow, index) => {
       const oldRow = oldData[index]
-      if (newRow[0] !== oldRow[0] || newRow[1] !== oldRow[1]) return false
-
-      try {
-        return JSON.stringify(JSON.parse(newRow[2])) === JSON.stringify(JSON.parse(oldRow[2]))
-      } catch (e) {
-        return newRow[2] === oldRow[2]
-      }
+      return (
+        newRow[0] === oldRow[0] && newRow[1] === oldRow[1] && getPlanNameTree(newRow[2]) === getPlanNameTree(oldRow[2])
+      )
     })
   }
 
-  // Initialize selected root plan when available root plans change
-  watch(
-    () => availableRootPlans.value,
-    (newRootPlans) => {
-      if (newRootPlans.length > 0 && !selectedRootPlan.value) {
-        selectedRootPlan.value = newRootPlans[0]
-      }
-    },
-    { immediate: true }
-  )
-
-  // Watch filteredData to update chart when data or root plan changes
+  // Live metrics refresh rebuilds the tree but must keep pan/zoom.
+  // Only reset the camera when this stage's plan topology changes
+  // (e.g. root plan or node filter change). Stage tabs keep separate chart instances, so
+  // switching stages no longer remounts or resets this state.
   watch(
     () => filteredData.value,
-    () => {
-      activeNodeIndex.value = availableNodes.value[0] ?? 0
-      zoomControls.value?.handleResetZoom()
+    (newData, oldData) => {
+      const nodes = availableNodes.value
+      if (!nodes.includes(activeNodeIndex.value)) {
+        activeNodeIndex.value = nodes[0] ?? 0
+      }
+
+      const structureChanged = !oldData || !isSamePlanStructure(newData, oldData)
+      if (!structureChanged) return
+
+      if (oldData) {
+        zoomControls.value?.handleResetZoom()
+      }
     },
     { immediate: true }
   )
-
-  // Watch props.data to reset state when stage changes (not when root plan changes)
-  watch(
-    () => props.data,
-    (newData, oldData) => {
-      // Only reset state if the data content actually changed (stage change)
-      if (!oldData || !areDataArraysEqual(newData, oldData)) {
-        selectedMetric.value = ''
-        highlightType.value = 'DURATION'
-        metricsExpanded.value = false
-        // Chart update is handled by filteredData watch
-      }
-    }
-  )
-
-  const localStageIndex = ref(props.index)
-
-  watch(
-    () => props.index,
-    (newIndex) => {
-      localStageIndex.value = newIndex
-    }
-  )
-
-  function onStageChange(newStageIndex) {
-    if (newStageIndex >= 0 && newStageIndex < props.totalStages) {
-      emit('changeStage', newStageIndex)
-    }
-  }
 
   onBeforeUnmount(() => {
     if (chartContainer.value) {
@@ -316,31 +205,30 @@
     // Also perform scrolling/highlighting to mirror direct scroll actions
     scrollToNode(nodeIndex)
   }
-
-  const updateNodesData = (data) => {
-    nodesData.value = data
-  }
 </script>
 
 <style lang="less">
   .explain-chart {
     display: flex;
-    flex-direction: column;
-    height: calc(100% - 32px);
+    flex-direction: row;
+    align-items: stretch;
+    box-sizing: border-box;
+    height: 100%;
+    min-height: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--gpt-border-default);
+    border-radius: var(--gpt-radius-md);
+    background: var(--gpt-bg-panel);
+    box-shadow: var(--gpt-shadow-sm);
 
-    padding: var(--gpt-page-padding-y) var(--gpt-page-padding-x);
-
-    .header {
+    .chart-main {
+      flex: 1;
+      min-width: 0;
+      min-height: 0;
       display: flex;
-      justify-content: space-between;
-      border-bottom: 1px solid var(--gpt-border-default);
-      padding-bottom: var(--gpt-gap-sm);
-    }
-
-    .stage-navigation {
-      display: flex;
-      justify-content: center;
-      align-items: center;
+      flex-direction: column;
+      position: relative;
     }
 
     .controls-wrapper {
@@ -351,10 +239,10 @@
       display: flex;
       justify-content: center;
       z-index: 10;
-      pointer-events: none; // Allow clicking through wrapper to SVG
+      pointer-events: none;
 
       > * {
-        pointer-events: auto; // Re-enable pointer events for children
+        pointer-events: auto;
       }
     }
 
@@ -362,6 +250,17 @@
       flex: 1;
       position: relative;
       overflow: hidden;
+      min-height: 0;
+    }
+
+    .chart-empty {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
     }
 
     .chart-container {
@@ -406,7 +305,7 @@
 
     .zoom-controls,
     .navigation-arrows {
-      pointer-events: auto; // Re-enable pointer events for controls
+      pointer-events: auto;
     }
   }
 
@@ -418,6 +317,8 @@
   .plan-card {
     width: auto;
     min-width: 200px;
+    // A root param can be long; cap the card so it does not stretch the whole tree layout.
+    max-width: 320px;
     background-color: var(--card-bg-color);
     border: 1px solid var(--border-color);
     border-radius: var(--gpt-radius-sm);
@@ -434,8 +335,10 @@
 
     .plan-header {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
+      min-width: 0;
       margin-bottom: 8px;
     }
 
@@ -445,35 +348,58 @@
       font-size: var(--gpt-font-md);
     }
 
-    .plan-param {
-      color: var(--main-font-color);
-      font-size: var(--gpt-font-md);
+    .plan-ordinal {
+      margin-left: 6px;
+      color: var(--third-font-color);
+      font-weight: normal;
     }
 
-    .metric-progress-container {
+    .plan-param {
+      max-width: 100%;
+      min-width: 0;
+      color: var(--small-font-color);
+      font-size: var(--gpt-font-md);
+      word-break: break-all;
+      // Two lines at most; the full text is in the title attribute.
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .key-metrics {
       margin-bottom: 8px;
       border-bottom: 1px dashed var(--border-color);
       padding-bottom: 8px;
     }
 
-    .metric-label {
+    .key-duration {
+      font-family: var(--font-mono);
       font-size: var(--gpt-font-md);
-      color: var(--small-font-color);
-      margin-bottom: 4px;
-      display: flex;
-      justify-content: space-between;
+      font-weight: 600;
+      color: var(--main-font-color);
+      white-space: nowrap;
     }
 
-    .metric-progress {
-      height: 6px;
+    .key-rows {
+      margin-top: 2px;
+      font-family: var(--font-mono);
+      font-size: var(--gpt-font-sm);
+      color: var(--third-font-color);
+      white-space: nowrap;
+    }
+
+    .key-metrics-bar {
+      height: 3px;
+      margin-top: 4px;
       background-color: var(--grey-bg-color);
-      border-radius: 3px;
+      border-radius: 2px;
       overflow: hidden;
     }
 
-    .metric-progress-bar {
+    .key-metrics-bar-fill {
       height: 100%;
-      border-radius: 3px;
+      border-radius: 2px;
       transition: width 0.3s ease;
     }
 

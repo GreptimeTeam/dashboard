@@ -5,9 +5,16 @@
 <script lang="ts" setup>
   import * as d3 from 'd3'
   import { flextree } from 'd3-flextree'
-  import { createVNode, render, h } from 'vue'
+  import { render, h } from 'vue'
   import PlanCard from './plan-card.vue'
-  import { CARD_DIMENSIONS, NODE_INDEX_CARD, getProgressColor } from '../utils'
+  import {
+    CARD_DIMENSIONS,
+    NODE_INDEX_CARD,
+    alignStagePlans,
+    parseStagePlan,
+    type StagePlanSlotLabel,
+    type StageRow,
+  } from '../utils'
 
   // Define interfaces (moved from parent)
   interface FlexHierarchyPointNode extends d3.HierarchyPointNode<any> {
@@ -43,10 +50,6 @@
       type: Number,
       default: 0,
     },
-    highlightType: {
-      type: String,
-      default: 'DURATION',
-    },
     selectedMetric: {
       type: String,
       default: '',
@@ -54,6 +57,12 @@
     metricsExpanded: {
       type: Boolean,
       default: false,
+    },
+    // Rows the bar scale is computed from. Pass the whole stage so the bars do not change
+    // when Nodes / Root Plan filters narrow `data`. Falls back to `data` when omitted.
+    scaleData: {
+      type: Array,
+      default: null,
     },
   })
 
@@ -68,6 +77,7 @@
   const backgroundMeasureContainer = ref<HTMLDivElement | null>(null)
   const nodeTreeBoundsMap = ref<Map<number, { minX: number; maxX: number }>>(new Map())
   const treeOffsetX = ref<number>(0)
+  let renderGeneration = 0
 
   // Single traversal for all max stats (extensible for future metrics)
   type MaxStats = {
@@ -96,7 +106,8 @@
 
   const maxStats = computed<MaxStats>(() => {
     const acc: MaxStats = { maxRows: 0, maxDuration: 0 }
-    props.data.forEach((row) => {
+    const scaleRows = props.scaleData ?? props.data
+    scaleRows.forEach((row) => {
       try {
         const planData = JSON.parse(row[2])
         traverseNodeForMax(planData, acc)
@@ -107,26 +118,42 @@
     return acc
   })
 
-  // Process raw data into node-specific data
-  function processNodesData(data) {
-    const nodeMap = new Map()
+  // Plan labels (param, #n) come from the whole stage, so filtering nodes or roots never renumbers them.
+  const alignment = computed(() => alignStagePlans((props.scaleData ?? props.data) as StageRow[]))
 
-    // Group by node
+  // Process raw data into node-specific data.
+  // A node can run several plans (one per branch, e.g. both inputs of a JOIN). Keep all of them,
+  // in explain order, so each one is drawn as its own plan tree under the node label.
+  function processNodesData(data) {
+    const nodeMap = new Map<number, { nodeIndex: number; plans: { plan: any; label: StagePlanSlotLabel }[] }>()
+
     data.forEach((row) => {
       const nodeIdx = row[1]
-      const planData = JSON.parse(row[2])
-      nodeMap.set(nodeIdx, {
-        nodeIndex: nodeIdx,
-        plan: planData,
-      })
+      // Same rule as the table: rows that are not a plan (footer, bad import) are skipped, never thrown on.
+      const plan = parseStagePlan(row[2])
+      if (!plan) return
+      const item = {
+        plan,
+        label: alignment.value.slotByRow.get(row as StageRow)?.label ?? { param: '', ordinal: 0 },
+      }
+      const entry = nodeMap.get(nodeIdx)
+      if (entry) {
+        entry.plans.push(item)
+      } else {
+        nodeMap.set(nodeIdx, { nodeIndex: nodeIdx, plans: [item] })
+      }
     })
 
     return Array.from(nodeMap.values())
   }
 
-  function toHierarchy(plan, nodeIndex) {
+  // Only a root card shows its param and plan number (when the stage needs them to tell plans apart);
+  // an operator's own param, e.g. a scan's region and file list, never goes on a card.
+  function toHierarchy(plan, nodeIndex, label?: StagePlanSlotLabel) {
     return {
       name: plan.name || 'Root',
+      param: label?.param ?? '',
+      ordinal: label?.ordinal ?? 0,
       nodeIndex,
       isNodeLabel: false, // Plan nodes are not node labels
       metrics: {
@@ -143,7 +170,11 @@
 
   // Render PlanCard in background, get size and HTML string
   // Returns both size and innerHTML string for reuse in foreignObject
-  function renderCardInBackground(nodeData: any, nodeIndex: number): Promise<{ size: [number, number]; html: string }> {
+  function renderCardInBackground(
+    nodeData: any,
+    nodeIndex: number,
+    cardKey: string
+  ): Promise<{ size: [number, number]; html: string }> {
     // Create a hidden measurement container (reused for all cards)
     if (!backgroundMeasureContainer.value) {
       const container = document.createElement('div')
@@ -166,13 +197,13 @@
     render(
       h(PlanCard, {
         nodeData,
-        highlightType: props.highlightType,
         maxRows: maxStats.value.maxRows,
         maxDuration: maxStats.value.maxDuration,
         selectedMetric: props.selectedMetric,
         metricsExpanded: props.metricsExpanded,
         isActive: props.activeNodeIndex === nodeIndex,
         stageIndex: props.stageIndex,
+        cardKey,
       }),
       cardContainer
     )
@@ -209,47 +240,68 @@
       const name = current.data?.name || ''
       // Skip fake root and node labels - only include actual plan operators
       if (name !== 'FakeRoot' && !current.data?.isNodeLabel) {
-        path.unshift(name)
+        // Sibling operators can share a name (e.g. both inputs of a HashJoinExec are
+        // RepartitionExec). The sibling index keeps their card, size and link keys distinct;
+        // otherwise they overwrite each other and the second card paints empty.
+        const siblingIndex = current.parent?.children?.indexOf(current) ?? 0
+        path.unshift(`${name}#${siblingIndex}`)
       }
       current = current.parent
     }
     return path
   }
 
-  // Note: Scrolling and highlighting are handled by parent component.
+  // Always remeasure + flextree (no height guessing), but never tear down the
+  // zoom SVG mid-SSE — destroying it causes flicker and breaks in-progress pan.
+  // Layout: svg > g.zoom-root (d3-zoom transform, persistent) > g.tree-content (replaced).
+  function ensureViewport(): {
+    svg: d3.Selection<SVGSVGElement, unknown, null, undefined>
+    zoomRoot: d3.Selection<SVGGElement, unknown, null, undefined>
+  } | null {
+    if (!treeContainer.value) return null
 
-  async function renderTree() {
-    if (!treeContainer.value || !props.data || props.data.length === 0) return
+    let svg = d3.select(treeContainer.value).select<SVGSVGElement>('svg.explain-svg')
+    let zoomRoot = svg.select<SVGGElement>('g.zoom-root')
+    const isNew = svg.empty()
 
-    // Clear previous content
-    treeContainer.value.innerHTML = ''
+    if (isNew) {
+      svg = d3.select(treeContainer.value).append('svg').attr('class', `explain-svg ${componentId.value}`)
+      zoomRoot = svg.append('g').attr('class', `zoom-root ${componentId.value}`)
+      // Bind zoom once when the stable SVG appears.
+      emit('svgCreated', { svg })
+    }
 
-    // Create container for zoomable content with explicit dimensions
-    const svg = d3
-      .select(treeContainer.value)
-      .append('svg')
-      .attr('width', treeContainer.value.clientWidth)
-      .attr('height', treeContainer.value.clientHeight)
-      .attr('class', `explain-svg ${componentId.value}`)
-      .attr('viewBox', `0 0 ${treeContainer.value.clientWidth} ${treeContainer.value.clientHeight}`)
+    const width = treeContainer.value.clientWidth || 800
+    const height = treeContainer.value.clientHeight || 600
+    svg.attr('width', width).attr('height', height).attr('viewBox', null)
 
-    // Emit event for zoom controls to apply zoom behavior
-    // The preservedTransform will be retrieved by the parent/zoom-controls
-    emit('svgCreated', { svg })
+    return { svg, zoomRoot }
+  }
 
-    // Add main group for transformation during zoom/pan
-    const mainGroup = svg.append('g').attr('class', componentId.value)
+  async function redrawTree() {
+    if (!treeContainer.value) return
+    if (!props.data || props.data.length === 0) {
+      const viewport = ensureViewport()
+      viewport?.zoomRoot.selectAll('g.tree-content').remove()
+      return
+    }
+
+    renderGeneration += 1
+    const generation = renderGeneration
+
+    const viewport = ensureViewport()
+    if (!viewport) return
+    const { zoomRoot } = viewport
 
     // Process all node data
     nodesData.value = processNodesData(props.data)
     emit('nodesDataUpdated', nodesData.value)
 
     // If no nodes, return early
-    if (!nodesData.value.length) return
-
-    // Clear node positions and bounds maps
-    nodePositions.value.clear()
-    nodeTreeBoundsMap.value.clear()
+    if (!nodesData.value.length) {
+      zoomRoot.selectAll('g.tree-content').remove()
+      return
+    }
 
     // Map to store rendered HTML strings and sizes by unique key (nodeIndex + node path)
     const renderedCardsMap = new Map<string, { size: [number, number]; html: string }>()
@@ -262,13 +314,14 @@
       children: nodesData.value
         .filter((nodeData) => !Number.isNaN(nodeData.nodeIndex))
         .map((nodeData) => {
-          const { nodeIndex, plan } = nodeData
-          const planTree = toHierarchy(plan, nodeIndex)
+          const { nodeIndex, plans } = nodeData
           return {
             name: `Node ${nodeIndex}`,
             nodeIndex,
             isNodeLabel: true, // Mark as node label
-            children: [planTree], // Plan tree as child of node label
+            // One plan tree per branch. Siblings under the label are laid out side by side,
+            // and each root's sibling index keeps its card keys distinct.
+            children: plans.map(({ plan, label }) => toHierarchy(plan, nodeIndex, label)),
           }
         }),
     }
@@ -293,17 +346,18 @@
         // Get path from hierarchy node (getNodePath filters out fake root and node labels)
         const nodePath = getNodePath(d)
         const key = getNodeKey(node.nodeIndex, nodePath)
-        const promise = renderCardInBackground(node, node.nodeIndex).then(({ size, html }) => {
+        const promise = renderCardInBackground(node, node.nodeIndex, key).then(({ size, html }) => {
           renderedCardsMap.set(key, { size, html })
         })
         allRenderPromises.push(promise)
       }
     })
 
-    // Wait for all cards to render
+    // Wait for all cards to render — keep previous tree-content visible during measure.
     if (allRenderPromises.length > 0) {
       await Promise.all(allRenderPromises)
     }
+    if (generation !== renderGeneration) return
 
     // Create the tree layout with dynamic sizing
     const treeLayout = flextree({
@@ -344,6 +398,10 @@
 
     // Apply layout to get positioned nodes
     const layoutRoot = treeLayout(hierarchy) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+    // Clear bounds maps only when we are about to paint the new layout.
+    nodePositions.value.clear()
+    nodeTreeBoundsMap.value.clear()
 
     // Calculate tree bounds and nodeTree bounds in a single pass
     // Get leftmost and rightmost edges considering node widths
@@ -401,9 +459,11 @@
     const offsetX = -minX + 20
     treeOffsetX.value = offsetX
 
-    // Create container for the entire tree
-    const treeContainerGroup = mainGroup
+    // Swap tree content only after layout is ready (old tree stays until this point).
+    zoomRoot.selectAll('g.tree-content').remove()
+    const treeContainerGroup = zoomRoot
       .append('g')
+      .attr('class', 'tree-content')
       .attr('transform', `translate(${offsetX}, 20)`)
       .style('overflow', 'visible')
 
@@ -579,22 +639,20 @@
     return { minX: minXInSVG, maxX: maxXInSVG, width: maxXInSVG - minXInSVG }
   }
 
-  // Watch all props that affect tree rendering
+  // Any data or card-layout prop change → remeasure + relayout into persistent zoom SVG.
+  // The parent replaces `data` on each tick, so a shallow watch is enough here.
   watch(
-    () => [props.data, props.highlightType, props.selectedMetric, props.metricsExpanded],
-    () => {
-      nextTick(() => {
-        renderTree()
-      })
+    () => [props.data, props.scaleData, props.selectedMetric, props.metricsExpanded],
+    async () => {
+      await nextTick()
+      await redrawTree()
     },
     { immediate: true }
   )
 
-  // Expose methods and treeContainer for parent component
-  // Only exposes position/data methods, no scrolling or transform logic
   defineExpose({
     treeContainer,
-    renderTree,
+    redrawTree,
     getNodeTreeRect,
   })
 </script>

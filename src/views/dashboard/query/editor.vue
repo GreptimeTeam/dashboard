@@ -15,7 +15,6 @@ a-card.editor-card.editor-card--inset.gpt-query-editor-inset(:bordered="false")
           div {{ $t('dashboard.runQuery') + (queryType === 'sql' && currentQueryNumber ? ' #' + currentQueryNumber : '') }}
       a-button-group.explain-toolbar-group
         QueryToolbarRunButton(
-          ref="explainBtnRef"
           abort-key="explain"
           button-type="outline"
           button-class="explain-query-btn query-run-btn--outline"
@@ -161,13 +160,24 @@ a-modal(
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { keymap } from '@codemirror/view'
   import { acceptCompletion } from '@codemirror/autocomplete'
-  import type { PromForm } from '@/store/modules/code-run/types'
+  import type { PromForm, ResultType } from '@/store/modules/code-run/types'
   import { useStorage } from '@vueuse/core'
   import { useI18n } from 'vue-i18n'
   import { sqlFormatter, parseSqlStatements, findStatementAtPosition, promqlFormatter } from '@/utils/sql'
   import { Message } from '@arco-design/web-vue'
   import QueryToolbarRunButton from '@/components/query-toolbar-run-button/index.vue'
-  import { getExplainResultKeyCount } from '@/services/code-run'
+  import {
+    clearAbortController,
+    createExplainResultKey,
+    EXPLAIN_RECORDS_SCHEMA,
+    getExplainResultKeyCount,
+    registerAbortController,
+  } from '@/services/code-run'
+  import {
+    runSQLAnalyzeStream,
+    type AnalyzeStreamPayload,
+    type AnalyzeStreamStageMetric,
+  } from '@/api/sql-analyze-stream'
   import useUiPref from '@/composables/use-ui-pref'
   import { useQuerySession } from './use-query-session'
   import { durationExamples, timeOptionsArray, getQueryTimeMap, getDurations } from '../config'
@@ -202,8 +212,7 @@ a-modal(
 
   const tsRef = ref<InstanceType<typeof import('./time-assistance.vue').default> | null>(null)
 
-  const { codes, queryType, cursorAt, queryOptions, sqlView, promqlView, clearCode, runQuery, explainQuery } =
-    useQueryCode()
+  const { codes, queryType, cursorAt, queryOptions, sqlView, promqlView, clearCode, runQuery } = useQueryCode()
 
   // Get current active CodeMirror view based on query type
   const currentView = computed(() => {
@@ -227,7 +236,6 @@ a-modal(
   const importExplainModalVisible = ref(false)
   const runQueryBtnRef = ref<InstanceType<typeof QueryToolbarRunButton> | null>(null)
   const runAllBtnRef = ref<InstanceType<typeof QueryToolbarRunButton> | null>(null)
-  const explainBtnRef = ref<InstanceType<typeof QueryToolbarRunButton> | null>(null)
 
   const openTimeAssistance = () => {
     if (queryType.value !== 'sql' || !tsRef.value) {
@@ -385,10 +393,128 @@ a-modal(
     }
   }
 
-  const executeExplain = async () => {
-    const queryString = currentStatement.value || codes.value[queryType.value]
-    let explainCommand = ''
+  const isTqlEvalStatement = (sql: string) => {
+    const trimmed = sql.trim().toLowerCase()
+    return trimmed.startsWith('tql eval') || trimmed.startsWith('tql evaluate')
+  }
 
+  const metricsToExplainRows = (metrics: AnalyzeStreamStageMetric[] = []) =>
+    metrics.map((item) => [
+      item.stage,
+      item.node,
+      typeof item.plan === 'string' ? item.plan : JSON.stringify(item.plan),
+    ])
+
+  const buildExplainResultFromPayload = (
+    base: ResultType,
+    payload: AnalyzeStreamPayload,
+    streaming: boolean
+  ): ResultType => {
+    // Prefer final records when present; otherwise build rows from live metrics snapshots.
+    const records = payload.output?.records
+      ? payload.output.records
+      : ({
+          schema: {
+            column_schemas: EXPLAIN_RECORDS_SCHEMA.column_schemas.map((col) => ({ ...col })),
+          },
+          rows: metricsToExplainRows(payload.metrics),
+        } as ResultType['records'])
+
+    return {
+      ...base,
+      records,
+      dimensionsAndXName: { dimensions: [], xAxis: '' },
+      executionTime: payload.elapsed_ms ?? base.executionTime,
+      streaming,
+    }
+  }
+
+  /** Run explain through `/v1/sql/analyze/stream` (EXPLAIN ANALYZE VERBOSE / TQL ANALYZE VERBOSE). */
+  const executeExplainViaStream = async (explainCommand: string) => {
+    const abortController = new AbortController()
+    registerAbortController('explain', abortController)
+
+    const liveResult: ResultType = {
+      records: {
+        schema: {
+          column_schemas: EXPLAIN_RECORDS_SCHEMA.column_schemas.map((col) => ({ ...col })),
+        },
+        rows: [],
+      },
+      dimensionsAndXName: { dimensions: [], xAxis: '' },
+      key: createExplainResultKey(),
+      type: 'sql',
+      name: 'explain',
+      executionTime: 0,
+      query: explainCommand,
+      streaming: true,
+    }
+    session.appendExplainResult(liveResult)
+    session.registerExplainAbort(liveResult.key, abortController)
+
+    let latest = liveResult
+    let terminalHandled = false
+    let parseErrorReported = false
+
+    try {
+      await runSQLAnalyzeStream(
+        explainCommand,
+        {
+          onError: (error) => {
+            if (parseErrorReported) return
+            parseErrorReported = true
+            Message.error(`${t('dashboard.explainLiveFailed')}: ${error.message}`)
+          },
+          onEvent: (event, payload) => {
+            if (event === 'metrics') {
+              // Paint elapsed immediately, then apply the heavier plan snapshot.
+              latest = {
+                ...latest,
+                streaming: true,
+                executionTime: payload.elapsed_ms ?? latest.executionTime,
+              }
+              session.updateExplainResult(latest)
+              latest = buildExplainResultFromPayload(latest, payload, true)
+              session.updateExplainResult(latest)
+              return
+            }
+
+            if (event === 'final') {
+              terminalHandled = true
+              latest = buildExplainResultFromPayload(latest, payload, false)
+              session.updateExplainResult(latest)
+              return
+            }
+
+            terminalHandled = true
+            latest = { ...latest, streaming: false, executionTime: payload.elapsed_ms ?? latest.executionTime }
+            session.updateExplainResult(latest)
+            if (event === 'error') {
+              Message.error(payload.reason || t('dashboard.explainLiveFailed'))
+            }
+          },
+        },
+        { signal: abortController.signal, snapshotIntervalMs: 1000 }
+      )
+
+      if (!terminalHandled) {
+        session.updateExplainResult({ ...latest, streaming: false })
+        if (!abortController.signal.aborted) {
+          Message.warning(t('dashboard.explainLiveStreamEnded'))
+        }
+      }
+    } catch (error: any) {
+      session.updateExplainResult({ ...latest, streaming: false })
+      if (abortController.signal.aborted || error?.name === 'AbortError') return
+      Message.error(error?.message || t('dashboard.explainLiveFailed'))
+    } finally {
+      session.releaseExplainAbort(liveResult.key, abortController)
+      clearAbortController('explain', abortController)
+    }
+  }
+
+  /** `/v1/sql/analyze/stream` accepts only a single `... ANALYZE VERBOSE` statement. */
+  const buildExplainCommand = (queryString: string): string | null => {
     if (queryType.value === 'promql') {
       let start = promForm.range[0]
       let end = promForm.range[1]
@@ -398,24 +524,34 @@ a-modal(
         start = now.subtract(promForm.time, 'minute').unix().toString()
       }
       const rangePrefix = `(${start}, ${end}, '${promForm.step}')`
-      explainCommand = `tql analyze format json ${rangePrefix} ${queryString}`
-    } else if (
-      queryString.trim().toLowerCase().startsWith('tql eval') ||
-      queryString.trim().toLowerCase().startsWith('tql evaluate')
-    ) {
-      const matches = queryString.match(/^tql\s+eval(?:uate)?\s+([\s\S]*)$/i)
-      if (matches && matches[1]) {
-        explainCommand = `tql analyze format json ${matches[1].trim()}`
-      }
-    } else {
-      explainCommand = `explain analyze format json ${queryString}`
+      return `TQL ANALYZE VERBOSE FORMAT JSON ${rangePrefix} ${queryString}`
     }
 
-    const result: any = await explainQuery(explainCommand, 'sql')
-    if (result?.cancelled) return
-    if (result?.results?.[0]) {
-      session.appendExplainResult(result.results[0])
+    if (isTqlEvalStatement(queryString)) {
+      const matches = queryString.match(/^tql\s+eval(?:uate)?\s+([\s\S]*)$/i)
+      const rest = matches?.[1]?.trim()
+      if (!rest) return null
+      return `TQL ANALYZE VERBOSE FORMAT JSON ${rest}`
     }
+
+    return `EXPLAIN ANALYZE VERBOSE FORMAT JSON ${queryString}`
+  }
+
+  const executeExplain = async () => {
+    const queryString = (currentStatement.value || codes.value[queryType.value] || '').trim()
+    if (!queryString) return
+
+    // The stream endpoint rejects multi-statement requests.
+    if (queryType.value === 'sql' && parseSqlStatements(queryString).length > 1) {
+      Message.warning(t('dashboard.explainSingleStatement'))
+      return
+    }
+
+    const explainCommand = buildExplainCommand(queryString)
+    if (!explainCommand) return
+
+    // SQL, tql eval and PromQL all use SSE analyze/stream for progressive metrics.
+    await executeExplainViaStream(explainCommand)
   }
 
   window.addEventListener('beforeunload', () => {
