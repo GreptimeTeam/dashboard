@@ -210,7 +210,11 @@
       const name = current.data?.name || ''
       // Skip fake root and node labels - only include actual plan operators
       if (name !== 'FakeRoot' && !current.data?.isNodeLabel) {
-        path.unshift(name)
+        // Sibling operators can share a name (e.g. both inputs of a HashJoinExec are
+        // RepartitionExec). The sibling index keeps their card, size and link keys distinct;
+        // otherwise they overwrite each other and the second card paints empty.
+        const siblingIndex = current.parent?.children?.indexOf(current) ?? 0
+        path.unshift(`${name}#${siblingIndex}`)
       }
       current = current.parent
     }
