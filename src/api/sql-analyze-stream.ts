@@ -1,6 +1,7 @@
 import qs from 'qs'
 import axios from 'axios'
 import { useAppStore } from '@/store'
+import { getEffectiveTimezone } from '@/utils/timezone'
 
 const analyzeStreamUrl = `/v1/sql/analyze/stream`
 
@@ -47,9 +48,9 @@ const buildHeaders = () => {
     headers[authHeader] = `Basic ${btoa(`${appStore.username}:${appStore.password}`)}`
   }
 
-  if (appStore.userTimezone) {
-    headers['x-greptime-timezone'] = appStore.userTimezone
-  }
+  // Keep parity with the axios interceptor: an empty setting means the browser
+  // timezone, which must be resolved instead of omitted (the server defaults to UTC).
+  headers['x-greptime-timezone'] = getEffectiveTimezone(appStore.userTimezone)
 
   return headers
 }
