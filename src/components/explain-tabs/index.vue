@@ -64,7 +64,7 @@
         :class="{ active: activeView === 'table' }"
       )
         ExplainGrid(
-          v-for="(stage, index) in stages"
+          v-for="(stage, index) in tableViewStages"
           :key="index"
           :data="stage"
           :index="index"
@@ -79,14 +79,14 @@
             :class="{ active: activeStageIndex === index }"
           )
             ExplainChart(
-              :data="stage"
+              :data="chartStageData[index] || stage"
               :index="index"
               :active-stage-index="activeStageIndex"
               :total-stages="stages.length"
-              @change-stage="activeStageIndex = $event"
+              @change-stage="onStageChange"
             )
       .explain-view-pane.raw-json-card(v-if="mountedViews.includes('raw')" :class="{ active: activeView === 'raw' }")
-        pre.raw-json {{ formattedRawJson }}
+        pre.raw-json(v-if="activeView === 'raw'") {{ formattedRawJson }}
 </template>
 
 <script lang="ts" setup>
@@ -107,6 +107,8 @@
   const activeView = ref<'table' | 'chart' | 'raw'>('table')
   // Prefer DN (stage 1) when present; otherwise stage 0 so Chart always mounts.
   const activeStageIndex = ref(0)
+  // Once the user picks a stage, live ticks must not move them back to the default.
+  let stagePicked = false
   // Keep visited views mounted so table↔chart switches preserve UI state
   // (metric selection, expand, pan/zoom, scroll) instead of remounting.
   const mountedViews = ref<Array<'table' | 'chart' | 'raw'>>(['table'])
@@ -117,6 +119,11 @@
   const preferredStageIndex = (stageCount: number) => {
     if (stageCount <= 0) return 0
     return stageCount > 1 ? 1 : 0
+  }
+
+  const onStageChange = (index: number) => {
+    stagePicked = true
+    activeStageIndex.value = index
   }
 
   const ensureChartStageMounted = (index: number) => {
@@ -154,6 +161,32 @@
     return getStages(props.data)
   })
 
+  // Live ticks must only refresh the visible view/stage. Components stay mounted
+  // (so their selection/zoom state survives), but inactive panes keep their last
+  // data until they become visible again.
+  const tableViewStages = shallowRef<any[][]>([])
+  const chartStageData = shallowRef<Record<number, any[][]>>({})
+
+  watch(
+    [stages, activeView],
+    ([nextStages, view]) => {
+      if (view === 'table') tableViewStages.value = nextStages
+    },
+    { immediate: true }
+  )
+
+  watch(
+    [stages, activeView, activeStageIndex],
+    ([nextStages, view, stageIndex]) => {
+      if (view !== 'chart') return
+      chartStageData.value = {
+        ...chartStageData.value,
+        [stageIndex]: nextStages[stageIndex] ?? [],
+      }
+    },
+    { immediate: true }
+  )
+
   const reconstructExplainJson = (result: ResultType) => {
     return {
       output: [
@@ -188,22 +221,27 @@
   watch(
     () => props.data?.key,
     () => {
+      stagePicked = false
       activeStageIndex.value = preferredStageIndex(stages.value.length)
       activeView.value = 'table'
       mountedViews.value = ['table']
       mountedChartStages.value = []
+      tableViewStages.value = stages.value
+      chartStageData.value = {}
     }
   )
 
   // Clamp / prefer DN once stages arrive (stream may fill rows after the tab mounts).
+  // `immediate` also applies the preference to static results (e.g. imported JSON).
   watch(
     () => stages.value.length,
-    (count, prev) => {
+    (count) => {
       if (count <= 0) return
-      if (activeStageIndex.value >= count || prev === 0) {
+      if (!stagePicked || activeStageIndex.value >= count) {
         activeStageIndex.value = preferredStageIndex(count)
       }
-    }
+    },
+    { immediate: true }
   )
 
   watch(

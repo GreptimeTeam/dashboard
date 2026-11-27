@@ -605,13 +605,14 @@
   }
 
   // Any data or card-layout prop change → remeasure + relayout into persistent zoom SVG.
+  // The parent replaces `data` on each tick, so a shallow watch is enough here.
   watch(
     () => [props.data, props.highlightType, props.selectedMetric, props.metricsExpanded],
     async () => {
       await nextTick()
       await redrawTree()
     },
-    { immediate: true, deep: true }
+    { immediate: true }
   )
 
   defineExpose({

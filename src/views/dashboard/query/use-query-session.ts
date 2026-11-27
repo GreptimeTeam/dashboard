@@ -15,6 +15,8 @@ export interface QuerySessionState {
   refreshSingleResult: (result: ResultType) => Promise<void>
   appendExplainResult: (result: ResultType) => void
   updateExplainResult: (result: ResultType) => void
+  registerExplainAbort: (key: number | string, controller: AbortController) => void
+  releaseExplainAbort: (key: number | string, controller?: AbortController) => void
 }
 
 // Symbol.for so the key survives HMR module re-evaluation (plain Symbol() breaks inject).
@@ -28,6 +30,25 @@ export function provideQuerySession(): QuerySessionState {
   const explainResults = ref<ResultType[]>([])
   const queryLogs = ref<Log[]>([])
 
+  // SSE explain streams need to be cancelled when their result tab is closed.
+  const explainAbortControllers = new Map<number | string, AbortController>()
+
+  const abortExplainStream = (key: number | string) => {
+    explainAbortControllers.get(key)?.abort()
+    explainAbortControllers.delete(key)
+  }
+
+  const registerExplainAbort = (key: number | string, controller: AbortController) => {
+    abortExplainStream(key)
+    explainAbortControllers.set(key, controller)
+  }
+
+  const releaseExplainAbort = (key: number | string, controller?: AbortController) => {
+    if (!controller || explainAbortControllers.get(key) === controller) {
+      explainAbortControllers.delete(key)
+    }
+  }
+
   const appendResults = (newResults: ResultType[]) => {
     if (!newResults?.length) return
     results.value.push(...newResults)
@@ -38,6 +59,8 @@ export function provideQuerySession(): QuerySessionState {
   }
 
   const clearAll = () => {
+    explainAbortControllers.forEach((controller) => controller.abort())
+    explainAbortControllers.clear()
     results.value = []
     explainResults.value = []
     queryLogs.value = []
@@ -48,6 +71,7 @@ export function provideQuerySession(): QuerySessionState {
   }
 
   const removeExplainResult = (payload: { key: number | string }) => {
+    abortExplainStream(payload.key)
     explainResults.value = explainResults.value.filter((item) => item.key !== payload.key)
   }
 
@@ -91,6 +115,8 @@ export function provideQuerySession(): QuerySessionState {
     refreshSingleResult,
     appendExplainResult,
     updateExplainResult,
+    registerExplainAbort,
+    releaseExplainAbort,
   }
 
   provide(querySessionKey, session)

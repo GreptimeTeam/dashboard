@@ -89,6 +89,7 @@ export default {
   'dashboard.explainLiveRunning': '実行中',
   'dashboard.explainLiveWaiting': '分析メトリクスを待機中…',
   'dashboard.explainLiveFailed': 'EXPLAIN ANALYZE に失敗しました',
+  'dashboard.explainLiveStreamEnded': 'EXPLAIN のストリームが予期せず終了しました',
   'dashboard.explainSingleStatement':
     'EXPLAIN は 1 つのステートメントのみ対応しています。カーソルをいずれか 1 つのステートメント内に置いてください。',
   'dashboard.download': 'ダウンロード',

@@ -450,14 +450,21 @@ a-modal(
       streaming: true,
     }
     session.appendExplainResult(liveResult)
+    session.registerExplainAbort(liveResult.key, abortController)
 
     let latest = liveResult
     let terminalHandled = false
+    let parseErrorReported = false
 
     try {
       await runSQLAnalyzeStream(
         explainCommand,
         {
+          onError: (error) => {
+            if (parseErrorReported) return
+            parseErrorReported = true
+            Message.error(`${t('dashboard.explainLiveFailed')}: ${error.message}`)
+          },
           onEvent: (event, payload) => {
             if (event === 'metrics') {
               // Paint elapsed immediately, then apply the heavier plan snapshot.
@@ -490,14 +497,18 @@ a-modal(
         { signal: abortController.signal, snapshotIntervalMs: 1000 }
       )
 
-      if (!terminalHandled && latest.streaming) {
+      if (!terminalHandled) {
         session.updateExplainResult({ ...latest, streaming: false })
+        if (!abortController.signal.aborted) {
+          Message.warning(t('dashboard.explainLiveStreamEnded'))
+        }
       }
     } catch (error: any) {
       session.updateExplainResult({ ...latest, streaming: false })
       if (abortController.signal.aborted || error?.name === 'AbortError') return
       Message.error(error?.message || t('dashboard.explainLiveFailed'))
     } finally {
+      session.releaseExplainAbort(liveResult.key, abortController)
       clearAbortController('explain', abortController)
     }
   }

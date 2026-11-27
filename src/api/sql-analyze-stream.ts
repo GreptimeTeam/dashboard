@@ -123,6 +123,12 @@ export async function runSQLAnalyzeStream(
     throw new Error('analyze/stream response has no body')
   }
 
+  const contentType = response.headers.get('content-type')?.toLowerCase() ?? ''
+  if (!contentType.includes('text/event-stream')) {
+    // e.g. a 200 HTML login/proxy page: parse it as SSE would silently yield no events.
+    throw new Error(`analyze/stream returned unexpected content-type: ${contentType || 'unknown'}`)
+  }
+
   const reader = response.body.getReader()
   const decoder = new TextDecoder()
   let buffer = ''
