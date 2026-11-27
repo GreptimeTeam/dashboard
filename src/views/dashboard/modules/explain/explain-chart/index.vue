@@ -2,6 +2,8 @@
 .explain-chart(:id="`explain-chart-stage-${index}`")
   .chart-main
     .chart-scroll-container
+      .chart-empty(v-if="!filteredData.length")
+        a-empty(:description="$t('explain.noPlans')")
       .chart-container.grab-bing(ref="chartContainer")
         TreeView(
           ref="treeView"
@@ -27,6 +29,7 @@
 
 <script lang="ts" setup name="ExplainChart">
   import * as d3 from 'd3'
+  import { parseStagePlan } from '../utils'
 
   const props = withDefaults(
     defineProps<{
@@ -57,11 +60,12 @@
   // Computed property for treeContainer to pass to zoom controls
   const treeContainerRef = computed(() => treeView.value?.treeContainer || null)
 
-  // Draw only the selected nodes; empty draws every node and every plan on it.
+  // Draw only the selected nodes (empty draws every node and every plan on it), and only rows that are
+  // valid plans.
   const filteredData = computed(() => {
     if (!props.data || props.data.length === 0) return []
     const nodeFilter = props.selectedNodes.length ? new Set(props.selectedNodes) : null
-    return props.data.filter((row) => !nodeFilter || nodeFilter.has(row[1]))
+    return props.data.filter((row) => (!nodeFilter || nodeFilter.has(row[1])) && parseStagePlan(row[2]) !== null)
   })
 
   // Get all available nodes from the filtered data
@@ -247,6 +251,16 @@
       position: relative;
       overflow: hidden;
       min-height: 0;
+    }
+
+    .chart-empty {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
     }
 
     .chart-container {

@@ -53,6 +53,7 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
 
 <script lang="ts" setup name="ExplainGrid">
   import { h } from 'vue'
+  import i18n from '@/locale'
   import {
     formatMetricName,
     formatMetricValue,
@@ -60,6 +61,7 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
     keyBarColor,
     alignStagePlans,
     getSlotOperators,
+    groupNodeParams,
   } from './utils'
 
   // Props structure:
@@ -147,20 +149,29 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
 
   // Determine if a row has additional details to show
   const rowExpandable = (record: any) => {
-    return record.param || record.hasAdditionalDetails
+    return record.paramGroups.length > 0
   }
 
   // Render expanded row content
+  // Param can differ per node (a scan's region and files, dynamic filters), so it is listed per node:
+  // nodes sharing a value are grouped on one line, and a single "Param" line is used only when every
+  // shown node that ran this operator has the same value.
   const expandedRowRender = (record: any) => {
-    const details = []
+    const shown = new Set(filteredNodeIndices.value)
+    const groups = (record.paramGroups as Array<{ nodes: number[]; param: string }>)
+      .map((group) => ({ ...group, nodes: group.nodes.filter((node) => shown.has(node)) }))
+      .filter((group) => group.nodes.length > 0)
+    const ranOperator = filteredNodeIndices.value.filter((node) => record[`node${node}`] !== undefined)
+    const sameForAll = groups.length === 1 && groups[0].nodes.length === ranOperator.length
 
-    // Add param if available
-    if (record.param) {
-      details.push({
-        label: 'Param',
-        value: record.param,
-      })
-    }
+    const details = groups.map((group) => {
+      if (sameForAll) return { label: 'Param', value: group.param }
+      const label =
+        group.nodes.length === 1
+          ? i18n.global.t('explain.nodeN', { n: group.nodes[0] })
+          : `${i18n.global.t('explain.nodes')} ${group.nodes.join(', ')}`
+      return { label, value: group.param }
+    })
 
     return h('div', { class: 'expanded-row' }, [
       h(
@@ -192,8 +203,7 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
           key: operator.key,
           step: operator.step,
           path: operator.path,
-          param: operator.param,
-          hasAdditionalDetails: Boolean(operator.param),
+          paramGroups: groupNodeParams(operator.byNode),
           startsPlan: operator.depth === 0 && slotPosition > 0,
         }
         if (operator.depth === 0) {

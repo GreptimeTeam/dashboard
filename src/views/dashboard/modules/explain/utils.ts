@@ -62,10 +62,13 @@ export function formatMetricName(key: string): string {
 // A stage row is `[stage, nodeIndex, plan_json_string]`; rows without a JSON plan (footers) are ignored.
 export type StageRow = [number, number, string]
 
-const parseStagePlan = (planStr: unknown): any | null => {
+// Plan JSON of a stage row, or null when the row is not a valid plan object (bad import, backend error
+// text). Every view skips such rows instead of throwing.
+export const parseStagePlan = (planStr: unknown): any | null => {
   if (typeof planStr !== 'string' || !planStr.startsWith('{')) return null
   try {
-    return JSON.parse(planStr)
+    const plan = JSON.parse(planStr)
+    return plan && typeof plan === 'object' ? plan : null
   } catch {
     return null
   }
@@ -243,6 +246,28 @@ const mergeOperator = (merged: MergedOperator, node: number, operator: any) => {
     }
     mergeOperator(target, node, child)
   })
+}
+
+// Params of one operator position grouped by value, e.g. a scan's region and files differ per node while a
+// filter expression is usually the same everywhere. Nodes without a param are left out; groups follow the
+// first node of each value.
+export interface NodeParamGroup {
+  nodes: number[]
+  param: string
+}
+
+export function groupNodeParams(byNode: Map<number, any>): NodeParamGroup[] {
+  const groups = new Map<string, number[]>()
+  ;[...byNode.keys()]
+    .sort((a, b) => a - b)
+    .forEach((node) => {
+      const param = byNode.get(node)?.param
+      if (typeof param !== 'string' || param === '') return
+      const nodes = groups.get(param)
+      if (nodes) nodes.push(node)
+      else groups.set(param, [node])
+    })
+  return [...groups].map(([param, nodes]) => ({ nodes, param }))
 }
 
 // One row per operator position of a slot (union over the nodes that ran it), depth first, parent before

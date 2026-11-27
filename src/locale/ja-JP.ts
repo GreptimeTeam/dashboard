@@ -127,6 +127,7 @@ export default {
   'explain.nodes': 'ノード',
   'explain.nodesAll': 'すべてのノード',
   'explain.nodeN': 'ノード {n}',
+  'explain.noPlans': '表示できる実行計画がありません',
   'explain.metric': 'メトリクス',
   'explain.metricPlaceholder': 'メトリクスを選択',
   'explain.expand': '展開',

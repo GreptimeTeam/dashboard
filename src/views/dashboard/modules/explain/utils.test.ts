@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { alignStagePlans, getSlotOperators, type StageRow } from './utils'
+import { alignStagePlans, getSlotOperators, groupNodeParams, parseStagePlan, type StageRow } from './utils'
 
 const op = (name: string, param = '', rows = 0, children: any[] = []) => ({
   name,
@@ -169,5 +169,59 @@ describe('getSlotOperators', () => {
     expect(new Set(rows.map((item) => item.key)).size).toBe(rows.length)
     expect([...rows[1].byNode.keys()]).toEqual([0])
     expect([...rows[2].byNode.keys()]).toEqual([1])
+  })
+})
+
+describe('groupNodeParams', () => {
+  const byNode = (entries: Array<[number, string | undefined]>) =>
+    new Map<number, any>(entries.map(([node, param]) => [node, { name: 'UnorderedScan', param }]))
+
+  it('lists one group per distinct param with the nodes that share it', () => {
+    const groups = groupNodeParams(
+      byNode([
+        [2, 'regions=[b]'],
+        [0, 'regions=[a]'],
+        [1, 'regions=[a]'],
+      ])
+    )
+
+    expect(groups).toEqual([
+      { nodes: [0, 1], param: 'regions=[a]' },
+      { nodes: [2], param: 'regions=[b]' },
+    ])
+  })
+
+  it('returns a single group when every node has the same param', () => {
+    expect(
+      groupNodeParams(
+        byNode([
+          [0, 'x > 1'],
+          [1, 'x > 1'],
+        ])
+      )
+    ).toEqual([{ nodes: [0, 1], param: 'x > 1' }])
+  })
+
+  it('leaves out nodes without a param', () => {
+    expect(
+      groupNodeParams(
+        byNode([
+          [0, undefined],
+          [1, ''],
+          [2, 'x > 1'],
+        ])
+      )
+    ).toEqual([{ nodes: [2], param: 'x > 1' }])
+    expect(groupNodeParams(byNode([[0, undefined]]))).toEqual([])
+  })
+})
+
+describe('parseStagePlan', () => {
+  it('returns the plan object, or null for anything else', () => {
+    expect(parseStagePlan('{"name":"FilterExec"}')).toEqual({ name: 'FilterExec' })
+    expect(parseStagePlan('Total rows: 41')).toBeNull()
+    expect(parseStagePlan('{"name": ')).toBeNull()
+    expect(parseStagePlan(null)).toBeNull()
+    expect(parseStagePlan({ name: 'x' })).toBeNull()
   })
 })

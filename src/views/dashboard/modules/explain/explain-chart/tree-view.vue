@@ -7,7 +7,14 @@
   import { flextree } from 'd3-flextree'
   import { render, h } from 'vue'
   import PlanCard from './plan-card.vue'
-  import { CARD_DIMENSIONS, NODE_INDEX_CARD, alignStagePlans, type StagePlanSlotLabel, type StageRow } from '../utils'
+  import {
+    CARD_DIMENSIONS,
+    NODE_INDEX_CARD,
+    alignStagePlans,
+    parseStagePlan,
+    type StagePlanSlotLabel,
+    type StageRow,
+  } from '../utils'
 
   // Define interfaces (moved from parent)
   interface FlexHierarchyPointNode extends d3.HierarchyPointNode<any> {
@@ -122,8 +129,11 @@
 
     data.forEach((row) => {
       const nodeIdx = row[1]
+      // Same rule as the table: rows that are not a plan (footer, bad import) are skipped, never thrown on.
+      const plan = parseStagePlan(row[2])
+      if (!plan) return
       const item = {
-        plan: JSON.parse(row[2]),
+        plan,
         label: alignment.value.slotByRow.get(row as StageRow)?.label ?? { param: '', ordinal: 0 },
       }
       const entry = nodeMap.get(nodeIdx)

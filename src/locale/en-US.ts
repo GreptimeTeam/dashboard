@@ -127,6 +127,7 @@ export default {
   'explain.nodes': 'Nodes',
   'explain.nodesAll': 'All nodes',
   'explain.nodeN': 'Node {n}',
+  'explain.noPlans': 'No plan to display',
   'explain.metric': 'Metric',
   'explain.metricPlaceholder': 'Select metric',
   'explain.expand': 'Expand',

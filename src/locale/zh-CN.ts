@@ -128,6 +128,7 @@ export default {
   'explain.nodes': '节点',
   'explain.nodesAll': '全部节点',
   'explain.nodeN': '节点 {n}',
+  'explain.noPlans': '没有可显示的执行计划',
   'explain.metric': '指标',
   'explain.metricPlaceholder': '选择指标',
   'explain.expand': '展开',
