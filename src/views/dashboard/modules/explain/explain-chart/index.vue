@@ -1,44 +1,17 @@
 <template lang="pug">
 .explain-chart(:id="`explain-chart-stage-${index}`")
-  .chart-sidebar
-    .sidebar-section
-      .sidebar-label Stage
-      a-radio-group.stage-radio(
-        type="button"
-        size="small"
-        :class="{ 'stage-radio--vertical': totalStages > 2 }"
-        :direction="totalStages <= 2 ? 'horizontal' : 'vertical'"
-        :model-value="activeStageIndex"
-        @change="onStageChange"
-      )
-        a-radio(v-for="i in totalStages" :key="i - 1" :value="i - 1") {{ totalStages <= 2 ? i - 1 : `Stage ${i - 1}` }}
-    .sidebar-section(v-if="availableRootPlans.length > 1")
-      .sidebar-label Root Plan
-      a-select(v-model="selectedRootPlan" size="small" style="width: 100%")
-        a-option(v-for="root in availableRootPlans" :key="root" :value="root") {{ root }}
-    .sidebar-divider
-    ChartControls(
-      v-model:highlight-type="highlightType"
-      v-model:selected-metric="selectedMetric"
-      v-model:metrics-expanded="metricsExpanded"
-      :available-nodes="availableNodes"
-      :active-node-index="activeNodeIndex"
-      :available-metrics="availableMetrics"
-      :stage-index="index"
-    )
   .chart-main
     .chart-scroll-container
       .chart-container.grab-bing(ref="chartContainer")
         TreeView(
           ref="treeView"
           :data="filteredData"
+          :scale-data="data"
           :active-node-index="activeNodeIndex"
-          :highlight-type="highlightType"
           :selected-metric="selectedMetric"
           :metrics-expanded="metricsExpanded"
           :stage-index="index"
           @update:active-node-index="updateActiveNode"
-          @nodes-data-updated="updateNodesData"
           @svgCreated="handleSvgCreated"
         )
       .controls-wrapper
@@ -54,25 +27,23 @@
 
 <script lang="ts" setup name="ExplainChart">
   import * as d3 from 'd3'
-  import { formatMetricName } from '../utils'
 
-  const props = defineProps<{
-    data: any[] // This is an array of rows from getStages
-    index: number
-    totalStages: number // Add this prop to know total number of stages
-    // Global selected stage — shared across kept-alive chart panes so the
-    // radio stays in sync when switching without remounting.
-    activeStageIndex: number
-  }>()
-
-  const emit = defineEmits(['changeStage'])
+  const props = withDefaults(
+    defineProps<{
+      data: any[] // This is an array of rows from getStages
+      index: number
+      // Root operator to draw when the stage has several roots; empty draws all plans.
+      rootPlan?: string
+      // Node ids to draw; empty draws all nodes.
+      selectedNodes?: number[]
+      selectedMetric?: string
+      metricsExpanded?: boolean
+    }>(),
+    { rootPlan: '', selectedNodes: () => [], selectedMetric: '', metricsExpanded: false }
+  )
 
   const chartContainer = ref<HTMLDivElement | null>(null)
-  const metricsExpanded = ref(false)
-  const selectedMetric = ref<string>('')
   const activeNodeIndex = ref<number>(0)
-  const highlightType = ref<string>('DURATION') // Highlight type: NONE, ROWS, DURATION
-  const nodesData = ref([])
   const treeView = ref<{
     treeContainer: HTMLDivElement | null
     getNodeTreeRect: (nodeIndex: number) => { minX: number; maxX: number; width: number } | null
@@ -84,85 +55,25 @@
     scrollToTransform: (transform: d3.ZoomTransform) => void
   } | null>(null)
   const componentId = computed(() => `explain-chart-stage-${props.index}`)
-  const selectedRootPlan = ref<string>('')
 
   // Computed property for treeContainer to pass to zoom controls
   const treeContainerRef = computed(() => treeView.value?.treeContainer || null)
 
-  // Extract available root plan names from props.data
-  const availableRootPlans = computed(() => {
-    if (!props.data || props.data.length === 0) return []
-    const rootNames = new Set<string>()
-    props.data.forEach((row) => {
-      const [, , planStr] = row
-      if (!planStr || typeof planStr !== 'string' || !planStr.startsWith('{')) {
-        return
-      }
-      try {
-        const plan = JSON.parse(planStr)
-        if (plan?.name) {
-          rootNames.add(plan.name)
-        }
-      } catch {
-        // Ignore invalid JSON
-      }
-    })
-    return Array.from(rootNames).sort()
-  })
-
-  // Filter data based on selected root plan
+  // Draw only the selected root plan / nodes (parent owns the selection).
   const filteredData = computed(() => {
     if (!props.data || props.data.length === 0) return []
-    if (availableRootPlans.value.length <= 1) {
-      // If only one root plan, return all data
-      return props.data
-    }
-    // Filter by selected root plan (watcher ensures selectedRootPlan is always set)
+    const nodeFilter = props.selectedNodes.length ? new Set(props.selectedNodes) : null
     return props.data.filter((row) => {
-      const [, , planStr] = row
-      if (!planStr || typeof planStr !== 'string' || !planStr.startsWith('{')) {
-        return false
-      }
+      const [, nodeIndex, planStr] = row
+      if (nodeFilter && !nodeFilter.has(nodeIndex)) return false
+      if (!props.rootPlan) return true
+      if (!planStr || typeof planStr !== 'string' || !planStr.startsWith('{')) return false
       try {
-        const plan = JSON.parse(planStr)
-        return plan?.name === selectedRootPlan.value
+        return JSON.parse(planStr)?.name === props.rootPlan
       } catch {
         return false
       }
     })
-  })
-
-  const availableMetrics = computed(() => {
-    const metricKeys = new Set<string>()
-
-    // Process all nodes from all plans to collect unique metric keys
-    nodesData.value.forEach(({ plan }) => {
-      function traverseNode(node) {
-        // Add metrics from this node
-        if (node.metrics) {
-          Object.keys(node.metrics).forEach((key) => {
-            // Skip the metrics we already show in progress bars
-            if (!['output_rows', 'elapsed_compute', 'outputRows', 'elapsedCompute'].includes(key)) {
-              metricKeys.add(key)
-            }
-          })
-        }
-
-        // Process children
-        if (node.children) {
-          node.children.forEach(traverseNode)
-        }
-      }
-
-      traverseNode(plan)
-    })
-
-    return Array.from(metricKeys)
-      .sort()
-      .map((key) => ({
-        value: key,
-        label: formatMetricName(key.toString()),
-      }))
   })
 
   // Get all available nodes from the filtered data
@@ -268,20 +179,9 @@
     })
   }
 
-  // Initialize selected root plan when available root plans change
-  watch(
-    () => availableRootPlans.value,
-    (newRootPlans) => {
-      if (newRootPlans.length > 0 && !selectedRootPlan.value) {
-        selectedRootPlan.value = newRootPlans[0]
-      }
-    },
-    { immediate: true }
-  )
-
-  // Live metrics refresh rebuilds the tree but must keep pan/zoom and controls.
-  // Only reset camera / highlight when this stage's plan topology changes
-  // (e.g. root plan switch). Stage tabs keep separate chart instances, so
+  // Live metrics refresh rebuilds the tree but must keep pan/zoom.
+  // Only reset the camera when this stage's plan topology changes
+  // (e.g. root plan or node filter change). Stage tabs keep separate chart instances, so
   // switching stages no longer remounts or resets this state.
   watch(
     () => filteredData.value,
@@ -297,18 +197,9 @@
       if (oldData) {
         zoomControls.value?.handleResetZoom()
       }
-      selectedMetric.value = ''
-      highlightType.value = 'DURATION'
-      metricsExpanded.value = false
     },
     { immediate: true }
   )
-
-  function onStageChange(newStageIndex) {
-    if (newStageIndex >= 0 && newStageIndex < props.totalStages) {
-      emit('changeStage', newStageIndex)
-    }
-  }
 
   onBeforeUnmount(() => {
     if (chartContainer.value) {
@@ -322,10 +213,6 @@
     // Also perform scrolling/highlighting to mirror direct scroll actions
     scrollToNode(nodeIndex)
   }
-
-  const updateNodesData = (data) => {
-    nodesData.value = data
-  }
 </script>
 
 <style lang="less">
@@ -333,88 +220,15 @@
     display: flex;
     flex-direction: row;
     align-items: stretch;
+    box-sizing: border-box;
     height: 100%;
     min-height: 0;
     padding: 0;
-
-    .chart-sidebar {
-      flex: 0 0 168px;
-      width: 168px;
-      display: flex;
-      flex-direction: column;
-      gap: var(--gpt-gap-md);
-      padding: var(--gpt-gap-md);
-      border-right: 1px solid var(--gpt-border-default);
-      background: var(--gpt-bg-surface, var(--gpt-bg-panel));
-      overflow-y: auto;
-      overflow-x: hidden;
-    }
-
-    .sidebar-section {
-      display: flex;
-      flex-direction: column;
-      gap: var(--gpt-gap-xs);
-    }
-
-    .sidebar-label {
-      font-size: var(--gpt-font-sm);
-      font-weight: 500;
-      color: var(--gpt-text-secondary);
-      line-height: 1.2;
-    }
-
-    .sidebar-divider {
-      height: 1px;
-      background: var(--gpt-border-default);
-      margin: var(--gpt-gap-xs) 0;
-    }
-
-    .stage-radio.arco-radio-group-button {
-      width: 100%;
-
-      .arco-radio-button {
-        flex: 1;
-        justify-content: center;
-      }
-
-      .arco-radio-button-content {
-        width: 100%;
-        justify-content: center;
-        padding: 0 8px;
-      }
-
-      // >2 stages: stack vertically (override global single-row height clip)
-      &.stage-radio--vertical {
-        display: flex;
-        flex-direction: column;
-        height: auto !important;
-        overflow: visible;
-
-        .arco-radio-button {
-          width: 100%;
-          height: var(--gpt-control-height-sm);
-          margin: -1px 0 0;
-          justify-content: flex-start;
-
-          &:first-of-type {
-            margin-top: 0;
-            border-radius: var(--gpt-radius-sm) var(--gpt-radius-sm) 0 0;
-          }
-
-          &:last-of-type {
-            border-radius: 0 0 var(--gpt-radius-sm) var(--gpt-radius-sm);
-          }
-
-          &:only-of-type {
-            border-radius: var(--gpt-radius-sm);
-          }
-        }
-
-        .arco-radio-button-content {
-          justify-content: flex-start;
-        }
-      }
-    }
+    overflow: hidden;
+    border: 1px solid var(--gpt-border-default);
+    border-radius: var(--gpt-radius-md);
+    background: var(--gpt-bg-panel);
+    box-shadow: var(--gpt-shadow-sm);
 
     .chart-main {
       flex: 1;
@@ -501,6 +315,8 @@
   .plan-card {
     width: auto;
     min-width: 200px;
+    // A root param can be long; cap the card so it does not stretch the whole tree layout.
+    max-width: 320px;
     background-color: var(--card-bg-color);
     border: 1px solid var(--border-color);
     border-radius: var(--gpt-radius-sm);
@@ -517,8 +333,10 @@
 
     .plan-header {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
+      min-width: 0;
       margin-bottom: 8px;
     }
 
@@ -528,35 +346,58 @@
       font-size: var(--gpt-font-md);
     }
 
-    .plan-param {
-      color: var(--main-font-color);
-      font-size: var(--gpt-font-md);
+    .plan-ordinal {
+      margin-left: 6px;
+      color: var(--third-font-color);
+      font-weight: normal;
     }
 
-    .metric-progress-container {
+    .plan-param {
+      max-width: 100%;
+      min-width: 0;
+      color: var(--small-font-color);
+      font-size: var(--gpt-font-md);
+      word-break: break-all;
+      // Two lines at most; the full text is in the title attribute.
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .key-metrics {
       margin-bottom: 8px;
       border-bottom: 1px dashed var(--border-color);
       padding-bottom: 8px;
     }
 
-    .metric-label {
+    .key-duration {
+      font-family: var(--font-mono);
       font-size: var(--gpt-font-md);
-      color: var(--small-font-color);
-      margin-bottom: 4px;
-      display: flex;
-      justify-content: space-between;
+      font-weight: 600;
+      color: var(--main-font-color);
+      white-space: nowrap;
     }
 
-    .metric-progress {
-      height: 6px;
+    .key-rows {
+      margin-top: 2px;
+      font-family: var(--font-mono);
+      font-size: var(--gpt-font-sm);
+      color: var(--third-font-color);
+      white-space: nowrap;
+    }
+
+    .key-metrics-bar {
+      height: 3px;
+      margin-top: 4px;
       background-color: var(--grey-bg-color);
-      border-radius: 3px;
+      border-radius: 2px;
       overflow: hidden;
     }
 
-    .metric-progress-bar {
+    .key-metrics-bar-fill {
       height: 100%;
-      border-radius: 3px;
+      border-radius: 2px;
       transition: width 0.3s ease;
     }
 

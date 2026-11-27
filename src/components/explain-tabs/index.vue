@@ -56,6 +56,24 @@
           :show-data="false"
         )
 
+  ExplainControls(
+    v-if="activeView !== 'raw' && stages.length"
+    v-model:metrics-expanded="metricsExpanded"
+    :view="activeView === 'chart' ? 'chart' : 'table'"
+    :stage="activeStageIndex"
+    :stage-count="stages.length"
+    :nodes="activeStageNodes"
+    :metrics="metricOptions"
+    :root-plans="activeRootPlans"
+    :root-plan="rootPlanFor(activeStageIndex)"
+    :selected-nodes="nodesFilterFor(activeStageIndex)"
+    :selected-metric="effectiveMetric"
+    @update:stage="onStageChange"
+    @update:root-plan="selectedRootPlan = $event"
+    @update:selected-nodes="selectedNodes = $event"
+    @update:selected-metric="selectedMetric = $event"
+  )
+
   .explain-content
     a-empty(v-if="props.data.streaming && !stages.length" :description="$t('dashboard.explainLiveWaiting')")
     .explain-views(v-else)
@@ -64,10 +82,13 @@
         :class="{ active: activeView === 'table' }"
       )
         ExplainGrid(
-          v-for="(stage, index) in tableViewStages"
-          :key="index"
-          :data="stage"
-          :index="index"
+          :key="activeStageIndex"
+          :data="tableViewStages[activeStageIndex] || []"
+          :index="activeStageIndex"
+          :root-plan="rootPlanFor(activeStageIndex)"
+          :selected-nodes="nodesFilterFor(activeStageIndex)"
+          :selected-metric="effectiveMetric"
+          :metrics-expanded="metricsExpanded"
         )
       .explain-view-pane.explain-charts(
         v-if="mountedViews.includes('chart')"
@@ -81,12 +102,14 @@
             ExplainChart(
               :data="chartStageData[index] || stage"
               :index="index"
-              :active-stage-index="activeStageIndex"
-              :total-stages="stages.length"
-              @change-stage="onStageChange"
+              :root-plan="rootPlanFor(index)"
+              :selected-nodes="nodesFilterFor(index)"
+              :selected-metric="effectiveMetric"
+              :metrics-expanded="metricsExpanded"
             )
-      .explain-view-pane.raw-json-card(v-if="mountedViews.includes('raw')" :class="{ active: activeView === 'raw' }")
-        pre.raw-json(v-if="activeView === 'raw'") {{ formattedRawJson }}
+      .explain-view-pane.explain-raw(v-if="mountedViews.includes('raw')" :class="{ active: activeView === 'raw' }")
+        .raw-json-card
+          pre.raw-json(v-if="activeView === 'raw'") {{ formattedRawJson }}
 </template>
 
 <script lang="ts" setup>
@@ -96,6 +119,13 @@
   import type { ResultType } from '@/store/modules/code-run/types'
   import ExplainGrid from '@/views/dashboard/modules/explain/explain-grid.vue'
   import ExplainChart from '@/views/dashboard/modules/explain/explain-chart/index.vue'
+  import ExplainControls from '@/views/dashboard/modules/explain/explain-controls.vue'
+  import {
+    formatMetricName,
+    getStageMetricKeys,
+    getStageNodeIds,
+    getStageRootPlanNames,
+  } from '@/views/dashboard/modules/explain/utils'
   import TextCopyable from '@/components/text-copyable.vue'
 
   const { t } = useI18n()
@@ -124,6 +154,19 @@
   const onStageChange = (index: number) => {
     stagePicked = true
     activeStageIndex.value = index
+  }
+
+  // Controls shared by the table and chart views. They are applied to whichever stage is shown.
+  const selectedNodes = ref<number[]>([])
+  const selectedMetric = ref('')
+  const metricsExpanded = ref(false)
+  const selectedRootPlan = ref('')
+
+  const resetControls = () => {
+    selectedNodes.value = []
+    selectedMetric.value = ''
+    metricsExpanded.value = false
+    selectedRootPlan.value = ''
   }
 
   const ensureChartStageMounted = (index: number) => {
@@ -160,6 +203,33 @@
     if (!props.data) return []
     return getStages(props.data)
   })
+
+  const activeStageRows = computed(() => stages.value[activeStageIndex.value] ?? [])
+  const activeStageNodes = computed(() => getStageNodeIds(activeStageRows.value))
+  const stageNodesByStage = computed(() => stages.value.map((rows) => getStageNodeIds(rows)))
+  const rootPlansByStage = computed(() => stages.value.map((rows) => getStageRootPlanNames(rows)))
+  const activeRootPlans = computed(() => rootPlansByStage.value[activeStageIndex.value] ?? [])
+
+  const metricOptions = computed(() =>
+    getStageMetricKeys(activeStageRows.value).map((key) => ({ value: key, label: formatMetricName(key) }))
+  )
+  // The kept selection may not exist in the stage being shown; treat that as "no metric selected".
+  const effectiveMetric = computed(() =>
+    metricOptions.value.some((metric) => metric.value === selectedMetric.value) ? selectedMetric.value : ''
+  )
+
+  // A node filter chosen on one stage only narrows the stages that have those nodes.
+  const nodesFilterFor = (stageIndex: number) => {
+    const stageNodes = stageNodesByStage.value[stageIndex] ?? []
+    return selectedNodes.value.filter((node) => stageNodes.includes(node))
+  }
+
+  // Only stages with several root plans need a root filter; default to the first one.
+  const rootPlanFor = (stageIndex: number) => {
+    const roots = rootPlansByStage.value[stageIndex] ?? []
+    if (roots.length <= 1) return ''
+    return roots.includes(selectedRootPlan.value) ? selectedRootPlan.value : roots[0]
+  }
 
   // Live ticks must only refresh the visible view/stage. Components stay mounted
   // (so their selection/zoom state survives), but inactive panes keep their last
@@ -222,6 +292,7 @@
     () => props.data?.key,
     () => {
       stagePicked = false
+      resetControls()
       activeStageIndex.value = preferredStageIndex(stages.value.length)
       activeView.value = 'table'
       mountedViews.value = ['table']
@@ -332,11 +403,9 @@
     flex: 1;
     min-height: 0;
     overflow: hidden;
+    // No border here: each view's content (stage cards, chart, raw card) draws its own,
+    // otherwise table mode shows the container border around the stage card borders.
     margin: var(--gpt-page-padding-y) var(--gpt-page-padding-x);
-    border: 1px solid var(--gpt-border-default);
-    border-radius: var(--gpt-radius-md);
-    background: var(--gpt-bg-panel);
-    box-shadow: var(--gpt-shadow-sm);
 
     > :first-child {
       height: 100%;
@@ -368,7 +437,6 @@
       flex-direction: row;
       align-items: stretch;
       gap: var(--gpt-gap-md);
-      padding: var(--gpt-gap-md);
       overflow: hidden;
 
       :deep(.explain-grid) {
@@ -399,10 +467,14 @@
   }
 
   .raw-json-card {
+    box-sizing: border-box;
     height: 100%;
     padding: var(--gpt-toolbar-padding);
     overflow: auto;
+    border: 1px solid var(--gpt-border-default);
+    border-radius: var(--gpt-radius-md);
     background: var(--gpt-bg-panel);
+    box-shadow: var(--gpt-shadow-sm);
 
     .raw-json {
       font-size: var(--gpt-font-base);

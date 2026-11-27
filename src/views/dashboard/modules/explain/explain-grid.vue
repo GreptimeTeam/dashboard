@@ -1,33 +1,5 @@
 <template lang="pug">
 a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
-  .grid-header
-    .stage-index Stage {{ props.index }}
-    a-space.header-controls(align="center")
-      a-select(
-        v-model="selectedNodes"
-        size="small"
-        style="min-width: 150px; margin-right: 8px"
-        placeholder="Nodes select"
-        multiple
-        allow-clear
-      )
-        a-option(v-for="nodeId in availableNodes" :key="nodeId" :value="nodeId") Node {{ nodeId }}
-      a-space.metric-control(align="center" :size="0")
-        a-select(
-          v-model="selectedMetric"
-          size="small"
-          style="width: fit-content; margin-right: 8px"
-          placeholder="Select Metric"
-          allow-clear
-          :trigger-props="{ autoFitPopupMinWidth: true }"
-          @change="selectMetric"
-        )
-          a-option(v-for="metric in availableMetrics" :key="metric.value" :value="metric.value") {{ metric.label }}
-        a-button(type="outline" size="small" @click="toggleMetricsExpanded")
-          template(#icon)
-            icon-expand(v-if="!metricsExpanded")
-            icon-shrink(v-else)
-          | {{ metricsExpanded ? 'Collapse' : 'Expand' }}
   a-table(
     size="small"
     column-resizable
@@ -35,42 +7,60 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
     :data="tableData"
     :pagination="false"
     :bordered="false"
-    :expandable="{ expandedRowRender: expandedRowRender, rowExpandable: rowExpandable }"
+    :expandable="{ expandedRowRender: expandedRowRender, rowExpandable: rowExpandable, fixed: true }"
+    :scroll="{ x: scrollWidth }"
+    :row-class="getRowClass"
     @row-click="handleRowClick"
   )
     template(#columns)
-      a-table-column(title="Plan" data-index="step")
+      a-table-column(
+        title="Plan"
+        data-index="step"
+        fixed="left"
+        :width="PLAN_COLUMN_WIDTH"
+      )
         template(#cell="{ record }")
           .step-cell
-            span {{ record.step }}
+            .step-line
+              span.step-name {{ record.step }}
+              template(v-if="record.root")
+                span.root-ordinal(v-if="record.root.ordinal") {{ '#' + record.root.ordinal }}
+                span.root-coverage(v-if="record.root.coverage < record.root.total") {{ record.root.coverage }}/{{ record.root.total }} {{ $t('explain.nodes') }}
+            .root-param(v-if="record.root && record.root.param" :title="record.root.param") {{ record.root.param }}
       template(v-for="nodeIndex in filteredNodeIndices" :key="nodeIndex")
-        a-table-column(:title="`Node ${nodeIndex}`" :data-index="`node${nodeIndex}`") 
+        a-table-column(:title="`Node ${nodeIndex}`" :data-index="`node${nodeIndex}`" :width="NODE_COLUMN_WIDTH")
           template(#cell="{ record }")
             .metrics(v-if="record[`node${nodeIndex}`]")
+              .key-metrics
+                .key-duration {{ getKeyMetrics(record, nodeIndex).duration }}
+                .key-metrics-bar
+                  .key-metrics-bar-fill(
+                    :style="{ width: `${getKeyMetrics(record, nodeIndex).percentage}%`, backgroundColor: getKeyMetrics(record, nodeIndex).color }"
+                  )
+                .key-rows {{ getKeyMetrics(record, nodeIndex).rows }} rows
               template(v-if="metricsExpanded")
-                template(v-for="(value, key) in getImportantMetrics(record[`node${nodeIndex}`])" :key="key")
+                template(v-for="(value, key) in getExtraMetrics(record[`node${nodeIndex}`])" :key="key")
                   .metric
                     .metric-header
                       span.metric-key {{ formatMetricName(key) }}:
                       span.metric-value {{ formatMetricValue(key, value) }}
-                    .metric-progress-bar-wrapper(v-if="isProgressMetric(key)")
-                      .metric-progress-bar(
-                        :style="{ width: `${getPercentage(record, nodeIndex, key)}%`, backgroundColor: getNodeProgressBarColor(record, nodeIndex, key) }"
-                      )
-              template(v-else)
-                .metric(v-if="record[`node${nodeIndex}`] && record[`node${nodeIndex}`][getActiveMetric] !== undefined")
+              template(v-else-if="extraMetricKey && record[`node${nodeIndex}`][extraMetricKey] !== undefined")
+                .metric
                   .metric-header
-                    span.metric-key {{ formatMetricName(getActiveMetric) }}:
-                    span.metric-value {{ formatMetricValue(getActiveMetric, record[`node${nodeIndex}`][getActiveMetric]) }}
-                  .metric-progress-bar-wrapper(v-if="isProgressMetric(getActiveMetric)")
-                    .metric-progress-bar(
-                      :style="{ width: `${getPercentage(record, nodeIndex, getActiveMetric)}%`, backgroundColor: getNodeProgressBarColor(record, nodeIndex, getActiveMetric) }"
-                    )
+                    span.metric-key {{ formatMetricName(extraMetricKey) }}:
+                    span.metric-value {{ formatMetricValue(extraMetricKey, record[`node${nodeIndex}`][extraMetricKey]) }}
 </template>
 
 <script lang="ts" setup name="ExplainGrid">
   import { h } from 'vue'
-  import { formatMetricName, formatTimeValue, formatMetricValue } from './utils'
+  import {
+    formatMetricName,
+    formatMetricValue,
+    FIXED_EXPLAIN_METRICS,
+    keyBarColor,
+    alignStagePlans,
+    getSlotOperators,
+  } from './utils'
 
   // Props structure:
   // data: Array of [stage, nodeIndex, plan_json_string] tuples
@@ -89,10 +79,21 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
   // Note: "node" here refers to a PHYSICAL COMPUTE NODE (server) in a distributed system,
   // not an operator node in the plan tree. Each physical node executes the same plan structure
   // but with different metrics (rows processed, time taken, etc.)
-  const props = defineProps<{
-    data: [number, number, string][]
-    index: number
-  }>()
+  const props = withDefaults(
+    defineProps<{
+      data: [number, number, string][]
+      index: number
+      // Node ids to show as columns; empty means all nodes.
+      selectedNodes?: number[]
+      // Root operator to show when the stage has several roots; empty shows every plan.
+      rootPlan?: string
+      // Metric shown in each node cell (falls back to output rows when empty).
+      selectedMetric?: string
+      // Show every metric of each node instead of just the selected one.
+      metricsExpanded?: boolean
+    }>(),
+    { selectedNodes: () => [], rootPlan: '', selectedMetric: '', metricsExpanded: false }
+  )
 
   const expandedKeys = ref<string[]>([])
 
@@ -109,21 +110,11 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
     }
   }
 
-  const metricsExpanded = ref(false)
-  const selectedMetric = ref<string | null>(null)
-
-  // Auto-select duration metric by default
-  onMounted(() => {
-    selectedMetric.value = 'elapsed_compute'
+  // Rows / Duration live on the key-metrics line; the selected metric is shown only when it is an extra one.
+  const extraMetricKey = computed(() => {
+    const key = props.selectedMetric
+    return key && !FIXED_EXPLAIN_METRICS.includes(key) ? key : ''
   })
-
-  const getActiveMetric = computed(() => {
-    return selectedMetric.value || 'output_rows'
-  })
-
-  const toggleMetricsExpanded = () => {
-    metricsExpanded.value = !metricsExpanded.value
-  }
 
   const availableNodes = computed(() => {
     if (!props.data || props.data.length === 0) return []
@@ -131,42 +122,28 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
     return nodeIds.sort((a, b) => a - b)
   })
 
-  const selectedNodes = ref([])
-
   const filteredNodeIndices = computed(() => {
-    if (!selectedNodes.value || selectedNodes.value.length === 0) {
+    if (!props.selectedNodes || props.selectedNodes.length === 0) {
       return availableNodes.value
     }
-    return selectedNodes.value
+    return [...props.selectedNodes].sort((a, b) => a - b)
   })
 
-  const selectMetric = (value: string) => {
-    metricsExpanded.value = false
-  }
+  // Plan and node columns have fixed widths so the Plan column can stay pinned while nodes scroll.
+  const PLAN_COLUMN_WIDTH = 300
+  const NODE_COLUMN_WIDTH = 220
+  const scrollWidth = computed(() => PLAN_COLUMN_WIDTH + filteredNodeIndices.value.length * NODE_COLUMN_WIDTH)
 
-  const getImportantMetrics = (metrics: Record<string, any>) => {
+  // Metrics other than Rows / Duration (those are on the key-metrics line), alphabetically.
+  const getExtraMetrics = (metrics: Record<string, any> | undefined) => {
     if (!metrics) return {}
-
     const sortedMetrics: Record<string, any> = {}
-
-    // Always show output_rows and elapsed_compute first if they exist
-    if (metrics.output_rows !== undefined) {
-      sortedMetrics.output_rows = metrics.output_rows
-    }
-
-    if (metrics.elapsed_compute !== undefined) {
-      sortedMetrics.elapsed_compute = metrics.elapsed_compute
-    }
-
-    // Then add any remaining metrics in alphabetical order
     Object.keys(metrics)
+      .filter((key) => !FIXED_EXPLAIN_METRICS.includes(key))
       .sort((a, b) => a.localeCompare(b))
       .forEach((key) => {
-        if (key !== 'output_rows' && key !== 'elapsed_compute') {
-          sortedMetrics[key] = metrics[key]
-        }
+        sortedMetrics[key] = metrics[key]
       })
-
     return sortedMetrics
   }
 
@@ -201,288 +178,52 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
     ])
   }
 
-  // Flatten a nested plan tree into a flat array of rows (one per operator)
-  // Recursively traverses the tree and creates a row for each operator
-  const flattenPlan = (
-    plan: any,
-    result: any[] = [],
-    depth = 0,
-    path: string[] = [],
-    isLast = true,
-    treePrefix = '',
-    index = 0
-  ): any[] => {
-    // Build visual prefix for tree display (└─ for last child, ├─ for others)
-    let linePrefix = ''
-    if (depth > 0) {
-      linePrefix = isLast ? `${treePrefix}└─ ` : `${treePrefix}├─ `
-    }
+  // Plans of the whole stage, aligned across nodes (see alignStagePlans). Always built from the whole
+  // stage so the node and root filters never change the plan numbering.
+  const alignment = computed(() => alignStagePlans(props.data ?? []))
 
-    // Build the path array: [root, child1, child2, ...]
-    const currentPath = [...path, plan.name]
-
-    // Create unique key for this row
-    const uniqueKey = `${depth}_${index}_${currentPath.join('/')}`
-
-    // Create row object for this operator
-    const row = {
-      key: uniqueKey,
-      step: `${linePrefix}${plan.name}`,
-      path: currentPath,
-      param: plan.param || '',
-      output_rows: plan.output_rows,
-      elapsed_compute: plan.elapsed_compute,
-      hasAdditionalDetails: Boolean(plan.param || plan.output_rows !== undefined || plan.elapsed_compute !== undefined),
-    }
-
-    result.push(row)
-
-    // Recursively process children
-    if (plan.children && plan.children.length > 0) {
-      // Build prefix for children (spaces or │ for vertical lines)
-      let childPrefix = ''
-      if (depth > 0) {
-        childPrefix = isLast ? `${treePrefix}   ` : `${treePrefix}│  `
-      }
-
-      // Process each child
-      plan.children.forEach((child: any, childIndex: number) => {
-        const isLastChild = childIndex === plan.children.length - 1
-        flattenPlan(child, result, depth + 1, currentPath, isLastChild, childPrefix, childIndex)
-      })
-    }
-
-    return result
-  }
-
-  // Build a map of path -> node for O(1) lookup
-  // Key: path.join('/') (e.g., "CoalesceBatchesExec/FilterExec/ProjectionExec")
-  // Value: the operator node object
-  const buildPathMap = (
-    plan: any,
-    pathMap: Map<string, any> = new Map(),
-    currentPath: string[] = []
-  ): Map<string, any> => {
-    if (!plan) return pathMap
-
-    const path = [...currentPath, plan.name]
-    const pathKey = path.join('/')
-    pathMap.set(pathKey, plan)
-
-    // Recursively process children
-    if (plan.children && plan.children.length > 0) {
-      plan.children.forEach((child: any) => {
-        buildPathMap(child, pathMap, path)
-      })
-    }
-
-    return pathMap
-  }
-
-  // Parse plans from props.data and group by physical node index
-  // Only includes plans with the same root operator name as the template plan
-  //
-  // Input: props.data = [[stage, nodeIndex, plan_json_string], ...]
-  // Output: Map<nodeIndex, parsed_plan_object>
-  //
-  // Example:
-  //   Input: [
-  //     [1, 0, '{"name": "CoalesceBatchesExec", ...}'],
-  //     [1, 1, '{"name": "CoalesceBatchesExec", ...}'],
-  //     [1, 5, '{"name": "CoalesceBatchesExec", ...}']
-  //   ]
-  //   Output: Map {
-  //     0 => { name: "CoalesceBatchesExec", children: [...], metrics: {...} },
-  //     1 => { name: "CoalesceBatchesExec", children: [...], metrics: {...} },
-  //     5 => { name: "CoalesceBatchesExec", children: [...], metrics: {...} }
-  //   }
-  const parsePlansByNode = (templatePlan: any): Map<number, any> => {
-    const plansByNode = new Map<number, any>()
-    const rootName = templatePlan?.name
-
-    props.data.forEach((row) => {
-      // Destructure: [stage, nodeIndex, plan_json_string]
-      // We ignore stage (index 0) since we're already filtered by stage in explain-tabs
-      const [, nodeIndex, planStr] = row
-
-      if (!planStr || typeof planStr !== 'string' || !planStr.startsWith('{')) {
-        return
-      }
-
-      try {
-        const plan = JSON.parse(planStr)
-        if (plan?.name === rootName) {
-          plansByNode.set(nodeIndex, plan)
-        }
-      } catch {
-        // Ignore invalid JSON (e.g., footer rows)
-      }
-    })
-
-    return plansByNode
-  }
-
-  // Build path maps for all plans (for O(1) lookup instead of tree traversal)
-  // Returns: Map<nodeIndex, pathMap> where pathMap is Map<pathKey, node>
-  const buildPathMapsForAllNodes = (plansByNode: Map<number, any>): Map<number, Map<string, any>> => {
-    const pathMapsByNode = new Map<number, Map<string, any>>()
-    plansByNode.forEach((plan, nodeIndex) => {
-      const pathMap = buildPathMap(plan)
-      pathMapsByNode.set(nodeIndex, pathMap)
-    })
-    return pathMapsByNode
-  }
-
-  // Attach metrics from each physical node's plan to the corresponding operator row
-  //
-  // rows: Flattened operator rows (one per operator in the plan tree)
-  // pathMapsByNode: Map of physical node index -> path map (pathKey -> operator node)
-  //
-  // For each operator row, find the matching operator in each physical node's path map
-  // and attach that physical node's metrics to the row as row.node0, row.node1, etc.
-  //
-  // Example:
-  //   row = { step: "FilterExec", path: ["CoalesceBatchesExec", "FilterExec"], ... }
-  //   pathMapsByNode = Map {
-  //     0 => Map { "CoalesceBatchesExec/FilterExec" => {...}, ... },
-  //     1 => Map { "CoalesceBatchesExec/FilterExec" => {...}, ... },
-  //     5 => Map { "CoalesceBatchesExec/FilterExec" => {...}, ... }
-  //   }
-  //
-  //   Result: row.node0 = { output_rows: 100, elapsed_compute: 50, ... }
-  //          row.node1 = { output_rows: 120, elapsed_compute: 60, ... }
-  //          row.node5 = { output_rows: 155616, elapsed_compute: 32, ... }
-  const attachNodeMetrics = (rows: any[], pathMapsByNode: Map<number, Map<string, any>>) => {
-    rows.forEach((row) => {
-      // Convert path array to path key for map lookup
-      const pathKey = row.path.join('/')
-
-      pathMapsByNode.forEach((pathMap, nodeIndex) => {
-        // O(1) lookup instead of tree traversal
-        const operatorNode = pathMap.get(pathKey)
-        if (operatorNode) {
-          // Attach metrics from this physical node's operator to the row
-          row[`node${nodeIndex}`] = {
-            ...operatorNode.metrics,
-            output_rows: operatorNode.output_rows,
-            elapsed_compute: operatorNode.elapsed_compute,
-          }
-        }
-      })
-    })
-  }
-
-  // Group props.data by root plan name
-  // Returns: Map<rootName, Array<[stage, nodeIndex, plan_json_string]>>
-  const groupByRootName = (): Map<string, Array<[number, number, string]>> => {
-    const groups = new Map<string, Array<[number, number, string]>>()
-
-    props.data.forEach((row) => {
-      const [, , planStr] = row
-      if (!planStr || typeof planStr !== 'string' || !planStr.startsWith('{')) {
-        return
-      }
-
-      try {
-        const plan = JSON.parse(planStr)
-        const rootName = plan?.name
-        if (!groups.has(rootName)) {
-          groups.set(rootName, [])
-        }
-        const group = groups.get(rootName)
-        if (group) {
-          group.push(row)
-        }
-      } catch {
-        // Ignore invalid JSON
-      }
-    })
-
-    return groups
-  }
-
-  // Process a single root plan group
-  const processRootPlan = (rootName: string, rootData: Array<[number, number, string]>): any[] => {
-    // Use first entry as template
-    const templatePlan = JSON.parse(rootData[0][2])
-    const planRows = flattenPlan(templatePlan)
-
-    // Parse all node plans for this root
-    const plansByNode = new Map<number, any>()
-    rootData.forEach((row) => {
-      const [, nodeIndex, planStr] = row
-      try {
-        const plan = JSON.parse(planStr)
-        if (plan?.name === rootName) {
-          plansByNode.set(nodeIndex, plan)
-        }
-      } catch {
-        // Ignore invalid JSON
-      }
-    })
-
-    // Build path maps and attach metrics
-    const pathMapsByNode = buildPathMapsForAllNodes(plansByNode)
-    attachNodeMetrics(planRows, pathMapsByNode)
-
-    return planRows
-  }
-
+  // One row per operator position of every plan, in plan order. A node that did not run an operator has
+  // no `node<N>` entry, so its cell stays empty.
   const tableData = computed(() => {
-    if (!props.data || props.data.length === 0) return []
-    // Step 1: Group props.data by root plan name
-    // This handles cases where there are multiple root plans (e.g., CoalesceBatchesExec and PromInstantManipulateExec)
-    const rootGroups = groupByRootName()
-    // Step 2: Process each root plan group separately
-    const allPlanRows: any[] = []
-    rootGroups.forEach((rootData, rootName) => {
-      const planRows = processRootPlan(rootName, rootData)
-      allPlanRows.push(...planRows)
-    })
+    const { slots, nodeIds } = alignment.value
+    const rows: any[] = []
 
-    return allPlanRows
-  })
-
-  const availableMetrics = computed(() => {
-    // Use a Set to track unique metrics across all nodes
-    const metricsSet = new Set<string>()
-    // Process the tableData to extract all available metrics
-    tableData.value.forEach((row) => {
-      // Check each node
-      filteredNodeIndices.value.forEach((nodeIndex) => {
-        const nodeData = row[`node${nodeIndex}`]
-        if (!nodeData) return
-
-        // Add all metrics from this node
-        Object.keys(nodeData).forEach((key) => {
-          // Only include numeric metrics that make sense for comparison
-          if (typeof nodeData[key] === 'number') {
-            metricsSet.add(key)
+    slots
+      .filter((slot) => !props.rootPlan || slot.name === props.rootPlan)
+      .forEach((slot, slotPosition) => {
+        getSlotOperators(slot).forEach((operator) => {
+          const record: any = {
+            key: operator.key,
+            step: operator.step,
+            path: operator.path,
+            param: operator.param,
+            hasAdditionalDetails: Boolean(operator.param),
+            startsPlan: operator.depth === 0 && slotPosition > 0,
           }
+          if (operator.depth === 0) {
+            record.root = {
+              param: slot.label.param,
+              ordinal: slot.label.ordinal,
+              coverage: slot.byNode.size,
+              total: nodeIds.length,
+            }
+          }
+          operator.byNode.forEach((cell, nodeIndex) => {
+            record[`node${nodeIndex}`] = {
+              ...cell.metrics,
+              output_rows: cell.output_rows,
+              elapsed_compute: cell.elapsed_compute,
+            }
+          })
+          rows.push(record)
         })
       })
-    })
 
-    // Convert to array and sort
-    const metricsList = Array.from(metricsSet)
-
-    // Place output_rows and elapsed_compute first, then alphabetically
-    return metricsList
-      .sort((a, b) => {
-        // Always put output_rows and elapsed_compute first
-        if (a === 'output_rows') return -1
-        if (b === 'output_rows') return 1
-        if (a === 'elapsed_compute') return -1
-        if (b === 'elapsed_compute') return 1
-
-        // Then sort alphabetically
-        return a.localeCompare(b)
-      })
-      .map((metric) => ({
-        value: metric,
-        label: formatMetricName(metric),
-      }))
+    return rows
   })
+
+  const getRowClass = (record: any) =>
+    [record.root ? 'plan-root-row' : '', record.startsPlan ? 'plan-start-row' : ''].filter(Boolean).join(' ')
 
   // Row click handler
   const handleRowClick = (record: any) => {
@@ -491,40 +232,41 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
     }
   }
 
-  // Get max value for a metric across all nodes and all operators/rows
-  // This shows relative performance across the entire table
-  const getMaxMetricValue = (metricKey: string): number => {
-    const allValues: number[] = []
-    tableData.value.forEach((row) => {
-      availableNodes.value.forEach((nodeIdx) => {
-        const nodeData = row[`node${nodeIdx}`]
-        if (nodeData && nodeData[metricKey] !== undefined) {
-          allValues.push(nodeData[metricKey])
-        }
-      })
-    })
-    return allValues.length > 0 ? Math.max(...allValues) : 0
-  }
+  // Largest value of every numeric metric over the whole stage (all plans, nodes and operators), computed
+  // once per data change. The bars then mean the same thing whatever the node or root filter shows, and
+  // they match the chart.
+  const stageMax = computed(() => {
+    const max: Record<string, number> = {}
+    const note = (key: string, value: unknown) => {
+      if (typeof value === 'number' && value > (max[key] ?? 0)) max[key] = value
+    }
+    const walk = (operator: any) => {
+      note('output_rows', operator.output_rows)
+      note('elapsed_compute', operator.elapsed_compute)
+      Object.entries(operator.metrics ?? {}).forEach(([key, value]) => note(key, value))
+      operator.children?.forEach(walk)
+    }
+    alignment.value.slots.forEach((slot) => slot.byNode.forEach((plan) => walk(plan)))
+    return max
+  })
 
   const getPercentage = (record: any, nodeIndex: number, metric: string | null): number => {
-    if (!metric || !record[`node${nodeIndex}`] || record[`node${nodeIndex}`][metric] === undefined) return 0
+    const value = metric ? record[`node${nodeIndex}`]?.[metric] : undefined
+    if (value === undefined) return 0
 
-    const maxValue = getMaxMetricValue(metric)
-    return maxValue > 0 ? (record[`node${nodeIndex}`][metric] / maxValue) * 100 : 0
+    const maxValue = stageMax.value[metric as string] ?? 0
+    return maxValue > 0 ? (value / maxValue) * 100 : 0
   }
 
-  const getNodeProgressBarColor = (record: any, nodeIndex: number, metric: string | null): string => {
-    if (!metric || !record[`node${nodeIndex}`] || record[`node${nodeIndex}`][metric] === undefined) return '#ccc'
-
-    const percentage = getPercentage(record, nodeIndex, metric)
-    if (percentage > 75) return '#f56c6c'
-    if (percentage > 50) return '#e6a23c'
-    return '#67c23a'
-  }
-
-  // Helper to determine if a metric should show a progress bar
-  const isProgressMetric = (key: string): boolean => {
-    return key === 'output_rows' || key === 'elapsed_compute'
+  const getKeyMetrics = (record: any, nodeIndex: number) => {
+    const cell = record[`node${nodeIndex}`]
+    const percentage = getPercentage(record, nodeIndex, 'elapsed_compute')
+    return {
+      rows: cell?.output_rows !== undefined ? formatMetricValue('output_rows', cell.output_rows) : '-',
+      duration: cell?.elapsed_compute !== undefined ? formatMetricValue('elapsed_compute', cell.elapsed_compute) : '-',
+      percentage,
+      color: keyBarColor(percentage),
+    }
   }
 </script>
 
@@ -547,39 +289,49 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
     }
   }
 
-  .grid-header {
-    display: flex;
-    justify-content: flex-start;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: var(--gpt-gap-md);
-    margin-bottom: 8px;
-    padding-bottom: var(--gpt-gap-md);
-    border-bottom: 1px solid var(--gpt-border-default);
-
-    .stage-index {
-      display: flex;
-      align-items: center;
-      font-size: var(--gpt-font-lg);
-      font-weight: 500;
-      color: var(--gpt-text-primary);
-      margin-right: var(--gpt-gap-lg);
-      margin-left: var(--gpt-gap-lg);
-      width: 80px;
-      line-height: var(--gpt-control-height-sm);
-      font-family: var(--font-family-base);
-    }
-  }
-
-  .header-controls {
-    display: flex;
-    align-items: center;
-  }
-
   .metrics {
     display: flex;
     flex-direction: column;
     gap: 4px;
+    min-width: 0;
+    overflow: hidden; // never spill into the next node column
+    white-space: nowrap;
+  }
+
+  .key-metrics {
+    font-size: var(--gpt-font-base);
+
+    // Duration is what answers "where did the time go", so it leads; rows are context.
+    .key-duration {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      color: var(--gpt-text-primary);
+      white-space: nowrap;
+    }
+
+    .key-rows {
+      margin-top: 2px;
+      font-family: var(--font-mono);
+      font-size: var(--gpt-font-sm);
+      color: var(--gpt-text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .key-metrics-bar {
+      height: 3px;
+      margin-top: 4px;
+      background-color: var(--gpt-table-head-bg);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .key-metrics-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.3s ease;
+    }
   }
 
   .metric {
@@ -605,55 +357,15 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
       text-overflow: ellipsis;
       overflow: hidden;
     }
-
-    .metric-progress-bar-wrapper {
-      height: 4px;
-      background-color: var(--gpt-table-head-bg);
-      border-radius: 2px;
-      overflow: hidden;
-      margin-top: 2px;
-      width: 100%;
-
-      .metric-progress-bar {
-        height: 100%;
-        transition: width 0.3s ease;
-        border-radius: 2px;
-      }
-    }
-  }
-
-  .metric-progress-container {
-    display: flex;
-    flex-direction: column;
-    margin-top: 4px;
-
-    .metric-label {
-      display: flex;
-      justify-content: space-between;
-      font-size: var(--gpt-font-base);
-      margin-bottom: var(--gpt-gap-xs);
-
-      .metric-value {
-        font-family: var(--font-mono);
-        color: var(--gpt-text-primary);
-      }
-    }
-
-    .metric-progress-bar-wrapper {
-      height: 6px;
-      background-color: var(--gpt-bg-surface);
-      border-radius: 3px;
-      overflow: hidden;
-
-      .metric-progress-bar {
-        height: 100%;
-        border-radius: 3px;
-      }
-    }
   }
 
   :deep(.arco-table-container) {
     overflow-x: auto;
+  }
+
+  // A thin rule above every plan after the first, so a second root does not read as a sibling operator.
+  :deep(.plan-start-row td) {
+    border-top: 1px solid var(--gpt-border-default);
   }
 
   :deep(.arco-table-td) {
@@ -661,11 +373,43 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
     overflow: visible;
   }
 
+  // Each plan's root row is shaded and bold, so the operators under it read as that plan's tree.
+  :deep(.plan-root-row td) {
+    background-color: var(--gpt-bg-surface);
+  }
+
+  .root-ordinal,
+  .root-coverage {
+    margin-left: 8px;
+    color: var(--gpt-text-muted);
+  }
+
+  .root-param {
+    max-width: 100%;
+    margin-top: 2px;
+    color: var(--gpt-text-muted);
+    font-size: var(--gpt-font-sm);
+    white-space: normal;
+    word-break: break-all;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
   .step-cell {
     white-space: pre; // Preserve whitespace for tree structure
     font-family: var(--font-mono); // Use var(--font-mono) for better tree alignment
     color: var(--gpt-text-primary);
     align-self: flex-start; // Align at the top
+
+    .step-line {
+      white-space: pre;
+    }
+  }
+
+  :deep(.plan-root-row) .step-name {
+    font-weight: 600;
   }
 
   :deep(.arco-table-td) {

@@ -7,7 +7,7 @@
   import { flextree } from 'd3-flextree'
   import { render, h } from 'vue'
   import PlanCard from './plan-card.vue'
-  import { CARD_DIMENSIONS, NODE_INDEX_CARD } from '../utils'
+  import { CARD_DIMENSIONS, NODE_INDEX_CARD, alignStagePlans, type StagePlanSlotLabel, type StageRow } from '../utils'
 
   // Define interfaces (moved from parent)
   interface FlexHierarchyPointNode extends d3.HierarchyPointNode<any> {
@@ -43,10 +43,6 @@
       type: Number,
       default: 0,
     },
-    highlightType: {
-      type: String,
-      default: 'DURATION',
-    },
     selectedMetric: {
       type: String,
       default: '',
@@ -54,6 +50,12 @@
     metricsExpanded: {
       type: Boolean,
       default: false,
+    },
+    // Rows the bar scale is computed from. Pass the whole stage so the bars do not change
+    // when Nodes / Root Plan filters narrow `data`. Falls back to `data` when omitted.
+    scaleData: {
+      type: Array,
+      default: null,
     },
   })
 
@@ -97,7 +99,8 @@
 
   const maxStats = computed<MaxStats>(() => {
     const acc: MaxStats = { maxRows: 0, maxDuration: 0 }
-    props.data.forEach((row) => {
+    const scaleRows = props.scaleData ?? props.data
+    scaleRows.forEach((row) => {
       try {
         const planData = JSON.parse(row[2])
         traverseNodeForMax(planData, acc)
@@ -108,26 +111,39 @@
     return acc
   })
 
-  // Process raw data into node-specific data
-  function processNodesData(data) {
-    const nodeMap = new Map()
+  // Plan labels (param, #n) come from the whole stage, so filtering nodes or roots never renumbers them.
+  const alignment = computed(() => alignStagePlans((props.scaleData ?? props.data) as StageRow[]))
 
-    // Group by node
+  // Process raw data into node-specific data.
+  // A node can run several plans (one per branch, e.g. both inputs of a JOIN). Keep all of them,
+  // in explain order, so each one is drawn as its own plan tree under the node label.
+  function processNodesData(data) {
+    const nodeMap = new Map<number, { nodeIndex: number; plans: { plan: any; label: StagePlanSlotLabel }[] }>()
+
     data.forEach((row) => {
       const nodeIdx = row[1]
-      const planData = JSON.parse(row[2])
-      nodeMap.set(nodeIdx, {
-        nodeIndex: nodeIdx,
-        plan: planData,
-      })
+      const item = {
+        plan: JSON.parse(row[2]),
+        label: alignment.value.slotByRow.get(row as StageRow)?.label ?? { param: '', ordinal: 0 },
+      }
+      const entry = nodeMap.get(nodeIdx)
+      if (entry) {
+        entry.plans.push(item)
+      } else {
+        nodeMap.set(nodeIdx, { nodeIndex: nodeIdx, plans: [item] })
+      }
     })
 
     return Array.from(nodeMap.values())
   }
 
-  function toHierarchy(plan, nodeIndex) {
+  // Only a root card shows its param and plan number (when the stage needs them to tell plans apart);
+  // an operator's own param, e.g. a scan's region and file list, never goes on a card.
+  function toHierarchy(plan, nodeIndex, label?: StagePlanSlotLabel) {
     return {
       name: plan.name || 'Root',
+      param: label?.param ?? '',
+      ordinal: label?.ordinal ?? 0,
       nodeIndex,
       isNodeLabel: false, // Plan nodes are not node labels
       metrics: {
@@ -144,7 +160,11 @@
 
   // Render PlanCard in background, get size and HTML string
   // Returns both size and innerHTML string for reuse in foreignObject
-  function renderCardInBackground(nodeData: any, nodeIndex: number): Promise<{ size: [number, number]; html: string }> {
+  function renderCardInBackground(
+    nodeData: any,
+    nodeIndex: number,
+    cardKey: string
+  ): Promise<{ size: [number, number]; html: string }> {
     // Create a hidden measurement container (reused for all cards)
     if (!backgroundMeasureContainer.value) {
       const container = document.createElement('div')
@@ -167,13 +187,13 @@
     render(
       h(PlanCard, {
         nodeData,
-        highlightType: props.highlightType,
         maxRows: maxStats.value.maxRows,
         maxDuration: maxStats.value.maxDuration,
         selectedMetric: props.selectedMetric,
         metricsExpanded: props.metricsExpanded,
         isActive: props.activeNodeIndex === nodeIndex,
         stageIndex: props.stageIndex,
+        cardKey,
       }),
       cardContainer
     )
@@ -284,13 +304,14 @@
       children: nodesData.value
         .filter((nodeData) => !Number.isNaN(nodeData.nodeIndex))
         .map((nodeData) => {
-          const { nodeIndex, plan } = nodeData
-          const planTree = toHierarchy(plan, nodeIndex)
+          const { nodeIndex, plans } = nodeData
           return {
             name: `Node ${nodeIndex}`,
             nodeIndex,
             isNodeLabel: true, // Mark as node label
-            children: [planTree], // Plan tree as child of node label
+            // One plan tree per branch. Siblings under the label are laid out side by side,
+            // and each root's sibling index keeps its card keys distinct.
+            children: plans.map(({ plan, label }) => toHierarchy(plan, nodeIndex, label)),
           }
         }),
     }
@@ -315,7 +336,7 @@
         // Get path from hierarchy node (getNodePath filters out fake root and node labels)
         const nodePath = getNodePath(d)
         const key = getNodeKey(node.nodeIndex, nodePath)
-        const promise = renderCardInBackground(node, node.nodeIndex).then(({ size, html }) => {
+        const promise = renderCardInBackground(node, node.nodeIndex, key).then(({ size, html }) => {
           renderedCardsMap.set(key, { size, html })
         })
         allRenderPromises.push(promise)
@@ -611,7 +632,7 @@
   // Any data or card-layout prop change → remeasure + relayout into persistent zoom SVG.
   // The parent replaces `data` on each tick, so a shallow watch is enough here.
   watch(
-    () => [props.data, props.highlightType, props.selectedMetric, props.metricsExpanded],
+    () => [props.data, props.scaleData, props.selectedMetric, props.metricsExpanded],
     async () => {
       await nextTick()
       await redrawTree()
